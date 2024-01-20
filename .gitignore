@@ -53,3 +53,6 @@ dkms.conf
 
 # MAC hidden files
 *.DS_Store
+
+Objects/
+Listings/

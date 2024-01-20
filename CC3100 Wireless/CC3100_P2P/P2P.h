@@ -42,7 +42,7 @@
  *                          doc\examples\p2p.pdf
  */
 
-#include "simplelink.h"
 #include "sl_common.h"
+#include "simplelink/simplelink.h"
 
-void P2P_Init();
+_i32 P2P_Init(void);
