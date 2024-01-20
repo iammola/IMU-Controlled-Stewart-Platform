@@ -52,10 +52,10 @@
 #include "../inc/hw_onewire.h"
 #include "../inc/hw_sysctl.h"
 #include "../inc/hw_types.h"
-#include "driverlib/debug.h"
-#include "driverlib/interrupt.h"
-#include "driverlib/onewire.h"
-#include "driverlib/sysctl.h"
+#include "debug.h"
+#include "interrupt.h"
+#include "onewire.h"
+#include "sysctl.h"
 
 //*****************************************************************************
 //

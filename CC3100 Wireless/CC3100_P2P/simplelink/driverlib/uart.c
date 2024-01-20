@@ -51,9 +51,9 @@
 #include "../inc/hw_sysctl.h"
 #include "../inc/hw_types.h"
 #include "../inc/hw_uart.h"
-#include "driverlib/debug.h"
-#include "driverlib/interrupt.h"
-#include "driverlib/uart.h"
+#include "debug.h"
+#include "interrupt.h"
+#include "uart.h"
 
 //*****************************************************************************
 //

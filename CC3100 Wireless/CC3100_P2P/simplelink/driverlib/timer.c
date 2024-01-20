@@ -51,9 +51,9 @@
 #include "../inc/hw_timer.h"
 #include "../inc/hw_types.h"
 #include "../inc/hw_sysctl.h"
-#include "driverlib/debug.h"
-#include "driverlib/interrupt.h"
-#include "driverlib/timer.h"
+#include "debug.h"
+#include "interrupt.h"
+#include "timer.h"
 
 //*****************************************************************************
 //

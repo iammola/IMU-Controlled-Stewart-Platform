@@ -53,9 +53,9 @@
 #include "../inc/hw_memmap.h"
 #include "../inc/hw_nvic.h"
 #include "../inc/hw_types.h"
-#include "driverlib/aes.h"
-#include "driverlib/debug.h"
-#include "driverlib/interrupt.h"
+#include "aes.h"
+#include "debug.h"
+#include "interrupt.h"
 
 //*****************************************************************************
 //

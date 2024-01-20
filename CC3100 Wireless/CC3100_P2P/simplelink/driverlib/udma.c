@@ -49,9 +49,9 @@
 #include "../inc/hw_sysctl.h"
 #include "../inc/hw_types.h"
 #include "../inc/hw_udma.h"
-#include "driverlib/debug.h"
-#include "driverlib/interrupt.h"
-#include "driverlib/udma.h"
+#include "debug.h"
+#include "interrupt.h"
+#include "udma.h"
 
 //*****************************************************************************
 //

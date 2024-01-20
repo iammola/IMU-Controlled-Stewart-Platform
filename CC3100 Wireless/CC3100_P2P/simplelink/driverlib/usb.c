@@ -51,11 +51,11 @@
 #include "../inc/hw_types.h"
 #include "../inc/hw_sysctl.h"
 #include "../inc/hw_usb.h"
-#include "driverlib/debug.h"
-#include "driverlib/interrupt.h"
-#include "driverlib/sysctl.h"
-#include "driverlib/udma.h"
-#include "driverlib/usb.h"
+#include "debug.h"
+#include "interrupt.h"
+#include "sysctl.h"
+#include "udma.h"
+#include "usb.h"
 
 //*****************************************************************************
 //

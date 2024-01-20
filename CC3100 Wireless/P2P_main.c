@@ -1,5 +1,5 @@
 /*
-Ensure "PART_TM4C123GH6PM TARGET_IS_BLIZZARD_RB1" is configured in Keil
+Ensure "PART_TM4C123GH6PM TARGET_IS_BLIZZARD_RA1" is configured in Keil
 In the Target Options, In the C/C++ tab, and in the Define field of the Preprocessor Symbols
 
 Without it, several variables are not set which hinder the build of many of the

@@ -51,10 +51,10 @@
 #include "../inc/hw_ints.h"
 #include "../inc/hw_sysctl.h"
 #include "../inc/hw_types.h"
-#include "driverlib/debug.h"
-#include "driverlib/hibernate.h"
-#include "driverlib/interrupt.h"
-#include "driverlib/sysctl.h"
+#include "debug.h"
+#include "hibernate.h"
+#include "interrupt.h"
+#include "sysctl.h"
 
 //*****************************************************************************
 //

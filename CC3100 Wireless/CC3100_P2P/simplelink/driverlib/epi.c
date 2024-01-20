@@ -44,9 +44,9 @@
 #include "../inc/hw_memmap.h"
 #include "../inc/hw_sysctl.h"
 #include "../inc/hw_types.h"
-#include "driverlib/debug.h"
-#include "driverlib/epi.h"
-#include "driverlib/interrupt.h"
+#include "debug.h"
+#include "epi.h"
+#include "interrupt.h"
 
 //*****************************************************************************
 //

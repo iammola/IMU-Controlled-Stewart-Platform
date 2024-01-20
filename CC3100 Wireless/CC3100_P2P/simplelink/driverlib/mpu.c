@@ -49,9 +49,9 @@
 #include "../inc/hw_ints.h"
 #include "../inc/hw_nvic.h"
 #include "../inc/hw_types.h"
-#include "driverlib/debug.h"
-#include "driverlib/interrupt.h"
-#include "driverlib/mpu.h"
+#include "debug.h"
+#include "interrupt.h"
+#include "mpu.h"
 
 //*****************************************************************************
 //

@@ -51,10 +51,10 @@
 #include "../inc/hw_types.h"
 #include "../inc/hw_ints.h"
 #include "../inc/hw_lcd.h"
-#include "driverlib/interrupt.h"
-#include "driverlib/sysctl.h"
-#include "driverlib/lcd.h"
-#include "driverlib/debug.h"
+#include "interrupt.h"
+#include "sysctl.h"
+#include "lcd.h"
+#include "debug.h"
 
 //*****************************************************************************
 //

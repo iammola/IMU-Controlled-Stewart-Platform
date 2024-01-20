@@ -51,9 +51,9 @@
 #include "../inc/hw_memmap.h"
 #include "../inc/hw_types.h"
 #include "../inc/hw_sysctl.h"
-#include "driverlib/adc.h"
-#include "driverlib/debug.h"
-#include "driverlib/interrupt.h"
+#include "adc.h"
+#include "debug.h"
+#include "interrupt.h"
 
 //*****************************************************************************
 //

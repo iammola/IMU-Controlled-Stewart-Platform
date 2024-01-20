@@ -338,7 +338,7 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls></MiscControls>
-              <Define>PART_TM4C123GH6PM TARGET_IS_BLIZZARD_RB1</Define>
+              <Define>PART_TM4C123GH6PM TARGET_IS_BLIZZARD_RA1</Define>
               <Undefine></Undefine>
               <IncludePath>.\CC3100_P2P\simplelink\inc;.\CC3100_P2P\simplelink\driverlib</IncludePath>
             </VariousControls>
