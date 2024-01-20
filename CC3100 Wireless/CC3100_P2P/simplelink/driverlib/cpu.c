@@ -90,7 +90,7 @@ CPUcpsid(void)
 #pragma diag_default=Pe940
 #endif
 #if defined(rvmdk) || defined(__ARMCC_VERSION)
-__asm uint32_t
+uint32_t __asm("CPUcpsid")
 CPUcpsid(void)
 {
     //
@@ -170,7 +170,7 @@ CPUprimask(void)
 #pragma diag_default=Pe940
 #endif
 #if defined(rvmdk) || defined(__ARMCC_VERSION)
-__asm uint32_t
+uint32_t __asm("CPUprimask")
 CPUprimask(void)
 {
     //
@@ -250,7 +250,7 @@ CPUcpsie(void)
 #pragma diag_default=Pe940
 #endif
 #if defined(rvmdk) || defined(__ARMCC_VERSION)
-__asm uint32_t
+uint32_t __asm("CPUcpsie")
 CPUcpsie(void)
 {
     //
@@ -310,7 +310,7 @@ CPUwfi(void)
 }
 #endif
 #if defined(rvmdk) || defined(__ARMCC_VERSION)
-__asm void
+void __asm("CPUwfi")
 CPUwfi(void)
 {
     //
@@ -358,7 +358,7 @@ CPUbasepriSet(uint32_t ui32NewBasepri)
 }
 #endif
 #if defined(rvmdk) || defined(__ARMCC_VERSION)
-__asm void
+void __asm("CPUbasepriSet")
 CPUbasepriSet(uint32_t ui32NewBasepri)
 {
     //
@@ -425,7 +425,7 @@ CPUbasepriGet(void)
 #pragma diag_default=Pe940
 #endif
 #if defined(rvmdk) || defined(__ARMCC_VERSION)
-__asm uint32_t
+uint32_t __asm("CPUbasepriGet")
 CPUbasepriGet(void)
 {
     //
