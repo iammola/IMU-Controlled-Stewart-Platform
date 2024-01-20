@@ -1,4 +1,4 @@
-/* 
+/*
 Ensure "PART_TM4C123GH6PM TARGET_IS_BLIZZARD_RB1" is configured in Keil
 In the Target Options, In the C/C++ tab, and in the Define field of the Preprocessor Symbols
 
@@ -12,7 +12,6 @@ and assume it's an advantage of using CCS/Eclipse to build the project
 */
 
 #include "CC3100_P2P/P2P.h"
-#include "CC3100_P2P/UDP.h"
 
 /*
  * Application's entry point

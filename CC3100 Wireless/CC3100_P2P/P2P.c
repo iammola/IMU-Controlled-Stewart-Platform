@@ -49,8 +49,6 @@
 
 #define APPLICATION_VERSION "1.3.0"
 
-#define SL_STOP_TIMEOUT 0xFF
-
 #define P2P_REMOTE_DEVICE "DIRECT-" /* Dummy SSDI to start the p2p connection */
 #define P2P_DEVICE_NAME "cc3100-p2p-device"
 
@@ -62,9 +60,6 @@
 #define LISTEN_CHANNEL 11
 #define OPRA_CHANNEL 6
 #define REGULATORY_CLASS 81
-
-/* Port to be used by server*/
-#define PORT_NUM 5001
 
 #define BUF_SIZE 1400
 #define NO_OF_PACKETS 1000

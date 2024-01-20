@@ -394,11 +394,6 @@
               <FileType>1</FileType>
               <FilePath>.\CC3100_P2P\P2P.c</FilePath>
             </File>
-            <File>
-              <FileName>UDP.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\CC3100_P2P\UDP.c</FilePath>
-            </File>
           </Files>
         </Group>
         <Group>
