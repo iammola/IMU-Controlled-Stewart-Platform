@@ -42,23 +42,25 @@
  *                          doc\examples\p2p.pdf
  */
 
+#include <stdint.h>
+
 #include "sl_common.h"
 #include "simplelink.h"
 
 #include "P2P.h"
+#include "GenerateDeviceName.h"
 
 #define APPLICATION_VERSION "1.3.0"
-
-#define P2P_REMOTE_DEVICE "DIRECT-" /* Dummy SSDI to start the p2p connection */
-#define P2P_DEVICE_NAME "cc3100-p2p-device"
 
 #define DEVICE_TYPE "1-0050F204-1"
 
 #define SECURITY_TYPE SL_SEC_TYPE_P2P_PBC
 #define KEY "YOZI"
 
+#define SCAN_INTERVAL 30
+
 #define LISTEN_CHANNEL 11
-#define OPRA_CHANNEL 6
+#define OPERATION_CHANNEL 6
 #define REGULATORY_CLASS 81
 
 #define BUF_SIZE 1400
@@ -75,22 +77,28 @@ typedef enum
   STATUS_CODE_MAX = -0xBB8
 } e_AppStatusCodes;
 
-_u8 g_Status = 0;
-_u32 g_DeviceIp = 0;
-_i8 g_p2p_dev[MAXIMAL_SSID_LENGTH + 1];
+uint8_t g_Status = 0;
+uint32_t g_DeviceIp = 0;
+
+char g_DeviceName[MAXIMAL_SSID_LENGTH + 1];
+char g_PeerDeviceName[MAXIMAL_SSID_LENGTH + 1];
 
 union
 {
-  _u8 BsdBuf[BUF_SIZE];
-  _u32 demobuf[BUF_SIZE / 4];
+  uint8_t BsdBuf[BUF_SIZE];
+  uint32_t demobuf[BUF_SIZE / 4];
 } uBuf;
 
-static _u8 itoa(_i16 cNum, _u8 *cString);
-static _i32 initializeAppVariables();
-static _i32 configureSimpleLinkToDefaultState();
+static uint8_t itoa(int16_t cNum, uint8_t *cString);
+static int32_t initializeAppVariables();
+static int32_t configureSimpleLinkToDefaultState();
 static void displayBanner();
-static _i32 P2P_StoreAndDisplayIP();
-static _i32 P2P_ConnectDevice();
+
+static int32_t P2P_StoreAndDisplayIP(void);
+static int32_t P2P_ConnectToPeer(void);
+static void P2P_ChangeMyDeviceName(void);
+static void P2P_SetDeviceName(int8_t *deviceVariable, char *deviceName, uint32_t deviceNameLength);
+int32_t P2P_Init(void);
 
 /*!
     \brief This function handles WLAN events
@@ -167,7 +175,7 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
 
   case SL_WLAN_CONNECTION_FAILED_EVENT:
       /*
-       * Status code for connection faliure will be available
+       * Status code for connection failure will be available
        * in 'slWlanConnFailureAsyncResponse_t' - Application
        * can use it if required.
        *
@@ -182,9 +190,9 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
   case SL_WLAN_P2P_NEG_REQ_RECEIVED_EVENT:
     SET_STATUS_BIT(g_Status, STATUS_BIT_P2P_NEG_REQ_RECEIVED);
 
-    pal_Memset(g_p2p_dev, '\0', MAXIMAL_SSID_LENGTH + 1);
-    pal_Memcpy(g_p2p_dev, pWlanEvent->EventData.P2PModeNegReqReceived.go_peer_device_name,
-               pWlanEvent->EventData.P2PModeNegReqReceived.go_peer_device_name_len);
+    P2P_SetDeviceName(*g_PeerDeviceName,
+                      pWlanEvent->EventData.P2PModeNegReqReceived.go_peer_device_name,
+                      pWlanEvent->EventData.P2PModeNegReqReceived.go_peer_device_name_len);
     break;
 
   case SL_WLAN_P2P_DEV_FOUND_EVENT:
@@ -197,6 +205,11 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
      * pEventData = &pWlanEvent->EventData.P2PModeDevFound;
      *
      */
+    SET_STATUS_BIT(g_Status, STATUS_BIT_P2P_DEV_FOUND);
+
+    P2P_SetDeviceName(*g_PeerDeviceName,
+                      pWlanEvent->EventData.P2PModeDevFound.go_peer_device_name,
+                      pWlanEvent->EventData.P2PModeDevFound.go_peer_device_name_len);
     break;
 
   default:
@@ -267,8 +280,7 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
 
     \warning
 */
-void SimpleLinkHttpServerCallback(SlHttpServerEvent_t *pHttpEvent,
-                                  SlHttpServerResponse_t *pHttpResponse)
+void SimpleLinkHttpServerCallback(SlHttpServerEvent_t *pHttpEvent, SlHttpServerResponse_t *pHttpResponse)
 {
   /* Unused in this application */
   CLI_Write(" [HTTP EVENT] Unexpected event \n\r");
@@ -348,12 +360,12 @@ void SimpleLinkSockEventHandler(SlSockEvent_t *pSock)
 
     \warning
 */
-static _u8 itoa(_i16 cNum, _u8 *cString)
+static uint8_t itoa(int16_t cNum, uint8_t *cString)
 {
-  _u8 *ptr = 0;
-  _i16 uTemp = cNum;
-  _u8 length = 0;
-  const _u8 digits[] = "0123456789";
+  uint8_t *ptr = 0;
+  int16_t uTemp = cNum;
+  uint8_t length = 0;
+  const uint8_t digits[] = "0123456789";
 
   /* value 0 is a special case */
   if (cNum == 0)
@@ -391,12 +403,14 @@ static _u8 itoa(_i16 cNum, _u8 *cString)
 
     \return     0 on success, negative error-code on error
 */
-static _i32 initializeAppVariables()
+static int32_t initializeAppVariables()
 {
   g_Status = 0;
   g_DeviceIp = 0;
+  P2P_SetDeviceName(*g_DeviceName, NULL, 0);
+  P2P_SetDeviceName(*g_PeerDeviceName, NULL, 0);
+
   pal_Memset(uBuf.BsdBuf, 0, sizeof(uBuf));
-  pal_Memset(g_p2p_dev, 0, MAXIMAL_SSID_LENGTH + 1);
 
   return SUCCESS;
 }
@@ -432,21 +446,21 @@ static void displayBanner()
 
     \return         On success, zero is returned. On error, negative is returned
 */
-static _i32 configureSimpleLinkToDefaultState()
+static int32_t configureSimpleLinkToDefaultState()
 {
   SlVersionFull ver = {0};
   _WlanRxFilterOperationCommandBuff_t RxFilterIdMask = {0};
 
-  _u8 val = 1;
-  _u8 configOpt = 0;
-  _u8 configLen = 0;
-  _u8 power = 0;
+  uint8_t val = 1;
+  uint8_t configOpt = 0;
+  uint8_t configLen = 0;
+  uint8_t power = 0;
 
-  _i32 retVal = -1;
-  _i32 mode = -1;
+  int32_t retVal = -1;
+  int32_t mode = -1;
 
   mode = sl_Start(0, 0, 0);
-  ASSERT_ON_ERROR(mode);
+  ASSERT_ON_ERROR(mode)
 
   /* If the device is not in station-mode, try configuring it in station-mode */
   if (ROLE_STA != mode)
@@ -464,35 +478,35 @@ static _i32 configureSimpleLinkToDefaultState()
 
     /* Switch to STA role and restart */
     retVal = sl_WlanSetMode(ROLE_STA);
-    ASSERT_ON_ERROR(retVal);
+    ASSERT_ON_ERROR(retVal)
 
     retVal = sl_Stop(SL_STOP_TIMEOUT);
-    ASSERT_ON_ERROR(retVal);
+    ASSERT_ON_ERROR(retVal)
 
     retVal = sl_Start(0, 0, 0);
-    ASSERT_ON_ERROR(retVal);
+    ASSERT_ON_ERROR(retVal)
 
     /* Check if the device is in station again */
     if (ROLE_STA != retVal)
     {
       /* We don't want to proceed if the device is not coming up in station-mode */
-      ASSERT_ON_ERROR(DEVICE_NOT_IN_STATION_MODE);
+      ASSERT_ON_ERROR(DEVICE_NOT_IN_STATION_MODE)
     }
   }
 
   /* Get the device's version-information */
   configOpt = SL_DEVICE_GENERAL_VERSION;
   configLen = sizeof(ver);
-  retVal = sl_DevGet(SL_DEVICE_GENERAL_CONFIGURATION, &configOpt, &configLen, (_u8 *)(&ver));
-  ASSERT_ON_ERROR(retVal);
+  retVal = sl_DevGet(SL_DEVICE_GENERAL_CONFIGURATION, &configOpt, &configLen, (uint8_t *)(&ver));
+  ASSERT_ON_ERROR(retVal)
 
   /* Set connection policy to Auto + SmartConfig (Device's default connection policy) */
   retVal = sl_WlanPolicySet(SL_POLICY_CONNECTION, SL_CONNECTION_POLICY(1, 0, 0, 0, 1), NULL, 0);
-  ASSERT_ON_ERROR(retVal);
+  ASSERT_ON_ERROR(retVal)
 
   /* Remove all profiles */
   retVal = sl_WlanProfileDel(0xFF);
-  ASSERT_ON_ERROR(retVal);
+  ASSERT_ON_ERROR(retVal)
 
   /*
    * Device in station-mode. Disconnect previous connection if any
@@ -511,38 +525,39 @@ static _i32 configureSimpleLinkToDefaultState()
 
   /* Enable DHCP client*/
   retVal = sl_NetCfgSet(SL_IPV4_STA_P2P_CL_DHCP_ENABLE, 1, 1, &val);
-  ASSERT_ON_ERROR(retVal);
+  ASSERT_ON_ERROR(retVal)
 
   /* Disable scan */
   configOpt = SL_SCAN_POLICY(0);
   retVal = sl_WlanPolicySet(SL_POLICY_SCAN, configOpt, NULL, 0);
-  ASSERT_ON_ERROR(retVal);
+  ASSERT_ON_ERROR(retVal)
 
-  /* Set Tx power level for station mode
-     Number between 0-15, as dB offset from max power - 0 will set maximum power */
+  /*
+   *   Set Tx power level for station mode
+   *   Number between 0-15, as dB offset from max power - 0 will set maximum power
+   */
   power = 0;
-  retVal = sl_WlanSet(SL_WLAN_CFG_GENERAL_PARAM_ID, WLAN_GENERAL_PARAM_OPT_STA_TX_POWER, 1, (_u8 *)&power);
-  ASSERT_ON_ERROR(retVal);
+  retVal = sl_WlanSet(SL_WLAN_CFG_GENERAL_PARAM_ID, WLAN_GENERAL_PARAM_OPT_STA_TX_POWER, 1, (uint8_t *)&power);
+  ASSERT_ON_ERROR(retVal)
 
-  /* Set PM policy to normal */
+  /* Set Power Management (PM) policy to normal */
   retVal = sl_WlanPolicySet(SL_POLICY_PM, SL_NORMAL_POLICY, NULL, 0);
-  ASSERT_ON_ERROR(retVal);
+  ASSERT_ON_ERROR(retVal)
 
   /* Unregister mDNS services */
   retVal = sl_NetAppMDNSUnRegisterService(0, 0);
-  ASSERT_ON_ERROR(retVal);
+  ASSERT_ON_ERROR(retVal)
 
-  /* Remove  all 64 filters (8*8) */
+  /* Remove all 64 filters (8*8) */
   pal_Memset(RxFilterIdMask.FilterIdMask, 0xFF, 8);
-  retVal = sl_WlanRxFilterSet(SL_REMOVE_RX_FILTER, (_u8 *)&RxFilterIdMask,
-                              sizeof(_WlanRxFilterOperationCommandBuff_t));
-  ASSERT_ON_ERROR(retVal);
+  retVal = sl_WlanRxFilterSet(SL_REMOVE_RX_FILTER, (uint8_t *)&RxFilterIdMask, sizeof(_WlanRxFilterOperationCommandBuff_t));
+  ASSERT_ON_ERROR(retVal)
 
   retVal = sl_Stop(SL_STOP_TIMEOUT);
-  ASSERT_ON_ERROR(retVal);
+  ASSERT_ON_ERROR(retVal)
 
   retVal = initializeAppVariables();
-  ASSERT_ON_ERROR(retVal);
+  ASSERT_ON_ERROR(retVal)
 
   return retVal; /* Success */
 }
@@ -562,22 +577,22 @@ static _i32 configureSimpleLinkToDefaultState()
 
     \warning
 */
-_i32 UDP_StartClient(_u16 Port)
+int32_t UDP_StartClient(uint16_t Port)
 {
   SlSockAddrIn_t Addr;
-  _u16 idx = 0;
-  _u16 AddrSize = 0;
-  _i16 SockID = 0;
-  _i16 Status = 0;
-  _u32 LoopCount = 0;
+  uint16_t idx = 0;
+  uint16_t AddrSize = 0;
+  int16_t SockID = 0;
+  int16_t Status = 0;
+  uint32_t LoopCount = 0;
 
   for (idx = 0; idx < BUF_SIZE; idx++)
   {
-    uBuf.BsdBuf[idx] = (_u8)(idx % 10);
+    uBuf.BsdBuf[idx] = (uint8_t)(idx % 10);
   }
 
   Addr.sin_family = SL_AF_INET;
-  Addr.sin_port = sl_Htons((_u16)Port);
+  Addr.sin_port = sl_Htons((uint16_t)Port);
   Addr.sin_addr.s_addr = sl_Htonl(g_DeviceIp);
 
   AddrSize = sizeof(SlSockAddrIn_t);
@@ -586,7 +601,7 @@ _i32 UDP_StartClient(_u16 Port)
   if (SockID < 0)
   {
     CLI_Write(" [UDP Client] Create socket Error \n\r");
-    ASSERT_ON_ERROR(SockID);
+    ASSERT_ON_ERROR(SockID)
   }
 
   while (LoopCount < NO_OF_PACKETS)
@@ -601,14 +616,14 @@ _i32 UDP_StartClient(_u16 Port)
     {
       Status = sl_Close(SockID);
       CLI_Write(" [UDP Client] Data send Error \n\r");
-      ASSERT_ON_ERROR(UDP_SEND_ERROR);
+      ASSERT_ON_ERROR(UDP_SEND_ERROR)
     }
 
     LoopCount++;
   }
 
   Status = sl_Close(SockID);
-  ASSERT_ON_ERROR(Status);
+  ASSERT_ON_ERROR(Status)
 
   return SUCCESS;
 }
@@ -627,31 +642,31 @@ _i32 UDP_StartClient(_u16 Port)
 
     \warning
 */
-_i32 UDP_StartServer(_u16 Port)
+int32_t UDP_StartServer(uint16_t Port)
 {
   SlSockAddrIn_t Addr;
   SlSockAddrIn_t LocalAddr;
-  _u16 idx = 0;
-  _u16 AddrSize = 0;
-  _i16 SockID = 0;
-  _i16 Status = 0;
-  _u16 LoopCount = 0;
-  _u16 recvSize = 0;
+  uint16_t idx = 0;
+  uint16_t AddrSize = 0;
+  int16_t SockID = 0;
+  int16_t Status = 0;
+  uint16_t LoopCount = 0;
+  uint16_t recvSize = 0;
 
   for (idx = 0; idx < BUF_SIZE; idx++)
   {
-    uBuf.BsdBuf[idx] = (_u8)(idx % 10);
+    uBuf.BsdBuf[idx] = (uint8_t)(idx % 10);
   }
 
   LocalAddr.sin_family = SL_AF_INET;
-  LocalAddr.sin_port = sl_Htons((_u16)Port);
+  LocalAddr.sin_port = sl_Htons((uint16_t)Port);
   LocalAddr.sin_addr.s_addr = 0;
 
   SockID = sl_Socket(SL_AF_INET, SL_SOCK_DGRAM, 0);
   if (SockID < 0)
   {
     CLI_Write(" [UDP Server] Create socket Error \n\r");
-    ASSERT_ON_ERROR(SockID);
+    ASSERT_ON_ERROR(SockID)
   }
 
   AddrSize = sizeof(SlSockAddrIn_t);
@@ -660,7 +675,7 @@ _i32 UDP_StartServer(_u16 Port)
   {
     Status = sl_Close(SockID);
     CLI_Write(" [UDP Server] Socket address assignment Error \n\r");
-    ASSERT_ON_ERROR(Status);
+    ASSERT_ON_ERROR(Status)
   }
 
   while (LoopCount < NO_OF_PACKETS)
@@ -675,7 +690,7 @@ _i32 UDP_StartServer(_u16 Port)
       {
         sl_Close(SockID);
         CLI_Write(" [UDP Server] Data recv Error \n\r");
-        ASSERT_ON_ERROR(UDP_RECV_ERROR);
+        ASSERT_ON_ERROR(UDP_RECV_ERROR)
       }
 
       recvSize -= Status;
@@ -686,7 +701,7 @@ _i32 UDP_StartServer(_u16 Port)
   }
 
   Status = sl_Close(SockID);
-  ASSERT_ON_ERROR(Status);
+  ASSERT_ON_ERROR(Status)
 
   return SUCCESS;
 }
@@ -702,42 +717,46 @@ _i32 UDP_StartServer(_u16 Port)
 
     \warning
 */
-static _i32 P2P_StoreAndDisplayIP()
+static int32_t P2P_StoreAndDisplayIP(void)
 {
-  _i32 retVal = -1;
+  int32_t retVal = -1;
   SlNetCfgIpV4Args_t ipV4 = {0};
 
-  _u8 buff[18] = {'\0'};
-  _u8 *ccPtr = 0;
-  _u8 ccLen = 0;
-  _u8 len = sizeof(SlNetCfgIpV4Args_t);
-  _u8 dhcpIsOn = 0;
+  uint8_t buff[18] = {'\0'};
+  uint8_t *ccPtr = 0;
+  uint8_t ccLen = 0;
+  uint8_t len = sizeof(SlNetCfgIpV4Args_t);
+  uint8_t dhcpIsOn = 0;
 
   ccPtr = buff;
 
   if (IS_IP_LEASED(g_Status))
   {
     /* Device is in GO mode, Get the IP of Device */
-    retVal = sl_NetCfgGet(SL_IPV4_AP_P2P_GO_GET_INFO, &dhcpIsOn, &len, (_u8 *)&ipV4);
-    ASSERT_ON_ERROR(retVal);
+    retVal = sl_NetCfgGet(SL_IPV4_AP_P2P_GO_GET_INFO, &dhcpIsOn, &len, (uint8_t *)&ipV4);
+    ASSERT_ON_ERROR(retVal)
     g_DeviceIp = ipV4.ipV4;
   }
+  else
+  {
+    CLI_Write(" IP Address is not yet leased\n\r");
+  }
 
-  ccLen = itoa((_u8)SL_IPV4_BYTE(g_DeviceIp, 3), ccPtr);
+  ccLen = itoa((uint8_t)SL_IPV4_BYTE(g_DeviceIp, 3), ccPtr);
   ccPtr += ccLen;
   *ccPtr++ = '.';
-  ccLen = itoa((_u8)SL_IPV4_BYTE(g_DeviceIp, 2), ccPtr);
+  ccLen = itoa((uint8_t)SL_IPV4_BYTE(g_DeviceIp, 2), ccPtr);
   ccPtr += ccLen;
   *ccPtr++ = '.';
-  ccLen = itoa((_u8)SL_IPV4_BYTE(g_DeviceIp, 1), ccPtr);
+  ccLen = itoa((uint8_t)SL_IPV4_BYTE(g_DeviceIp, 1), ccPtr);
   ccPtr += ccLen;
   *ccPtr++ = '.';
-  ccLen = itoa((_u8)SL_IPV4_BYTE(g_DeviceIp, 0), ccPtr);
+  ccLen = itoa((uint8_t)SL_IPV4_BYTE(g_DeviceIp, 0), ccPtr);
   ccPtr += ccLen;
 
-  CLI_Write((_u8 *)" Device IP: ");
-  CLI_Write((_u8 *)buff);
-  CLI_Write((_u8 *)"\r\n");
+  CLI_Write(" Device IP: ");
+  CLI_Write(buff);
+  CLI_Write("\r\n");
 
   return SUCCESS;
 }
@@ -745,8 +764,8 @@ static _i32 P2P_StoreAndDisplayIP()
 /*!
     \brief Connecting to a remote p2p device
 
-    This function connects to the required p2p device (P2P_REMOTE_DEVICE).
-    This code example connects using key (KEY).
+    This function enables scanning with the configured interval, and waits for the
+    peer device to be found before connecting using the defined key.
 
     \param[in]  None
 
@@ -756,27 +775,34 @@ static _i32 P2P_StoreAndDisplayIP()
 
     \warning
 */
-static _i32 P2P_ConnectDevice()
+static int32_t P2P_ConnectToPeer(void)
 {
   SlSecParams_t secParams = {0};
-  _i32 retVal = 0;
+  int32_t retVal = 0;
+
+  CLI_Write(" Starting Scan... \n\r");
+
+  /* Enable Scan */
+  retVal = sl_WlanPolicySet(SL_POLICY_SCAN, SL_SCAN_POLICY(1), SCAN_INTERVAL, sizeof(SCAN_INTERVAL));
+  ASSERT_ON_ERROR(retVal)
+
+  while (!IS_P2P_DEV_FOUND(g_Status))
+  {
+    _SlNonOsMainLoopTask();
+  }
+
+  CLI_Write(" Found Device ");
+  CLI_Write(g_PeerDeviceName);
+  CLI_Write(". Requesting Connection... ");
+  CLI_Write("\r\n");
 
   secParams.Key = KEY;
   secParams.KeyLen = pal_Strlen(KEY);
   secParams.Type = SECURITY_TYPE;
 
-  /* wlan connect call with dummy SSID to start the connection process */
-  retVal = sl_WlanConnect(P2P_REMOTE_DEVICE, pal_Strlen(P2P_REMOTE_DEVICE), 0, &secParams, 0);
-  ASSERT_ON_ERROR(retVal);
-
-  while (!IS_P2P_NEG_REQ_RECEIVED(g_Status))
-  {
-    _SlNonOsMainLoopTask();
-  }
-
   /* Connect with the device requesting the connection */
-  retVal = sl_WlanConnect(g_p2p_dev, pal_Strlen(g_p2p_dev), 0, &secParams, 0);
-  ASSERT_ON_ERROR(retVal);
+  retVal = sl_WlanConnect(g_PeerDeviceName, pal_Strlen(g_PeerDeviceName), 0, &secParams, 0);
+  ASSERT_ON_ERROR(retVal)
 
   while ((!IS_IP_LEASED(g_Status) && !IS_IP_ACQUIRED(g_Status)) ||
          (!IS_CONNECTED(g_Status) && !IS_STA_CONNECTED(g_Status)))
@@ -786,19 +812,39 @@ static _i32 P2P_ConnectDevice()
     if (IS_CONNECTION_FAILED(g_Status))
     {
       /* Error, connection is failed */
-      CLI_Write((_u8 *)" Connection Failed\r\n");
-      ASSERT_ON_ERROR(P2P_CONNECTION_FAILED);
+      CLI_Write(" Connection Failed\r\n");
+      ASSERT_ON_ERROR(P2P_CONNECTION_FAILED)
     }
   }
 
   return SUCCESS;
 }
 
-_i32 P2P_Init(void)
+static void P2P_ChangeMyDeviceName(void)
 {
-  _u8 paramBuff[4];
-  _i32 retVal = initializeAppVariables();
-  ASSERT_ON_ERROR(retVal);
+  P2P_SetDeviceName(*g_DeviceName, GenerateDeviceName(), GENERATED_NAME_LENGTH);
+
+  CLI_Write(" Device Name set to ");
+  CLI_Write(g_DeviceName);
+  CLI_Write("\n\r");
+}
+
+static void P2P_SetDeviceName(char *deviceVariable, char *deviceName, uint32_t deviceNameLength)
+{
+  pal_Memset(deviceVariable, '\0', MAXIMAL_SSID_LENGTH + 1);
+
+  if (deviceName != NULL)
+  {
+    pal_Memcpy(deviceVariable, deviceName, deviceNameLength);
+  }
+}
+
+int32_t P2P_Init(void)
+{
+  uint8_t channels[4];
+  int32_t retVal = initializeAppVariables();
+
+  ASSERT_ON_ERROR(retVal)
 
   /* Initialize the Application Uart Interface */
   CLI_Configure();
@@ -851,9 +897,11 @@ _i32 P2P_Init(void)
     LOOP_FOREVER();
   }
 
-  /* Set Auto policy
+  /*
+   * Set Auto policy
    * any p2p option (SL_CONNECTION_POLICY(0,0,0,any_p2p,0)) can be used to
-   * connect to first available p2p device */
+   * connect to first available p2p device
+   */
   retVal = sl_WlanPolicySet(SL_POLICY_CONNECTION, SL_CONNECTION_POLICY(1, 0, 0, 0, 0), NULL, 0);
   if (retVal < 0)
   {
@@ -861,12 +909,14 @@ _i32 P2P_Init(void)
     LOOP_FOREVER();
   }
 
-  /* Set the negotiation role (SL_P2P_ROLE_NEGOTIATE).
+  /*
+   * Set the negotiation role (SL_P2P_ROLE_NEGOTIATE).
    * CC3100 will negotiate with remote device GO/client mode.
    * Other valid options are:
    *             - SL_P2P_ROLE_GROUP_OWNER
-   *             - SL_P2P_ROLE_CLIENT                           */
-  retVal = sl_WlanPolicySet(SL_POLICY_P2P, SL_P2P_POLICY(SL_P2P_ROLE_NEGOTIATE, SL_P2P_NEG_INITIATOR_ACTIVE), NULL, 0);
+   *             - SL_P2P_ROLE_CLIENT
+   */
+  retVal = sl_WlanPolicySet(SL_POLICY_P2P, SL_P2P_POLICY(SL_P2P_ROLE_NEGOTIATE, SL_P2P_NEG_INITIATOR_RAND_BACKOFF), NULL, 0);
   if (retVal < 0)
   {
     CLI_Write(" Failed to set P2P negotiation role \n\r");
@@ -874,7 +924,7 @@ _i32 P2P_Init(void)
   }
 
   /* Set P2P Device name */
-  retVal = sl_NetAppSet(SL_NET_APP_DEVICE_CONFIG_ID, NETAPP_SET_GET_DEV_CONF_OPT_DEVICE_URN, pal_Strlen(P2P_DEVICE_NAME), (_u8 *)P2P_DEVICE_NAME);
+  retVal = sl_NetAppSet(SL_NET_APP_DEVICE_CONFIG_ID, NETAPP_SET_GET_DEV_CONF_OPT_DEVICE_URN, pal_Strlen(g_DeviceName), *g_DeviceName);
   if (retVal < 0)
   {
     CLI_Write(" Failed to set P2P device name \n\r");
@@ -889,40 +939,44 @@ _i32 P2P_Init(void)
     LOOP_FOREVER();
   }
 
-  paramBuff[0] = LISTEN_CHANNEL;
-  paramBuff[1] = REGULATORY_CLASS;
-  paramBuff[2] = OPRA_CHANNEL;
-  paramBuff[3] = REGULATORY_CLASS;
+  channels[0] = LISTEN_CHANNEL;
+  channels[1] = REGULATORY_CLASS;
+  channels[2] = OPERATION_CHANNEL;
+  channels[3] = REGULATORY_CLASS;
 
   /* Set P2P Device listen and operation channel valid channels are 1/6/11 */
-  retVal = sl_WlanSet(SL_WLAN_CFG_P2P_PARAM_ID, WLAN_P2P_OPT_CHANNEL_N_REGS, 4, paramBuff);
+  retVal = sl_WlanSet(SL_WLAN_CFG_P2P_PARAM_ID, WLAN_P2P_OPT_CHANNEL_N_REGS, 4, channels);
   if (retVal < 0)
   {
     CLI_Write(" Failed to set device listen and operation channels \n\r");
     LOOP_FOREVER();
   }
 
+  CLI_Write(" Restarting Device with set configuration... \n\r");
+
   /* Restart as P2P device */
   retVal = sl_Stop(SL_STOP_TIMEOUT);
   if (retVal < 0)
   {
-    CLI_Write(" Restarting Device with set configuration... \n\r");
+    CLI_Write(" Failed to stop device \n\r");
     LOOP_FOREVER();
   }
 
   retVal = sl_Start(0, 0, 0);
   if (retVal < 0 || ROLE_P2P != retVal)
   {
-    CLI_Write(" Failed to start the device in P2P mode \n\r");
+    CLI_Write(" Failed to start the device \n\r");
     LOOP_FOREVER();
   }
 
+  P2P_ChangeMyDeviceName();
+
   CLI_Write(" Device is configured in P2P mode - Device name: ");
-  CLI_Write(P2P_DEVICE_NAME);
+  CLI_Write(g_DeviceName);
   CLI_Write("\r\n");
 
   /* Connect to configure P2P device */
-  retVal = P2P_ConnectDevice();
+  retVal = P2P_ConnectToPeer();
   if (retVal < 0)
   {
     CLI_Write(" Failed to establish connection w/ remote P2P device \n\r");
