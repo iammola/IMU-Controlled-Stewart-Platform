@@ -89,7 +89,7 @@ CPUcpsid(void)
 }
 #pragma diag_default = Pe940
 #endif
-#if defined(rvmdk) || defined(__ARMCC_VERSION)
+#if defined(rvmdk)
 __asm uint32_t
 CPUcpsid(void)
 {
@@ -101,7 +101,7 @@ CPUcpsid(void)
     bx lr
 }
 #endif
-#if defined(ccs)
+#if defined(ccs) || defined(__ARMCC_VERSION)
 uint32_t
 CPUcpsid(void)
 {
@@ -169,7 +169,7 @@ CPUprimask(void)
 }
 #pragma diag_default = Pe940
 #endif
-#if defined(rvmdk) || defined(__ARMCC_VERSION)
+#if defined(rvmdk)
 __asm uint32_t
 CPUprimask(void)
 {
@@ -180,7 +180,7 @@ CPUprimask(void)
     bx lr
 }
 #endif
-#if defined(ccs)
+#if defined(ccs) || defined(__ARMCC_VERSION)
 uint32_t
 CPUprimask(void)
 {
@@ -249,7 +249,7 @@ CPUcpsie(void)
 }
 #pragma diag_default = Pe940
 #endif
-#if defined(rvmdk) || defined(__ARMCC_VERSION)
+#if defined(rvmdk)
 __asm uint32_t
 CPUcpsie(void)
 {
@@ -261,7 +261,7 @@ CPUcpsie(void)
     bx lr
 }
 #endif
-#if defined(ccs)
+#if defined(ccs) || defined(__ARMCC_VERSION)
 uint32_t
 CPUcpsie(void)
 {
@@ -308,7 +308,7 @@ void CPUwfi(void)
     __asm("    wfi\n");
 }
 #endif
-#if defined(rvmdk) || defined(__ARMCC_VERSION)
+#if defined(rvmdk)
 __asm void
 CPUwfi(void)
 {
@@ -319,7 +319,7 @@ CPUwfi(void)
     bx lr
 }
 #endif
-#if defined(ccs)
+#if defined(ccs) || defined(__ARMCC_VERSION)
 void CPUwfi(void)
 {
     //
@@ -354,7 +354,7 @@ void CPUbasepriSet(uint32_t ui32NewBasepri)
     __asm("    msr     BASEPRI, r0\n");
 }
 #endif
-#if defined(rvmdk) || defined(__ARMCC_VERSION)
+#if defined(rvmdk)
 __asm void
 CPUbasepriSet(uint32_t ui32NewBasepri)
 {
@@ -365,7 +365,7 @@ CPUbasepriSet(uint32_t ui32NewBasepri)
     bx lr
 }
 #endif
-#if defined(ccs)
+#if defined(ccs) || defined(__ARMCC_VERSION)
 void CPUbasepriSet(uint32_t ui32NewBasepri)
 {
     //
@@ -420,7 +420,7 @@ CPUbasepriGet(void)
 }
 #pragma diag_default = Pe940
 #endif
-#if defined(rvmdk) || defined(__ARMCC_VERSION)
+#if defined(rvmdk)
 __asm uint32_t
 CPUbasepriGet(void)
 {
@@ -431,7 +431,7 @@ CPUbasepriGet(void)
     bx lr
 }
 #endif
-#if defined(ccs)
+#if defined(ccs) || defined(__ARMCC_VERSION)
 uint32_t
 CPUbasepriGet(void)
 {

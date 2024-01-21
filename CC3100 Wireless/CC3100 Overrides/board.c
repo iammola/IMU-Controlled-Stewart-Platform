@@ -123,7 +123,7 @@ void Delay(unsigned long interval)
     ROM_SysCtlDelay((ROM_SysCtlClockGet() / (3 * 1000)) * interval);
 }
 
-void GPIOB_intHandler()
+void GPIOB_Handler()
 {
     unsigned long intStatus;
     intStatus = GPIOIntStatus(GPIO_PORTB_BASE, 0);
@@ -140,7 +140,7 @@ void GPIOB_intHandler()
     }
 }
 
-void UART1_intHandler()
+void UART1_Handler()
 {
     unsigned long intStatus;
     intStatus = UARTIntStatus(UART1_BASE, 0);
