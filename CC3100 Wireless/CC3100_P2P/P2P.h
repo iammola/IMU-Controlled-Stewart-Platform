@@ -43,7 +43,7 @@
  */
 
 #include "sl_common.h"
-#include "simplelink/simplelink.h"
+#include "simplelink.h"
 
 #define SL_STOP_TIMEOUT 0xFF
 

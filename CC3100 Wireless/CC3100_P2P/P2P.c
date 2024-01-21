@@ -43,7 +43,7 @@
  */
 
 #include "sl_common.h"
-#include "simplelink/simplelink.h"
+#include "simplelink.h"
 
 #include "P2P.h"
 
@@ -55,7 +55,7 @@
 #define DEVICE_TYPE "1-0050F204-1"
 
 #define SECURITY_TYPE SL_SEC_TYPE_P2P_PBC
-#define KEY ""
+#define KEY "YOZI"
 
 #define LISTEN_CHANNEL 11
 #define OPRA_CHANNEL 6
@@ -453,11 +453,13 @@ static _i32 configureSimpleLinkToDefaultState()
   {
     if (ROLE_AP == mode)
     {
+      CLI_Write(" Waiting for IP Address to be Acquired \n\r");
       /* If the device is in AP mode, we need to wait for this event before doing anything */
       while (!IS_IP_ACQUIRED(g_Status))
       {
         _SlNonOsMainLoopTask();
       }
+      CLI_Write(" IP Address Acquired \n\r");
     }
 
     /* Switch to STA role and restart */

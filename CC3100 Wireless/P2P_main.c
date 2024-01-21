@@ -9,9 +9,13 @@ I discovered this after searching the whole project and discovering the variable
 because of an #ifndef condition, I used other TM4C123 examples from the Peripheral SDK and search for the condition variables
 and found them in the *.uvproj files. That is defined in Keil. I couldn't find any documentation in the SDK talking about this
 and assume it's an advantage of using CCS/Eclipse to build the project
+
+"_USE_CLI_" is also required.
 */
 
 #include "CC3100_P2P/P2P.h"
+
+#include "PLL/PLL.h"
 
 /*
  * Application's entry point
@@ -20,10 +24,7 @@ int main(void)
 {
   _i32 retVal = -1;
 
-  /* Stop WDT and initialize the system-clock of the MCU
-     These functions needs to be implemented in PAL */
-  stopWDT();
-  initClk();
+  PLL_Init();
 
   retVal = P2P_Init();
   if (retVal < 0)
