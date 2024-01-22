@@ -34,11 +34,11 @@ int main(void)
   }
 
   /*After calling this function, you can start sending data to CC3100 IP address on PORT_NUM */
-  // retVal = UDP_StartServer(PORT_NUM);
-  // if (retVal < 0)
-  //   CLI_Write(" Failed to start UDP  server \n\r");
-  // else
-  //   CLI_Write(" UDP  client connected successfully \n\r");
+  retVal = UDP_StartServer(PORT_NUM);
+  if (retVal < 0)
+    CLI_Write(" Failed to start UDP  server \n\r");
+  else
+    CLI_Write(" UDP  client connected successfully \n\r");
 
   /* Stop the CC3100 device */
   retVal = sl_Stop(SL_STOP_TIMEOUT);
