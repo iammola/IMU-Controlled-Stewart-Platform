@@ -50,6 +50,8 @@
 /* Port to be used by server*/
 #define PORT_NUM 5001
 
+void NumberToCLI(int16_t num);
+
 _i32 P2P_Init(void);
 
 /*!

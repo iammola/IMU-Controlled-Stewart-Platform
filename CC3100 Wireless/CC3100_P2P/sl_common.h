@@ -49,18 +49,24 @@ extern "C"
 #endif
 
 /**/
-#define LOOP_FOREVER() \
-    {                  \
-        while (1)      \
-            ;          \
+#define LOOP_FOREVER(code)                                               \
+    {                                                                    \
+        CLI_Write((unsigned char *)" Looping Forever because of code "); \
+        NumberToCLI(code);                                               \
+        CLI_Write((unsigned char *)". \n\r");                            \
+        while (1)                                                        \
+            ;                                                            \
     }
 
 #define ASSERT_ON_ERROR(error_code)                                   \
     {                                                                 \
         /* Handling the error-codes is specific to the application */ \
         if (error_code < 0)                                           \
-            return error_code;                                        \
-        /* else, continue w/ execution */                             \
+        {                                                             \
+            CLI_Write((unsigned char *)" Error occurred. Code ");     \
+            NumberToCLI(error_code);                                  \
+            CLI_Write((unsigned char *)"\n\r");                       \
+        } /* else, continue w/ execution */                           \
     }
 
 #define pal_Memset(x, y, z) memset((void *)x, y, z)
