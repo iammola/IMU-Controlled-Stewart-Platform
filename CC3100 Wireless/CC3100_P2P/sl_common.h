@@ -133,10 +133,6 @@ extern "C"
                                           *      1 in a 'status_variable', connection requested by remote wifi-direct device
                                           *      0 in a 'status_variable',
                                           */
-        STATUS_BIT_P2P_DEV_FOUND,        /* If this bit is:
-                                          *      1 in a 'status_variable', device found after scan
-                                          *      0 in a 'status_variable',
-                                          */
         STATUS_BIT_SMARTCONFIG_DONE,     /* If this bit is:
                                           *      1 in a 'status_variable', smartconfig completed
                                           *      0 in a 'status_variable', smartconfig event couldn't complete
@@ -165,8 +161,6 @@ extern "C"
                                                              STATUS_BIT_CONNECTION_FAILED)
 #define IS_P2P_NEG_REQ_RECEIVED(status_variable) GET_STATUS_BIT(status_variable, \
                                                                 STATUS_BIT_P2P_NEG_REQ_RECEIVED)
-#define IS_P2P_DEV_FOUND(status_variable) GET_STATUS_BIT(status_variable, \
-                                                         STATUS_BIT_P2P_DEV_FOUND)
 #define IS_SMARTCONFIG_DONE(status_variable) GET_STATUS_BIT(status_variable, \
                                                             STATUS_BIT_SMARTCONFIG_DONE)
 #define IS_SMARTCONFIG_STOPPED(status_variable) GET_STATUS_BIT(status_variable, \

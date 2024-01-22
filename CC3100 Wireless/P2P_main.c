@@ -29,12 +29,12 @@ int main(void)
   retVal = P2P_Init();
   if (retVal < 0)
   {
-    CLI_Write(" Failed to initialize device \n\r");
-    LOOP_FOREVER();
+    CLI_Write((unsigned char *)" Failed to initialize device \n\r");
+    LOOP_FOREVER()
   }
 
   /*After calling this function, you can start sending data to CC3100 IP address on PORT_NUM */
-  // retVal = UDP_StartServer(PORT_NUM);
+  // retVal = UDP_ReadData(PORT_NUM);
   // if (retVal < 0)
   //   CLI_Write(" Failed to start UDP  server \n\r");
   // else
@@ -44,8 +44,8 @@ int main(void)
   retVal = sl_Stop(SL_STOP_TIMEOUT);
   if (retVal < 0)
   {
-    CLI_Write(" Failed to stop device \n\r");
-    LOOP_FOREVER();
+    CLI_Write((unsigned char *)" Failed to stop device \n\r");
+    LOOP_FOREVER()
   }
 
   return 0;
