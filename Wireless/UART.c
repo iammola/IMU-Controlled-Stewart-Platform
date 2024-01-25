@@ -29,10 +29,10 @@ static void UART_BRDConfigure(uint8_t SYS_CLOCK, bool useHighSpeed, uint32_t bau
   uint32_t fractionalPart = (BRD & FRACTIONAL_BRD_MASK) + 0.5;
 
   // Write calculated BRD integer part
-  UART0_IBRD_R = integerPart;
+  UART4_IBRD_R = integerPart;
 
   // Write calculated fractional part
-  UART0_FBRD_R = fractionalPart;
+  UART4_FBRD_R = fractionalPart;
 }
 
 static void UART_LCRHConfigure(uint8_t wordLength, bool useTwoStopBits, bool isEvenParity)
@@ -65,7 +65,7 @@ static void UART_LCRHConfigure(uint8_t wordLength, bool useTwoStopBits, bool isE
   if (useTwoStopBits)
     result |= UART_LCRH_STP2;
 
-  UART0_LCRH_R = result;
+  UART4_LCRH_R = result;
 }
 
 static void UART_Enable(bool useHighSpeed)
@@ -76,20 +76,20 @@ static void UART_Enable(bool useHighSpeed)
   if (!useHighSpeed)
     result |= UART_CTL_HSE;
 
-  UART0_CTL_R |= result;
+  UART4_CTL_R |= result;
 }
 
 static void UART_Disable(void)
 {
   // Wait for transmission to finish
-  while (UART0_FR_R & UART_FR_BUSY)
+  while (UART4_FR_R & UART_FR_BUSY)
     ;
 
   // Clear the FIFO
-  UART0_LCRH_R &= ~UART_LCRH_FEN;
+  UART4_LCRH_R &= ~UART_LCRH_FEN;
 
   // Disable the UART
-  UART0_CTL_R &= ~UART_CTL_UARTEN;
+  UART4_CTL_R &= ~UART_CTL_UARTEN;
 }
 
 static void UART_InterruptEnable(uint8_t RXFIFOLevel)
@@ -97,10 +97,10 @@ static void UART_InterruptEnable(uint8_t RXFIFOLevel)
   uint8_t FIFOInterruptLevel = 0;
 
   // Clear RX interrupts
-  UART0_ICR_R = UART_IM_RXIM;
+  UART4_ICR_R = UART_IM_RXIM;
 
   // Allow Receive interrupts on to be handled by controller
-  UART0_IM_R = UART_IM_RXIM;
+  UART4_IM_R = UART_IM_RXIM;
 
   // Set RX Interrupt Levels
   switch (RXFIFOLevel)
@@ -144,9 +144,9 @@ static void UART_InterruptEnable(uint8_t RXFIFOLevel)
     }
   */
 
-  UART0_IFLS_R = FIFOInterruptLevel;
+  UART4_IFLS_R = FIFOInterruptLevel;
 
-  // Enable Interrupt 5 for UART 0
+  // Enable Interrupt 5 for UART 4
   NVIC_EN0_R |= NVIC_EN0_INT5;
 
   // Set Priority to 5
@@ -156,23 +156,23 @@ static void UART_InterruptEnable(uint8_t RXFIFOLevel)
 // TODO: Support dynamically choosing port
 void UART_Init(uint8_t SYS_CLOCK, bool useHighSpeed, uint32_t baudRate, uint8_t wordLength, uint8_t RXFIFOLevel, bool useTwoStopBits, bool isEvenParity)
 {
-  // Enable Port A's clock
-  SYSCTL_RCGCGPIO_R |= SYSCTL_RCGC2_GPIOA;
+  // Enable Port C's clock
+  SYSCTL_RCGCGPIO_R |= SYSCTL_RCGC2_GPIOC;
 
   // Enable UART module 0's clock
-  SYSCTL_RCGCUART_R |= SYSCTL_RCGC1_UART0;
+  SYSCTL_RCGCUART_R |= SYSCTL_RCGCUART_R4;
 
-  // Enable Alternate functions in PINS 0 and 1.
-  GPIO_PORTA_AFSEL_R |= (1 << 0) | (1 << 1);
+  // Enable Alternate functions in PINS 4 and 5.
+  GPIO_PORTC_AFSEL_R |= (1 << 4) | (1 << 5);
 
   // Enable UART Tx and Rx functions by masking the pin peripherals byte and setting the UART value
-  GPIO_PORTA_PCTL_R = (GPIO_PORTA_PCTL_R & ~(GPIO_PCTL_PA0_M | GPIO_PCTL_PA1_M)) | GPIO_PCTL_PA0_U0RX | GPIO_PCTL_PA1_U0TX;
+  GPIO_PORTC_PCTL_R = (GPIO_PORTC_PCTL_R & ~(GPIO_PCTL_PC4_M | GPIO_PCTL_PC5_M)) | GPIO_PCTL_PC4_U4RX | GPIO_PCTL_PC5_U4TX;
 
-  // Configure Pin 0 (UART0Rx) as an input and Pin 1 (UART0Tx) as an output
-  GPIO_PORTA_DIR_R = (GPIO_PORTA_DIR_R & ~0x3) | (1 << 1);
+  // Configure Pin 0 (UART4Rx) as an input and Pin 1 (UART4Tx) as an output
+  GPIO_PORTC_DIR_R = (GPIO_PORTC_DIR_R & ~0x3) | (1 << 1);
 
   // Enable Digital on PINS 0 and 1.
-  GPIO_PORTA_DEN_R |= 0x3;
+  GPIO_PORTC_DEN_R |= 0x3;
 
   // Disable UART
   UART_Disable();
@@ -183,7 +183,7 @@ void UART_Init(uint8_t SYS_CLOCK, bool useHighSpeed, uint32_t baudRate, uint8_t 
   // Configure (Line Control) LCRH
   UART_LCRHConfigure(wordLength, useTwoStopBits, isEvenParity);
 
-  // Enable UART 0 Interrupts
+  // Enable UART 4 Interrupts
   UART_InterruptEnable(RXFIFOLevel);
 
   // Enable UART
@@ -195,13 +195,13 @@ void UART_TransmitByte(uint32_t data, uint8_t byteCount)
   for (uint8_t byteIndex = 0; byteIndex < byteCount; byteIndex++)
   {
     // Prevent Data from being set while the transmit FIFO is full
-    while (UART0_FR_R & UART_FR_TXFF)
+    while (UART4_FR_R & UART_FR_TXFF)
       ;
 
     // Set data to transmit
-    UART0_DR_R = (data >> (8 * byteIndex)) & BYTE_MASK;
+    UART4_DR_R = (data >> (8 * byteIndex)) & BYTE_MASK;
 
-    UART0_CTL_R |= UART_CTL_TXE;
+    UART4_CTL_R |= UART_CTL_TXE;
   }
 }
 
@@ -217,13 +217,13 @@ uint32_t UART_ReceiveByte(uint8_t byteCount)
     wait = 0;
 
     // Wait for the receive FIFO to not be empty
-    while (UART0_FR_R & UART_FR_RXFE)
+    while (UART4_FR_R & UART_FR_RXFE)
     {
       if (++wait > MAX_WAIT)
         return data;
     }
 
-    data |= (UART0_DR_R << (8 * byteIndex));
+    data |= (UART4_DR_R << (8 * byteIndex));
   }
 
   return data;
