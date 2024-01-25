@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "UART.h"
 #include "tm4c123gh6pm.h"
 
 #define DP 4
@@ -94,11 +95,11 @@ static void UART_Disable(void)
 
 static void UART_InterruptEnable(void)
 {
-  // Clear RX and TX interrupts
-  UART0_ICR_R = UART_IM_TXIM | UART_IM_RXIM;
+  // Clear RX interrupts
+  UART0_ICR_R = UART_IM_RXIM;
 
-  // Allow interrupts on Transmit and Receive to be received
-  UART0_IM_R = UART_IM_TXIM | UART_IM_RXIM;
+  // Allow Receive interrupts on to be handled by controller
+  UART0_IM_R = UART_IM_RXIM;
 
   // Enable Interrupt 5 for UART 0
   NVIC_EN0_R |= NVIC_EN0_INT5;
@@ -107,7 +108,9 @@ static void UART_InterruptEnable(void)
   NVIC_PRI1_R = (NVIC_PRI1_R & ~(NVIC_PRI1_INT5_M)) | (INTERRUPT_PRIORITY << NVIC_PRI1_INT5_S);
 }
 
-static void UART0_Handler(void) {}
+static void UART0_Handler(void) {
+
+}
 
 // TODO: Support dynamically choosing port
 void UART_Init(uint8_t SYS_CLOCK, bool useHighSpeed, uint32_t baudRate, uint8_t wordLength, bool useTwoStopBits, bool isEvenParity, bool enableFIFO)
@@ -143,7 +146,7 @@ void UART_Init(uint8_t SYS_CLOCK, bool useHighSpeed, uint32_t baudRate, uint8_t 
   UART_InterruptEnable();
 
   // Enable UART
-  UART_Enable();
+  UART_Enable(useHighSpeed);
 }
 
 void UART_Transmit(void) {}
