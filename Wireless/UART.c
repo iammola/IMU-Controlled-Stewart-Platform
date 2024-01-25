@@ -4,7 +4,6 @@
 #include "UART.h"
 #include "tm4c123gh6pm.h"
 
-#define INTERRUPT_PRIORITY 5
 
 #define FRACTIONAL_BRD_MULTIPLIER 6 // 2^6= 6 or LSH 4 times
 #define FRACTIONAL_BRD_MASK (1 << FRACTIONAL_BRD_MULTIPLIER) - 1
@@ -150,7 +149,7 @@ static void UART_InterruptEnable(uint8_t RXFIFOLevel)
   NVIC_EN0_R |= NVIC_EN0_INT5;
 
   // Set Priority to 5
-  NVIC_PRI1_R = (NVIC_PRI1_R & ~(NVIC_PRI1_INT5_M)) | (INTERRUPT_PRIORITY << NVIC_PRI1_INT5_S);
+  NVIC_PRI1_R = (NVIC_PRI1_R & ~(NVIC_PRI1_INT5_M)) | (UART_INTERRUPT_PRIORITY << NVIC_PRI1_INT5_S);
 }
 
 // TODO: Support dynamically choosing port
