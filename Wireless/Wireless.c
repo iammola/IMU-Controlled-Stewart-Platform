@@ -12,8 +12,8 @@ int main(void)
 			16,
 			false,
 			9600,
-			3,
-			false,
+			3, // UART_LCRH_WLEN_8
+			1, // UART_IFLS_RX2_8
 			true,
 			true);
 }
