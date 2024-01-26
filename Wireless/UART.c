@@ -4,14 +4,8 @@
 #include "UART.h"
 #include "tm4c123gh6pm.h"
 
-
-#define FRACTIONAL_BRD_MULTIPLIER 6 // 2^6= 6 or LSH 4 times
+#define FRACTIONAL_BRD_MULTIPLIER 6 // 2^6 = 64 or LSH 6 times
 #define FRACTIONAL_BRD_MASK (1 << FRACTIONAL_BRD_MULTIPLIER) - 1
-
-// All ones in a byte
-#define BYTE_MASK (1 << 8) - 1
-
-#define MAX_WAIT 1e6
 
 // https://stackoverflow.com/questions/10067510/fixed-point-arithmetic-in-c-programming
 static void UART_BRDConfigure(uint8_t SYS_CLOCK, bool useHighSpeed, uint32_t baudRate)
@@ -69,7 +63,7 @@ static void UART_LCRHConfigure(uint8_t wordLength, bool useTwoStopBits, bool isE
 
 static void UART_Enable(bool useHighSpeed)
 {
-  uint8_t result = UART_CTL_UARTEN;
+  uint32_t result = UART_CTL_UARTEN | UART_CTL_TXE | UART_CTL_RXE;
 
   // Enable High-Speed Mode
   if (!useHighSpeed)
@@ -93,8 +87,6 @@ static void UART_Disable(void)
 
 static void UART_InterruptEnable(uint8_t RXFIFOLevel)
 {
-  uint8_t FIFOInterruptLevel = 0;
-
   // Clear RX interrupts
   UART4_ICR_R = UART_IM_RXIM;
 
@@ -105,48 +97,27 @@ static void UART_InterruptEnable(uint8_t RXFIFOLevel)
   switch (RXFIFOLevel)
   {
   case 4:
-    FIFOInterruptLevel |= UART_IFLS_RX7_8;
+    RXFIFOLevel = UART_IFLS_RX7_8;
     break;
   case 3:
-    FIFOInterruptLevel |= UART_IFLS_RX6_8;
+    RXFIFOLevel = UART_IFLS_RX6_8;
     break;
   case 1:
-    FIFOInterruptLevel |= UART_IFLS_RX2_8;
+    RXFIFOLevel = UART_IFLS_RX2_8;
     break;
   case 0:
-    FIFOInterruptLevel |= UART_IFLS_RX1_8;
+    RXFIFOLevel = UART_IFLS_RX1_8;
     break;
   default:
-    FIFOInterruptLevel |= UART_IFLS_RX4_8;
+    RXFIFOLevel = UART_IFLS_RX4_8;
     break;
   }
 
-  /*
-    // Set TX Interrupt Levels
-    switch (TXFIFOLevel)
-    {
-    case 4:
-      FIFOInterruptLevel |= UART_IFLS_TX1_8;
-      break;
-    case 3:
-      FIFOInterruptLevel |= UART_IFLS_TX4_8;
-      break;
-    case 1:
-      FIFOInterruptLevel |= UART_IFLS_TX6_8;
-      break;
-    case 0:
-      FIFOInterruptLevel |= UART_IFLS_TX7_8;
-      break;
-    default:
-      FIFOInterruptLevel |= UART_IFLS_TX4_8;
-      break;
-    }
-  */
+  // Set RX FIFO level
+  UART4_IFLS_R = (UART4_IFLS_R & ~UART_IFLS_RX_M) | RXFIFOLevel;
 
-  UART4_IFLS_R = FIFOInterruptLevel;
-
-  // Enable Interrupt 5 for UART 4
-  NVIC_EN0_R |= NVIC_EN0_INT5;
+  // Enable Interrupt 60 (would be 60 - 32 = 28 on EN1) for UART 4
+  NVIC_EN1_R |= NVIC_EN0_INT28;
 
   // Set Priority to 5
   NVIC_PRI1_R = (NVIC_PRI1_R & ~(NVIC_PRI1_INT5_M)) | (UART_INTERRUPT_PRIORITY << NVIC_PRI1_INT5_S);
@@ -167,11 +138,11 @@ void UART_Init(uint8_t SYS_CLOCK, bool useHighSpeed, uint32_t baudRate, uint8_t 
   // Enable UART Tx and Rx functions by masking the pin peripherals byte and setting the UART value
   GPIO_PORTC_PCTL_R = (GPIO_PORTC_PCTL_R & ~(GPIO_PCTL_PC4_M | GPIO_PCTL_PC5_M)) | GPIO_PCTL_PC4_U4RX | GPIO_PCTL_PC5_U4TX;
 
-  // Configure Pin 0 (UART4Rx) as an input and Pin 1 (UART4Tx) as an output
-  GPIO_PORTC_DIR_R = (GPIO_PORTC_DIR_R & ~0x3) | (1 << 1);
+  // Configure Pin 4 (UART4Rx) as an input and Pin 5 (UART4Tx) as an output
+  GPIO_PORTC_DIR_R = (GPIO_PORTC_DIR_R & ~0x30) | (1 << 5);
 
-  // Enable Digital on PINS 0 and 1.
-  GPIO_PORTC_DEN_R |= 0x3;
+  // Enable Digital on PINS 4 and 5.
+  GPIO_PORTC_DEN_R |= (1 << 4) | (1 << 5);
 
   // Disable UART
   UART_Disable();
@@ -189,41 +160,44 @@ void UART_Init(uint8_t SYS_CLOCK, bool useHighSpeed, uint32_t baudRate, uint8_t 
   UART_Enable(useHighSpeed);
 }
 
-void UART_TransmitByte(uint32_t data, uint8_t byteCount)
+void UART_Transmit(uint32_t data, uint8_t byteCount)
 {
-  for (uint8_t byteIndex = 0; byteIndex < byteCount; byteIndex++)
+  uint8_t byteIndex = 0;
+
+  do
   {
     // Prevent Data from being set while the transmit FIFO is full
     while (UART4_FR_R & UART_FR_TXFF)
       ;
 
-    // Set data to transmit
-    UART4_DR_R = (data >> (8 * byteIndex)) & BYTE_MASK;
+    // Left shift data by 8 once each time
+    if (byteIndex > 0)
+      data >>= 8;
 
-    UART4_CTL_R |= UART_CTL_TXE;
-  }
+    // Only the 8 LSB if shifted are taken
+    UART4_DR_R = data;
+
+    // Increment index tracker
+    byteIndex++;
+  } while (byteIndex < byteCount && byteIndex < 3);
 }
 
-uint32_t UART_ReceiveByte(uint8_t byteCount)
+uint32_t UART_Receive(uint8_t byteCount)
 {
   uint32_t data = 0;
   uint8_t byteIndex = 0;
 
-  uint32_t wait = 0;
-
-  for (byteIndex = 0; byteIndex < byteCount; byteIndex++)
+  do
   {
-    wait = 0;
-
     // Wait for the receive FIFO to not be empty
     while (UART4_FR_R & UART_FR_RXFE)
-    {
-      if (++wait > MAX_WAIT)
-        return data;
-    }
+      ;
 
     data |= (UART4_DR_R << (8 * byteIndex));
-  }
+
+    // Increment index tracker
+    byteIndex++;
+  } while (byteIndex < byteCount && byteIndex < 3);
 
   return data;
 }
