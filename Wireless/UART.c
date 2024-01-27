@@ -87,11 +87,8 @@ static void UART_Disable(void)
 
 static void UART_InterruptEnable(uint8_t RXFIFOLevel)
 {
-  // Clear RX interrupts
-  UART4_ICR_R = UART_IM_RXIM;
-
   // Allow Receive interrupts on to be handled by controller
-  UART4_IM_R = UART_IM_RXIM;
+  UART4_IM_R = UART_IM_RXIM | UART_IM_RTIM;
 
   // Set RX Interrupt Levels
   switch (RXFIFOLevel)
@@ -160,7 +157,7 @@ void UART_Init(uint8_t SYS_CLOCK, bool useHighSpeed, uint32_t baudRate, uint8_t 
   UART_Enable(useHighSpeed);
 }
 
-void UART_Transmit(uint32_t data, uint8_t byteCount)
+void UART_Transmit(uint8_t *data, uint8_t byteCount)
 {
   uint8_t byteIndex = 0;
 
@@ -170,34 +167,28 @@ void UART_Transmit(uint32_t data, uint8_t byteCount)
     while (UART4_FR_R & UART_FR_TXFF)
       ;
 
-    // Left shift data by 8 once each time
-    if (byteIndex > 0)
-      data >>= 8;
-
-    // Only the 8 LSB if shifted are taken
-    UART4_DR_R = data;
+    // Transmit data byte
+    UART4_DR_R = data[byteIndex];
 
     // Increment index tracker
     byteIndex++;
-  } while (byteIndex < byteCount && byteIndex < 3);
+  } while (byteIndex < byteCount);
 }
 
-uint32_t UART_Receive(uint8_t byteCount)
+void UART_Receive(uint8_t byteCount, uint8_t *dest)
 {
-  uint32_t data = 0;
   uint8_t byteIndex = 0;
 
   do
   {
-    // Wait for the receive FIFO to not be empty
+    // Wait FOR Receive FIFO to have data
     while (UART4_FR_R & UART_FR_RXFE)
       ;
 
-    data |= (UART4_DR_R << (8 * byteIndex));
+    // Read data
+    dest[byteIndex] = UART4_DR_R;
 
     // Increment index tracker
     byteIndex++;
-  } while (byteIndex < byteCount && byteIndex < 3);
-
-  return data;
+  } while (byteIndex < byteCount);
 }

@@ -5,11 +5,14 @@
 
 #include "UART.h"
 
-uint8_t myIdx = 0;
-int8_t peerIdx = 0;
+uint8_t transferBuffer[1];
+uint8_t receiveBuffer[1];
+
+uint8_t *myIdx = &receiveBuffer[0];
+uint8_t *peerIdx = &transferBuffer[0];
 
 static void PortF_Init(void);
-static void SetLED(uint32_t bit);
+static void SetLED(void);
 
 static void PortF_Init(void)
 {
@@ -18,7 +21,7 @@ static void PortF_Init(void)
 	delay = SYSCTL_RCGCGPIO_R;							 // allow time for clock to start
 
 	GPIO_PORTF_LOCK_R = GPIO_LOCK_KEY; // unlock GPIO Port F
-	GPIO_PORTF_CR_R = 0x0F;						 // allow changes to PF0-4
+	GPIO_PORTF_CR_R = 0x0F;						 // allow changes to PF0-3
 
 	// enable PF0 (SW2) as inputs and PF1-3 (RBG) as outputs
 	GPIO_PORTF_DIR_R = (GPIO_PORTF_DIR_R & ~0x0F) | 0x0E;
@@ -38,22 +41,24 @@ static void PortF_Init(void)
 	// Enable Interrupt 30 for GPIO Port F
 	NVIC_EN0_R |= NVIC_EN0_INT30;
 
-	// Set Priority to one less than UART's
-	NVIC_PRI7_R = (NVIC_PRI7_R & ~((unsigned)NVIC_PRI7_INT30_M)) | ((UART_INTERRUPT_PRIORITY - 1) << NVIC_PRI7_INT30_S);
+	// Set Priority to one more than UART's for less importance
+	NVIC_PRI7_R = (NVIC_PRI7_R & ~NVIC_PRI7_INT30_M) | ((UART_INTERRUPT_PRIORITY + 1) << NVIC_PRI7_INT30_S);
 }
 
-static void SetLED(uint32_t bit)
+static void SetLED(void)
 {
 	// Turn RED on, then BLUE, then GREEN, then OFF.
-	GPIO_PORTF_DATA_R = 0x0E & (1 << bit);
+	GPIO_PORTF_DATA_R = 0x0E & (1 << *myIdx);
 }
 
 void UART4_Handler(void)
 {
 	if (UART4_MIS_R & UART_MIS_RXMIS)
 	{
+		UART_Receive(1, receiveBuffer);
+		SetLED();
+
 		UART4_ICR_R |= UART_ICR_RXIC;
-		SetLED(UART_Receive(1));
 	}
 }
 
@@ -67,12 +72,14 @@ void GPIOF_Handler(void)
 		// Clear the interrupt
 		GPIO_PORTF_ICR_R |= 0x01;
 
-		// Transmit index
-		UART_Transmit(++peerIdx, 1);
-
 		// Update and keep index in bounds
-		if (peerIdx > 3)
-			peerIdx = -1;
+		if (*peerIdx == 3)
+			*peerIdx = 0;
+		else
+			*peerIdx = *peerIdx + 1;
+
+		// Transmit index
+		UART_Transmit(transferBuffer, 1);
 	}
 }
 
