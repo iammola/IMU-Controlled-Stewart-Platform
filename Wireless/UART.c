@@ -7,7 +7,21 @@
 #define FRACTIONAL_BRD_MULTIPLIER 6 // 2^6 = 64 or LSH 6 times
 #define FRACTIONAL_BRD_MASK (1 << FRACTIONAL_BRD_MULTIPLIER) - 1
 
+static void UART_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate);
+static void UART_LCRHConfigure(uint8_t wordLength, bool useTwoStopBits, bool useEvenParity);
+static void UART_Enable(void);
+static void UART_Disable(void);
+static void UART_InterruptEnable(uint8_t RXFIFOLevel);
+
+// ------------ UART_BRDConfigure --------------------
+// Uses Fixed Point Arithmetic to calculate the Integer and Fractional Parts of the
+// Baud-Rate divisor required to work with the desired baud rate. It automatically
+// chooses if High-Speed Mode should be enabled depending on the parameters provided
 // https://stackoverflow.com/questions/10067510/fixed-point-arithmetic-in-c-programming
+//
+// Input: SYS_CLOCK - The clock frequency of the system
+//        baudRate - The desired baud rate for UART transmission
+// Output: None
 static void UART_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate)
 {
   // High speed mode must be used if the BAUD rate would run faster than the system clock
@@ -41,7 +55,13 @@ static void UART_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate)
     UART4_CTL_R &= ~UART_CTL_HSE;
 }
 
-static void UART_LCRHConfigure(uint8_t wordLength, bool useTwoStopBits, bool isEvenParity)
+// --------- UART_LCRHConfigure -------------
+// Input: wordLength - The number of bits in the data word
+//                     3 for 8 bits, 2 for 7 bits, 1 for 6 bits, and otherwise for 5 bits
+//        useTwoStopBits - For two stop bits to be used at the end of transmission
+//        useEvenParity - Specifies if even or odd parity should be used
+// Output: None
+static void UART_LCRHConfigure(uint8_t wordLength, bool useTwoStopBits, bool useEvenParity)
 {
   // Enable FIFO buffers and Parity
   uint32_t result = UART_LCRH_FEN | UART_LCRH_PEN;
@@ -64,7 +84,7 @@ static void UART_LCRHConfigure(uint8_t wordLength, bool useTwoStopBits, bool isE
   }
 
   // Enable Even Parity
-  if (isEvenParity)
+  if (useEvenParity)
     result |= UART_LCRH_EPS;
 
   // Enable Two Stop Bits
@@ -74,12 +94,20 @@ static void UART_LCRHConfigure(uint8_t wordLength, bool useTwoStopBits, bool isE
   UART4_LCRH_R = result;
 }
 
+// -------- UART_Enable -------
+// Enables the UART, Transmit and Receive operations
+// Input: None
+// Output: None
 static void UART_Enable(void)
 {
-  // Enable UART, Transmit and Receive operations
   UART4_CTL_R |= UART_CTL_UARTEN | UART_CTL_TXE | UART_CTL_RXE;
 }
 
+// -------- UART_Disable -------
+// Waits for the UART to be IDLE before clearing the FIFO by disabling it and
+// then disables the UART, Transmit and Receive operations
+// Input: None
+// Output: None
 static void UART_Disable(void)
 {
   // Wait for transmission to finish
@@ -93,6 +121,11 @@ static void UART_Disable(void)
   UART4_CTL_R &= ~(UART_CTL_UARTEN | UART_CTL_TXE | UART_CTL_RXE);
 }
 
+// -------- UART_Disable -------
+// Enables the UART's Interrupt handler for the Receive FIFO Level and Timeout events for software flow control,
+// also setting the Priority to 5
+// Input: RXFIFOLevel - The desired level to trigger the Receive FIFO interrupt on
+// Output: None
 static void UART_InterruptEnable(uint8_t RXFIFOLevel)
 {
   // Allow Receive FIFO and Timeout interrupts on to be handled by controller
@@ -128,11 +161,20 @@ static void UART_InterruptEnable(uint8_t RXFIFOLevel)
   NVIC_PRI15_R = (NVIC_PRI15_R & ~NVIC_PRI15_INTA_M) | (UART_INTERRUPT_PRIORITY << NVIC_PRI15_INTA_S);
 }
 
-// TODO: Support dynamically choosing port
-void UART_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t RXFIFOLevel, bool useTwoStopBits, bool isEvenParity)
+// ----------- UART_Init ------------
+// Initializes the UART 4 module in Port C using the specified options
+// Input: SYS_CLOCK - System Clock
+//        baudRate - The desired baud rate for UART transmission
+//        wordLength - The number of bits in the data word
+//                     3 for 8 bits, 2 for 7 bits, 1 for 6 bits, and otherwise for 5 bits
+//        RXFIFOLevel - The desired level to trigger the Receive FIFO interrupt on
+//        useTwoStopBits - For two stop bits to be used at the end of transmission
+//        useEvenParity - Specifies if even or odd parity should be used
+// Output: None
+void UART_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t RXFIFOLevel, bool useTwoStopBits, bool useEvenParity)
 {
   // Enable Port C's clock
-  SYSCTL_RCGCGPIO_R |= SYSCTL_RCGC2_GPIOC;
+  SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R2;
 
   // Enable UART module 0's clock
   SYSCTL_RCGCUART_R |= SYSCTL_RCGCUART_R4;
@@ -156,7 +198,7 @@ void UART_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_
   UART_BRDConfigure(SYS_CLOCK, baudRate);
 
   // Configure (Line Control) LCRH
-  UART_LCRHConfigure(wordLength, useTwoStopBits, isEvenParity);
+  UART_LCRHConfigure(wordLength, useTwoStopBits, useEvenParity);
 
   // Enable UART 4 Interrupts
   UART_InterruptEnable(RXFIFOLevel);
@@ -165,6 +207,12 @@ void UART_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_
   UART_Enable();
 }
 
+// ----------- UART_Transmit -------------
+// Transmits data through the UART line. If the transmit FIFO is full, it blocks further
+// processing until there is space to prevent data loss
+// Input: data - Data buffer to transmit
+//        byteCount - The number of bytes in the data buffer to transmit
+// Output: None
 void UART_Transmit(uint8_t *data, uint8_t byteCount)
 {
   uint8_t byteIndex = 0;
@@ -183,6 +231,11 @@ void UART_Transmit(uint8_t *data, uint8_t byteCount)
   } while (byteIndex < byteCount);
 }
 
+// --------- UART_Receive ------------
+// Gets the data received by the UART. It waits for the Receive FIFO to not be empty,
+// before returning the data
+// Input: None
+// Output: Data received from UART
 uint8_t UART_Receive(void)
 {
   // Wait FOR Receive FIFO to have data

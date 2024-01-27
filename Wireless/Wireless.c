@@ -5,7 +5,7 @@
 
 #include "UART.h"
 
-uint8_t rxBuf[1];
+uint8_t txBuf[1];
 
 static void PortF_Init(void);
 static void SetLED(uint8_t myIdx);
@@ -60,13 +60,13 @@ void GPIOF_Handler(void)
 		GPIO_PORTF_ICR_R |= 0x01;
 
 		// Update and keep index in bounds
-		if (rxBuf[0] == 3)
-			rxBuf[0] = 0;
+		if (txBuf[0] == 3)
+			txBuf[0] = 0;
 		else
-			rxBuf[0] = rxBuf[0] + 1;
+			txBuf[0] = txBuf[0] + 1;
 
 		// Transmit index
-		UART_Transmit(rxBuf, 1);
+		UART_Transmit(txBuf, 1);
 	}
 }
 
@@ -78,9 +78,9 @@ int main(void)
 	// Initialize Port F
 	PortF_Init();
 
-	// Initialize UART for a 80MHz, 9600 baud, 8 bit data length, one-quarter FIFO RX interrupts,
+	// Initialize UART for a 80MHz, 9600 baud, 8 bit data length, one-eighth FIFO RX interrupts,
 	// 1 stop bit, and even parity
-	UART_Init(80e6, 9600, 3 /* UART_LCRH_WLEN_8 */, 1 /* UART_IFLS_RX2_8 */, false, true);
+	UART_Init(80e6, 9600, 3 /* UART_LCRH_WLEN_8 */, 0 /* UART_IFLS_RX1_8 */, false, true);
 
 	while (1)
 		;

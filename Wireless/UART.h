@@ -3,8 +3,29 @@
 
 #define UART_INTERRUPT_PRIORITY 5
 
-void UART_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t RXFIFOLevel, bool useTwoStopBits, bool isEvenParity);
+// ----------- UART_Init ------------
+// Initializes the UART 4 module in Port C using the specified options
+// Input: SYS_CLOCK - System Clock
+//        baudRate - The desired baud rate for UART transmission
+//        wordLength - The number of bits in the data word
+//                     3 for 8 bits, 2 for 7 bits, 1 for 6 bits, and otherwise for 5 bits
+//        RXFIFOLevel - The desired level to trigger the Receive FIFO interrupt on
+//        useTwoStopBits - For two stop bits to be used at the end of transmission
+//        useEvenParity - Specifies if even or odd parity should be used
+// Output: None
+void UART_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t RXFIFOLevel, bool useTwoStopBits, bool useEvenParity);
 
+// ----------- UART_Transmit -------------
+// Transmits data through the UART line. If the transmit FIFO is full, it blocks further
+// processing until there is space to prevent data loss
+// Input: data - Data buffer to transmit
+//        byteCount - The number of bytes in the data buffer to transmit
+// Output: None
 void UART_Transmit(uint8_t *data, uint8_t byteCount);
 
+// --------- UART_Receive ------------
+// Gets the data received by the UART. It waits for the Receive FIFO to not be empty,
+// before returning the data
+// Input: None
+// Output: Data received from UART
 uint8_t UART_Receive(void);
