@@ -5,14 +5,10 @@
 
 #include "UART.h"
 
-uint8_t transferBuffer[1];
-uint8_t receiveBuffer[1];
-
-uint8_t *myIdx = &receiveBuffer[0];
-uint8_t *peerIdx = &transferBuffer[0];
+uint8_t rxBuf[1];
 
 static void PortF_Init(void);
-static void SetLED(void);
+static void SetLED(uint8_t myIdx);
 
 static void PortF_Init(void)
 {
@@ -35,7 +31,6 @@ static void PortF_Init(void)
 	GPIO_PORTF_IS_R &= ~0x01;	 // Configure for Edge-Detect on PF0
 	GPIO_PORTF_IBE_R &= ~0x01; // Allow GPIOIEV register to control interrupt
 	GPIO_PORTF_IEV_R &= ~0x01; // Trigger falling edge on PF0
-	GPIO_PORTF_ICR_R |= 0x01;	 // Clear the interrupt state pin by setting a 1 at the pin
 	GPIO_PORTF_IM_R |= 0x01;	 // Allow interrupts to be sent
 
 	// Enable Interrupt 30 for GPIO Port F
@@ -45,41 +40,33 @@ static void PortF_Init(void)
 	NVIC_PRI7_R = (NVIC_PRI7_R & ~NVIC_PRI7_INT30_M) | ((UART_INTERRUPT_PRIORITY + 1) << NVIC_PRI7_INT30_S);
 }
 
-static void SetLED(void)
+static void SetLED(uint8_t myIdx)
 {
 	// Turn RED on, then BLUE, then GREEN, then OFF.
-	GPIO_PORTF_DATA_R = 0x0E & (1 << *myIdx);
+	GPIO_PORTF_DATA_R = 0x0E & (1 << myIdx);
 }
 
 void UART4_Handler(void)
 {
-	if (UART4_MIS_R & UART_MIS_RXMIS)
-	{
-		UART_Receive(1, receiveBuffer);
-		SetLED();
-
-		UART4_ICR_R |= UART_ICR_RXIC;
-	}
+	SetLED(UART_Receive());
+	UART4_ICR_R |= UART_ICR_RXIC | UART_ICR_RTIC;
 }
 
 void GPIOF_Handler(void)
 {
-	// Confirm the interrupt is caused by SW2
-	bool isSW2Interrupt = (GPIO_PORTF_MIS_R & 0x01) == 0x01;
-
-	if (isSW2Interrupt)
+	if (GPIO_PORTF_MIS_R & 0x01)
 	{
 		// Clear the interrupt
 		GPIO_PORTF_ICR_R |= 0x01;
 
 		// Update and keep index in bounds
-		if (*peerIdx == 3)
-			*peerIdx = 0;
+		if (rxBuf[0] == 3)
+			rxBuf[0] = 0;
 		else
-			*peerIdx = *peerIdx + 1;
+			rxBuf[0] = rxBuf[0] + 1;
 
 		// Transmit index
-		UART_Transmit(transferBuffer, 1);
+		UART_Transmit(rxBuf, 1);
 	}
 }
 
@@ -91,16 +78,9 @@ int main(void)
 	// Initialize Port F
 	PortF_Init();
 
-	// Initialize UART for a 80MHz, 9600 baud, using High Speed, 8 bit data length,
-	// one-eighth FIFO RX interrupts, 1 stop bit, and even parity
-	UART_Init(
-			80,
-			true,
-			115200,
-			3 /* UART_LCRH_WLEN_8 */,
-			0 /* UART_IFLS_RX1_8 */,
-			false,
-			true);
+	// Initialize UART for a 80MHz, 9600 baud, 8 bit data length, one-quarter FIFO RX interrupts,
+	// 1 stop bit, and even parity
+	UART_Init(80e6, 9600, 3 /* UART_LCRH_WLEN_8 */, 1 /* UART_IFLS_RX2_8 */, false, true);
 
 	while (1)
 		;
