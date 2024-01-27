@@ -120,7 +120,7 @@ static void UART_InterruptEnable(uint8_t RXFIFOLevel)
   NVIC_EN1_R |= NVIC_EN0_INT28;
 
   // Set Priority to 5
-  NVIC_PRI1_R = (NVIC_PRI1_R & ~(NVIC_PRI1_INT5_M)) | (UART_INTERRUPT_PRIORITY << NVIC_PRI1_INT5_S);
+  NVIC_PRI15_R = (NVIC_PRI15_R & ~NVIC_PRI15_INTA_M) | (UART_INTERRUPT_PRIORITY << NVIC_PRI15_INTA_S);
 }
 
 // TODO: Support dynamically choosing port
