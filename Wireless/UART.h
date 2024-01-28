@@ -10,10 +10,11 @@
 //        wordLength - The number of bits in the data word
 //                     3 for 8 bits, 2 for 7 bits, 1 for 6 bits, and otherwise for 5 bits
 //        RXFIFOLevel - The desired level to trigger the Receive FIFO interrupt on
+//        parity - If the LSB is 1, it denotes parity is enabled
+//                 the 2nd bit being a 1 denotes Even Parity
 //        useTwoStopBits - For two stop bits to be used at the end of transmission
-//        useEvenParity - Specifies if even or odd parity should be used
 // Output: None
-void UART_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t RXFIFOLevel, bool useTwoStopBits, bool useEvenParity);
+void UART_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t RXFIFOLevel, uint8_t parity, bool useTwoStopBits);
 
 // ----------- UART_Transmit -------------
 // Transmits data through the UART line. If the transmit FIFO is full, it blocks further

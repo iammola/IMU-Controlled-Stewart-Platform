@@ -8,7 +8,7 @@
 #define FRACTIONAL_BRD_MASK (1 << FRACTIONAL_BRD_MULTIPLIER) - 1
 
 static void UART_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate);
-static void UART_LCRHConfigure(uint8_t wordLength, bool useTwoStopBits, bool useEvenParity);
+static void UART_LCRHConfigure(uint8_t wordLength, uint8_t parity, bool useTwoStopBits);
 static void UART_Enable(void);
 static void UART_Disable(void);
 static void UART_InterruptEnable(uint8_t RXFIFOLevel);
@@ -58,13 +58,14 @@ static void UART_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate)
 // --------- UART_LCRHConfigure -------------
 // Input: wordLength - The number of bits in the data word
 //                     3 for 8 bits, 2 for 7 bits, 1 for 6 bits, and otherwise for 5 bits
+//        parity - If the LSB is 1, it denotes parity is enabled
+//                 the 2nd bit being a 1 denotes Even Parity
 //        useTwoStopBits - For two stop bits to be used at the end of transmission
-//        useEvenParity - Specifies if even or odd parity should be used
 // Output: None
-static void UART_LCRHConfigure(uint8_t wordLength, bool useTwoStopBits, bool useEvenParity)
+static void UART_LCRHConfigure(uint8_t wordLength, uint8_t parity, bool useTwoStopBits)
 {
-  // Enable FIFO buffers and Parity
-  uint32_t result = UART_LCRH_FEN | UART_LCRH_PEN;
+  // Enable FIFO buffers
+  uint32_t result = UART_LCRH_FEN;
 
   // Specify word length, falling back to 5 bits.
   switch (wordLength)
@@ -83,9 +84,16 @@ static void UART_LCRHConfigure(uint8_t wordLength, bool useTwoStopBits, bool use
     break;
   }
 
-  // Enable Even Parity
-  if (useEvenParity)
-    result |= UART_LCRH_EPS;
+  // If LSB is 1, then Parity should be enabled
+  if (parity & 0x1)
+  {
+    // Enable Parity
+    result |= UART_LCRH_PEN;
+
+    // Enable Even Parity
+    if (parity & 0x2)
+      result |= UART_LCRH_EPS;
+  }
 
   // Enable Two Stop Bits
   if (useTwoStopBits)
@@ -168,10 +176,11 @@ static void UART_InterruptEnable(uint8_t RXFIFOLevel)
 //        wordLength - The number of bits in the data word
 //                     3 for 8 bits, 2 for 7 bits, 1 for 6 bits, and otherwise for 5 bits
 //        RXFIFOLevel - The desired level to trigger the Receive FIFO interrupt on
+//        parity - If the LSB is 1, it denotes parity is enabled
+//                 the 2nd bit being a 1 denotes Even Parity
 //        useTwoStopBits - For two stop bits to be used at the end of transmission
-//        useEvenParity - Specifies if even or odd parity should be used
 // Output: None
-void UART_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t RXFIFOLevel, bool useTwoStopBits, bool useEvenParity)
+void UART_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t RXFIFOLevel, uint8_t parity, bool useTwoStopBits)
 {
   // Enable Port C's clock
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R2;
@@ -198,7 +207,7 @@ void UART_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_
   UART_BRDConfigure(SYS_CLOCK, baudRate);
 
   // Configure (Line Control) LCRH
-  UART_LCRHConfigure(wordLength, useTwoStopBits, useEvenParity);
+  UART_LCRHConfigure(wordLength, useTwoStopBits, parity);
 
   // Enable UART 4 Interrupts
   UART_InterruptEnable(RXFIFOLevel);

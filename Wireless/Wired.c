@@ -1,3 +1,4 @@
+#ifdef WIRED
 #include <stdbool.h>
 
 #include "PLL.h"
@@ -80,8 +81,9 @@ int main(void)
 
 	// Initialize UART for a 80MHz, 9600 baud, 8 bit data length, one-eighth FIFO RX interrupts,
 	// 1 stop bit, and even parity
-	UART_Init(80e6, 9600, 3 /* UART_LCRH_WLEN_8 */, 0 /* UART_IFLS_RX1_8 */, false, true);
+	UART_Init(80e6, 9600, 3 /* UART_LCRH_WLEN_8 */, 0 /* UART_IFLS_RX1_8 */, 0x3 /* Enable Even Parity */, false);
 
 	while (1)
 		;
 }
+#endif
