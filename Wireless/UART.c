@@ -30,7 +30,7 @@ static void UART_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate)
   // Basically the Baud-Rate Generation formula given, BRD = SYS_CLOCK / (CLK_DIV * BAUD_RATE);
   // But uses Fixed Point Arithmetic by multiplying the values by specific power of 2
   // Depending on the need for the High Speed Mode, the CLK_DIV changes
-  uint32_t BRD = (SYS_CLOCK << FRACTIONAL_BRD_MULTIPLIER) / (baudRate * (needsHighSpeed ? 8 : 16));
+  uint32_t BRD = ((SYS_CLOCK / (needsHighSpeed ? 8 : 16)) << FRACTIONAL_BRD_MULTIPLIER) / baudRate;
 
   // Dividing it by the initial multiplier would then give us back the integer value
   uint32_t integerPart = BRD >> FRACTIONAL_BRD_MULTIPLIER;
@@ -109,6 +109,7 @@ static void UART_LCRHConfigure(uint8_t wordLength, uint8_t parity, bool useTwoSt
 static void UART_Enable(void)
 {
   UART4_CTL_R |= UART_CTL_UARTEN | UART_CTL_TXE | UART_CTL_RXE;
+  // UART4_CTL_R |= UART_CTL_LBE | UART_CTL_UARTEN | UART_CTL_TXE | UART_CTL_RXE;
 }
 
 // -------- UART_Disable -------

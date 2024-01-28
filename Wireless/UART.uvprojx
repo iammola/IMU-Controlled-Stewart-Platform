@@ -390,14 +390,24 @@
               <FilePath>.\UART.c</FilePath>
             </File>
             <File>
-              <FileName>Wireless.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Wireless.c</FilePath>
-            </File>
-            <File>
               <FileName>PLL.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\PLL.c</FilePath>
+            </File>
+            <File>
+              <FileName>Wired.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Wired.c</FilePath>
+            </File>
+            <File>
+              <FileName>JDY-10M.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\JDY-10M.c</FilePath>
+            </File>
+            <File>
+              <FileName>JDY-10 Wireless.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\JDY-10 Wireless.c</FilePath>
             </File>
           </Files>
         </Group>
