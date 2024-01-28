@@ -1,3 +1,4 @@
+#ifndef WIRED
 #include <stdio.h>
 
 #include "tm4c123gh6pm.h"
@@ -55,8 +56,18 @@ static void JDY10M_SendCommand(char *instruction, uint8_t instructionLen, char *
   UART_Transmit((unsigned char *)AT_Instruction, size);
 }
 
-void JDY10M_Init(void)
+const uint32_t baudRates[] = {
+    115200,
+    57600,
+    38400,
+    19200,
+    9600,
+    4800};
+
+void JDY10M_Init(uint32_t SYS_CLOCK)
 {
+  uint32_t time = 0;
+  uint8_t baudIdx = 0;
   // Enable Port C's clock
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R2;
 
@@ -72,19 +83,24 @@ void JDY10M_Init(void)
   // Enable Digital on PWRC_BIT
   GPIO_PORTC_DEN_R |= 1 << PWRC_BIT;
 
-  // Initialize UART for a 80MHz, 115200 baud, 8 bit data length, one-eighth FIFO RX interrupts,
+  // Initialize UART for SYS_CLOCK, 115200 baud, 8 bit data length, one-eighth FIFO RX interrupts,
   // 1 stop bit, and no parity
   // https://www.electro-tech-online.com/threads/jdy-10-bluetooth-ble-uart-transceiver-module.152098/post-1312849
-  UART_Init(16e6, 115200, 3 /* UART_LCRH_WLEN_8 */, 4 /* UART_IFLS_RX7_8 */, 0 /* No Parity */, false);
 
   // Drive PWRC bit low to send AT instructions
   PWRC_ADDR = 0;
 
-  while ((ctx < 80e6) && (UART4_FR_R & UART_FR_RXFE))
+  for (; baudIdx < 6; baudIdx++)
   {
-    UART_Transmit((unsigned char *)"AT\r\n", 4);
-    ctx++;
+    UART_Init(SYS_CLOCK, baudRates[baudIdx], 3 /* UART_LCRH_WLEN_8 */, 4 /* UART_IFLS_RX7_8 */, 0 /* No Parity */, false);
+    // UART_Transmit((unsigned char *)"masadregui76oi8ifm0v0e9[sdgtrhsaerfkm3498rrgfre0[fewvimeraf9'fkrugfyywiero87fd6AGve0r9\r\n", 88);
+    UART_Transmit((unsigned char *)"AT-BAUD\r\n", 9);
+    for (time = 0; time < SYS_CLOCK; time++)
+    {
+    }
   }
+
+  ctx = 0;
 
   // JDY10M_SendCommand(NAME_INSTRUCTION, STR_LEN(NAME_INSTRUCTION), DEVICE_NAME, STR_LEN(DEVICE_NAME));
 
@@ -98,3 +114,4 @@ void JDY10M_Init(void)
   // Drive PWRC bit high for transparent transmission
   PWRC_ADDR = 1 << PWRC_BIT;
 }
+#endif

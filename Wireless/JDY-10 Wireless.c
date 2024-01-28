@@ -9,9 +9,9 @@
 int main(void)
 {
 	// Initialize PLL
-	// PLL_Init();
+	PLL_Init();
 
-	JDY10M_Init();
+	JDY10M_Init(80e6);
 
 	while (1)
 		;
