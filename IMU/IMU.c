@@ -1,6 +1,7 @@
 #include "tm4c123gh6pm.h"
 
 #include "IMU.h"
+#include "ICM-20948.h"
 
 #define CLK 0 // (PD0) SSI3CLK
 #define FSS 1 // (PD1) SSI3FSS
@@ -97,10 +98,19 @@ void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK)
 
   // Wake the device from sleep, disable the Temp sensor, Turn off low power mode
   // and auto-selected clock source
-  IMU_Write(PWR_MGMT_1_ADDR, 0x09);
+  IMU_Write(PWR_MGMT_1_ADDR, CLKSEL_AUTO & ~(SLEEP_ENABLED | TEMP_ENABLED | LP_ENABLED));
+
+  // Enable the Accelerometer and Gyroscope
+  IMU_Write(PWR_MGMT_2_ADDR, ACCEL_ENABLED | GYRO_ENABLED);
 
   // Enable DMP and FIFO, and disable I2C for SPI only
-  IMU_Write(USER_CTRL_ADDR, 0xD0);
+  IMU_Write(USER_CTRL_ADDR, DMP_ENABLED | FIFO_ENABLED | SPI_ENABLED);
+
+  // Configure gyro scale to 2000dps
+  IMU_Write(GYRO_CONFIG_1, GYRO_FS_SEL_2000);
+
+  // Configure accelerometer scale to 16G
+  IMU_Write(ACCEL_CONFIG, ACCEL_FS_SEL_16G);
 }
 
 void IMU_Read(REG_ADDRESS REGISTER)
