@@ -8,12 +8,12 @@
 #define RX 2  // (PD2) SSI3Rx
 #define TX 3  // (PD3) SSI3Tx
 
-#define CS 4 // (PD4) Chip Select
+#define CS 6 // (PD6) Chip Select
 #define CS_ADDR (*((volatile uint32_t *)(0x40007000 | (1 << (CS + 2)))))
 
 #define PINS (unsigned)((1 << CLK) | (1 << FSS) | (1 << RX) | (1 << TX))
 #define PCTL (unsigned)(GPIO_PCTL_PD0_SSI3CLK | GPIO_PCTL_PD1_SSI3FSS | GPIO_PCTL_PD2_SSI3RX | GPIO_PCTL_PD3_SSI3TX)
-#define PCTL_MASK (unsigned)(GPIO_PCTL_PD0_M | GPIO_PCTL_PD1_M | GPIO_PCTL_PD2_M | GPIO_PCTL_PD3_M | GPIO_PCTL_PD4_M)
+#define PCTL_MASK (unsigned)(GPIO_PCTL_PD0_M | GPIO_PCTL_PD1_M | GPIO_PCTL_PD2_M | GPIO_PCTL_PD3_M | GPIO_PCTL_PD6_M)
 
 #define READ(data) (unsigned)(0x8000 | (data << 8))
 #define WRITE(addr, data) (unsigned)(0x7FFF & ((addr << 8) | data))
