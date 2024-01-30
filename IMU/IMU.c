@@ -11,21 +11,21 @@
 #define CS 4 // (PD4) Chip Select
 #define CS_ADDR (*((volatile uint32_t *)(0x40007000 | (1 << (CS + 2)))))
 
-#define PINS (1 << CLK) | (1 << FSS) | (1 << RX) | (1 << TX)
-#define PCTL GPIO_PCTL_PD0_SSI3CLK | GPIO_PCTL_PD1_SSI3FSS | GPIO_PCTL_PD2_SSI3RX | GPIO_PCTL_PD3_SSI3TX
-#define PCTL_MASK GPIO_PCTL_PD0_M | GPIO_PCTL_PD1_M | GPIO_PCTL_PD2_M | GPIO_PCTL_PD3_M | GPIO_PCTL_PD4_M
+#define PINS (unsigned)((1 << CLK) | (1 << FSS) | (1 << RX) | (1 << TX))
+#define PCTL (unsigned)(GPIO_PCTL_PD0_SSI3CLK | GPIO_PCTL_PD1_SSI3FSS | GPIO_PCTL_PD2_SSI3RX | GPIO_PCTL_PD3_SSI3TX)
+#define PCTL_MASK (unsigned)(GPIO_PCTL_PD0_M | GPIO_PCTL_PD1_M | GPIO_PCTL_PD2_M | GPIO_PCTL_PD3_M | GPIO_PCTL_PD4_M)
 
-#define READ(data) 0x8000 | (data << 8)
-#define WRITE(addr, data) 0x7FFF & ((addr << 8) | data)
+#define READ(data) (unsigned)(0x8000 | (data << 8))
+#define WRITE(addr, data) (unsigned)(0x7FFF & ((addr << 8) | data))
 
 // Defaults to USER_BANK_0
-USER_BANK LastUserBank = USER_BANK_0;
+static USER_BANK LastUserBank = USER_BANK_0;
 
 // Using Port D
 static void SPI_Init(uint32_t SYS_CLK, uint32_t SSI_CLK)
 {
-  uint8_t ssiSCR = 0;
-  uint8_t ssiCPSR = 0;
+  uint32_t ssiSCR = 0;
+  uint32_t ssiCPSR = 0;
   uint32_t maxBitRate = SYS_CLK / SSI_CLK;
 
   // Enable Port D clock
@@ -35,7 +35,7 @@ static void SPI_Init(uint32_t SYS_CLK, uint32_t SSI_CLK)
   SYSCTL_RCGCSSI_R |= SYSCTL_RCGCSSI_R3;
 
   // Enable Alternate Functions on all pins but the CS pin
-  GPIO_PORTD_AFSEL_R = (GPIO_PORTD_AFSEL_R | PINS) & ~(1 << CS);
+  GPIO_PORTD_AFSEL_R = (GPIO_PORTD_AFSEL_R | PINS) & (unsigned)~(1 << CS);
 
   // Enable SSI module 3 peripheral functions
   GPIO_PORTD_PCTL_R = (GPIO_PORTD_PCTL_R & ~PCTL_MASK) | PCTL;
@@ -50,10 +50,10 @@ static void SPI_Init(uint32_t SYS_CLK, uint32_t SSI_CLK)
   GPIO_PORTD_PUR_R |= (1 << CLK);
 
   // Disable SSI
-  SSI3_CR1_R &= ~SSI_CR1_SSE;
+  SSI3_CR1_R &= (unsigned)~SSI_CR1_SSE;
 
   // Enable Master mode
-  SSI3_CR0_R &= ~SSI_CR1_MS;
+  SSI3_CR0_R &= (unsigned)~SSI_CR1_MS;
 
   // Configure for system clock
   SSI3_CC_R = SSI_CC_CS_SYSPLL;
@@ -115,9 +115,6 @@ void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK)
 
 void IMU_Read(REG_ADDRESS REGISTER)
 {
-  uint16_t dataIdx = 0;
-  uint16_t twoByteData = 0x00;
-
   // Drive Chip Select low for slave active
   CS_ADDR = 0;
 
@@ -137,9 +134,6 @@ void IMU_Read(REG_ADDRESS REGISTER)
 
 void IMU_Write(REG_ADDRESS REGISTER, uint8_t data)
 {
-  uint16_t dataIdx = 0;
-  uint16_t twoByteData = 0x00;
-
   // Drive Chip Select low for slave active
   CS_ADDR = 0;
 

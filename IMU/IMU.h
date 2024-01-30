@@ -1,6 +1,7 @@
 #ifndef __IMU__
 #include <stdint.h>
 
+#include "ICM-20948.h"
 
 void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK);
 
