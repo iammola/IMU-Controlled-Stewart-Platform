@@ -1,15 +1,32 @@
-#ifdef WIRED
 #include <stdbool.h>
+#include <string.h>
 
 #include "PLL.h"
 #include "tm4c123gh6pm.h"
 
 #include "UART.h"
+#include "JDY-10M.h"
 
 uint8_t txBuf[1];
 
 static void PortF_Init(void);
 static void SetLED(uint8_t myIdx);
+
+static uint32_t baudRates[] = {1200, 2400, 4800, 9600, 19200, 38400, 57600, 115000, 115200, 230400};
+static char *commands[] = {
+		"AT",
+		"AT+VER",
+		"AT+BAUD",
+		"AT+PASS",
+		"AT+NAME",
+		"AT+HOSTEN3",
+		"AT\r\n",
+		"AT+VER\r\n",
+		"AT+BAUD\r\n",
+		"AT+PASS\r\n",
+		"AT+NAME\r\n",
+		"AT+HOSTEN3\r\n",
+};
 
 static void PortF_Init(void)
 {
@@ -73,17 +90,41 @@ void GPIOF_Handler(void)
 
 int main(void)
 {
+	uint32_t time = 0;
+	uint8_t baudIdx = 0;
+	uint8_t cmdIdx = 0;
+
 	// Initialize PLL
 	PLL_Init();
 
 	// Initialize Port F
 	PortF_Init();
 
-	// Initialize UART for a 80MHz, 9600 baud, 8 bit data length, one-eighth FIFO RX interrupts,
-	// 1 stop bit, and even parity
-	UART_Init(80e6, 9600, 3 /* UART_LCRH_WLEN_8 */, 0 /* UART_IFLS_RX1_8 */, 0x3 /* Enable Even Parity */, false);
+	// Initialize UART for a 80MHz, 115200 baud, 8 bit data length, one-eighth FIFO RX interrupts,
+	// 1 stop bit, and no parity
+	// UART_Init(80e6, 115200, 3 /* UART_LCRH_WLEN_8 */, 0 /* UART_IFLS_RX1_8 */, 0x00 /* No Parity */, false);
+
+#ifndef WIRED
+	JDY10M_Init();
+
+	for (baudIdx = 0; baudIdx < (sizeof(baudRates) / sizeof(baudRates[0])); baudIdx++)
+	{
+		UART_Init(80e6, baudRates[baudIdx], 3 /* UART_LCRH_WLEN_8 */, 4 /* UART_IFLS_RX7_8 */, 0 /* No Parity */, false);
+
+		// UART_Transmit((unsigned char *)"vf hyregkhtog;rj,gx8o7ygnhc x7gdfyg8yg7sfhdenfp9waefrh8o7HDBS*(&^ITEDoy8aehdjhjhbsdx", strlen("vf hyregkhtog;rj,gx8o7ygnhc x7gdfyg8yg7sfhdenfp9waefrh8o7HDBS*(&^ITEDoy8aehdjhjhbsdx"));
+		for (cmdIdx = 0; cmdIdx < (sizeof(commands) / sizeof(commands[0])); cmdIdx++)
+		{
+			UART_Transmit((unsigned char *)commands[cmdIdx], strlen(commands[cmdIdx]));
+		}
+
+		while ((UART4_FR_R & UART_FR_BUSY) || (++time < 1e6))
+		{
+		}
+
+		time = 0;
+	}
+#endif
 
 	while (1)
 		;
 }
-#endif

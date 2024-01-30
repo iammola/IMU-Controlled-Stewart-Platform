@@ -109,7 +109,7 @@ static void UART_LCRHConfigure(uint8_t wordLength, uint8_t parity, bool useTwoSt
 static void UART_Enable(void)
 {
   UART4_CTL_R |= UART_CTL_UARTEN | UART_CTL_TXE | UART_CTL_RXE;
-  // UART4_CTL_R |= UART_CTL_LBE | UART_CTL_UARTEN | UART_CTL_TXE | UART_CTL_RXE;
+  // UART4_CTL_R |= UART_CTL_LBE;
 }
 
 // -------- UART_Disable -------
