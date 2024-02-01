@@ -1,6 +1,3 @@
-// TODO: Remove the CLK_BIT from the interrupt handler
-//       Only added to attempt to watch the pins because the logic
-//       analyzer wasn't working.
 #include "tm4c123gh6pm.h"
 
 #include "IMU.h"
@@ -10,6 +7,8 @@
 #define FSS_BIT 1 << 1 // (PD1) SSI3FSS (Chip Select)
 #define RX_BIT 1 << 2  // (PD2) SSI3Rx
 #define TX_BIT 1 << 3  // (PD3) SSI3Tx
+
+#define SSI_INT_PRIORITY 1
 
 #define SPI_PINS (unsigned)(CLK_BIT | FSS_BIT | RX_BIT | TX_BIT)
 #define SPI_PCTL (unsigned)(GPIO_PCTL_PD0_SSI3CLK | GPIO_PCTL_PD1_SSI3FSS | GPIO_PCTL_PD2_SSI3RX | GPIO_PCTL_PD3_SSI3TX)
@@ -21,52 +20,52 @@
 
 #define FSS_ADDR (*((volatile uint32_t *)(0x40007000 | (FSS_BIT << 2))))
 
-#define READ(addr) (unsigned)(0x8000 | (addr << 8))
+#define READ(addr) (unsigned)(0x80FF | (addr << 8))
+
 #define WRITE(addr, data) (unsigned)(0x7FFF & ((addr << 8) | data))
 
-static uint16_t dmp;
+#define WAIT_FOR_TX_SPACE()                      \
+  while ((SSI3_SR_R & SSI_SR_TNF) != SSI_SR_TNF) \
+    ;
+
+#define WAIT_FOR_RX_DATA()                       \
+  while ((SSI3_SR_R & SSI_SR_RNE) != SSI_SR_RNE) \
+    ;
+
+#define WAIT_FOR_IDLE()                          \
+  while ((SSI3_SR_R & SSI_SR_BSY) == SSI_SR_BSY) \
+    ;
+
+static uint8_t dmp;
 
 // Defaults to USER_BANK_0
 static USER_BANK LastUserBank = USER_BANK_0;
 
-DELAY_FUNC IMU_Delay;
-
-static uint32_t PD0_CLK;
-static uint32_t PD1_FSS;
-static uint32_t PD2_RX;
-static uint32_t PD3_TX;
-static uint32_t PD6_INT;
+static DELAY_FUNC IMU_Delay;
 
 static void IMU_Interrupt_Init(void);
 static void IMU_Config(void);
 void GPIOD_Handler(void);
+void IMU_ChangeUserBank(REG_ADDRESS REGISTER);
 
 void GPIOD_Handler(void)
 {
-  uint16_t intStatus = 0;
-
-  PD0_CLK = (GPIO_PORTD_DATA_R & 0x02) >> 0;
-  PD1_FSS = (GPIO_PORTD_DATA_R & 0x02) >> 1;
-  PD2_RX = (GPIO_PORTD_DATA_R & 0x04) >> 2;
-  PD3_TX = (GPIO_PORTD_DATA_R & 0x08) >> 3;
-  PD6_INT = (GPIO_PORTD_DATA_R & 0x40) >> 6;
+  uint8_t intStatus = 0;
 
   // Ensure the interrupt is on the INT pin and is a DMP interrupt
   if (GPIO_PORTD_MIS_R & INT_BIT)
   {
-    intStatus = IMU_Read(INT_STATUS_ADDR);
+    IMU_Read(INT_STATUS_ADDR, &intStatus);
 
     if (intStatus & DMP_INT)
     {
       // Get DMP data from FIFO register
-      dmp = IMU_Read(FIFO_R_W_ADDR);
+      IMU_Read(FIFO_R_W_ADDR, &dmp);
     }
 
     // Clear Interrupt
     GPIO_PORTD_ICR_R |= INT_BIT;
   }
-
-  GPIO_PORTD_ICR_R |= CLK_BIT;
 }
 
 static void IMU_Interrupt_Init(void)
@@ -93,13 +92,13 @@ static void IMU_Interrupt_Init(void)
   GPIO_PORTD_IM_R &= ~INT_BIT;
 
   // Configure for Edge-Detect interrupts
-  GPIO_PORTD_IS_R &= ~(INT_BIT | CLK_BIT);
+  GPIO_PORTD_IS_R &= ~INT_BIT;
 
   // Only listen on one edge event
-  GPIO_PORTD_IBE_R &= (~INT_BIT | CLK_BIT);
+  GPIO_PORTD_IBE_R &= ~INT_BIT;
 
-  // Trigger interrupt on Falling edge
-  GPIO_PORTD_IEV_R &= ~INT_BIT;
+  // Trigger interrupt on rising edge
+  GPIO_PORTD_IEV_R |= INT_BIT;
 
   // Enable Port D's Interrupt Handler
   NVIC_EN0_R |= NVIC_EN0_INT3;
@@ -108,10 +107,10 @@ static void IMU_Interrupt_Init(void)
   NVIC_PRI0_R = (NVIC_PRI0_R & ~NVIC_PRI0_INT3_M) | (INT_PRIORITY << NVIC_PRI0_INT3_S);
 
   // Clear the INT pin's interrupt
-  GPIO_PORTD_ICR_R |= INT_BIT | CLK_BIT;
+  GPIO_PORTD_ICR_R |= INT_BIT;
 
   // Allow the INT pin interrupt to be detected
-  GPIO_PORTD_IM_R |= INT_BIT | CLK_BIT;
+  GPIO_PORTD_IM_R |= INT_BIT;
 }
 
 static void IMU_Config(void)
@@ -119,15 +118,17 @@ static void IMU_Config(void)
   // Reset the device
   IMU_Write(PWR_MGMT_1_ADDR, DEVICE_RESET);
 
-  // Wait 100ms after powering up
-  IMU_Delay(100);
+  WAIT_FOR_IDLE()
+
+  // Wait 110ms after device reset
+  IMU_Delay(110);
 
   // Wake the device from sleep, disable the Temp sensor, Turn off low power mode
   // and auto-selected clock source
   IMU_Write(PWR_MGMT_1_ADDR, CLKSEL_AUTO & ~(SLEEP_ENABLE | TEMP_ENABLE | LP_ENABLE));
 
   // Enable the Accelerometer and Gyroscope
-  IMU_Write(PWR_MGMT_2_ADDR, ACCEL_ENABLE | GYRO_ENABLE);
+  IMU_Write(PWR_MGMT_2_ADDR, ~(ACCEL_DISABLE | GYRO_DISABLE));
 
   // Enable DMP and FIFO, and disable I2C for SPI only
   IMU_Write(USER_CTRL_ADDR, DMP_ENABLE | FIFO_ENABLE | SPI_ENABLE);
@@ -144,6 +145,8 @@ static void IMU_Config(void)
 
   // Enable DMP interrupt
   IMU_Write(INT_ENABLE_ADDR, DMP_INT_ENABLE);
+
+  WAIT_FOR_IDLE()
 }
 
 static void SPI_Init(uint32_t SYS_CLK, uint32_t SSI_CLK)
@@ -178,7 +181,18 @@ static void SPI_Init(uint32_t SYS_CLK, uint32_t SSI_CLK)
 
   // Disable SSI
   SSI3_CR1_R &= (unsigned)~SSI_CR1_SSE;
-  // SSI3_CR1_R = (SSI3_CR1_R & (unsigned)~SSI_CR1_SSE) | SSI_CR1_LBM;
+
+  /*
+    // Enable SSI Receive Interrupt
+    SSI3_IM_R |= SSI_IM_RXIM;
+
+    // Enable SSI3's Interrupt Handler
+    // INT number = 58, (58 - 32)
+    NVIC_EN1_R |= NVIC_EN0_INT26;
+
+    // Configure SSI3's priority
+    NVIC_PRI14_R = (NVIC_PRI14_R & ~NVIC_PRI14_INTC_M) | (SSI_INT_PRIORITY << NVIC_PRI14_INTC_S);
+  */
 
   // Enable Master mode
   SSI3_CR0_R &= (unsigned)~SSI_CR1_MS;
@@ -240,62 +254,58 @@ void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, DELAY_FUNC delay)
   IMU_Config();
 
   // Configure the Interrupt pin
-  IMU_Interrupt_Init();
+  // IMU_Interrupt_Init();
 }
 
-uint16_t IMU_Read(REG_ADDRESS REGISTER)
+void IMU_Read(REG_ADDRESS REGISTER, uint8_t *result)
 {
-  uint8_t check, check2, check3;
-  uint16_t pool = 0, busy_count = 0, no_data_count = 0;
+  uint32_t clearData = 0;
+
   // Force FSS pin low
   FSS_ADDR = 0;
 
+  // Change User Bank if Needed
   if (LastUserBank != REGISTER.USER_BANK)
+    IMU_ChangeUserBank(REGISTER);
+
+  // Clear RX FIFO
+  while ((SSI3_SR_R & SSI_SR_RNE) == SSI_SR_RNE)
   {
-    LastUserBank = REGISTER.USER_BANK;
-    // Write to device the USER_BANK to read from
-    SSI3_DR_R = WRITE(USER_BANK_ADDR.ADDRESS, REGISTER.USER_BANK);
+    clearData = SSI3_DR_R;
   }
 
-  // Put a 1 on the R/W bit to specify read
+  WAIT_FOR_TX_SPACE()
   SSI3_DR_R = READ(REGISTER.ADDRESS);
 
-  // while (SSI3_SR_R & SSI_SR_BSY) {busy_count++;}
+  // Test more without each one or the other and add limits to loops
+  WAIT_FOR_IDLE()
+  WAIT_FOR_RX_DATA()
+
+  // Clear excess bits, as we only care about least 8
+  *result = SSI3_DR_R & 0xFF;
 
   // Force FSS pin high
-  // Wait for Receive FIFO to not be empty
-  while //(pool != 0xEA)
-        // (no_data_count<8)
-      (pool == 0x00)
-  {
-    check = SSI3_SR_R & SSI_SR_RNE;
-    check2 = SSI3_SR_R & SSI_SR_TFE;
-    check3 = SSI3_SR_R & SSI_SR_BSY;
-
-    pool = (uint16_t)SSI3_DR_R;
-    no_data_count++;
-    if (check3)
-      busy_count++;
-  }
-
   FSS_ADDR = FSS_BIT;
-  // Return data from register
-  return pool;
 }
 
 void IMU_Write(REG_ADDRESS REGISTER, uint8_t data)
 {
   FSS_ADDR = 0;
 
+  // Change User Bank if Needed
   if (LastUserBank != REGISTER.USER_BANK)
-  {
-    LastUserBank = REGISTER.USER_BANK;
-    // Write to device the USER_BANK to read from
-    SSI3_DR_R = WRITE(USER_BANK_ADDR.ADDRESS, REGISTER.USER_BANK);
-  }
+    IMU_ChangeUserBank(REGISTER);
 
-  // Put a 1 on the R/W bit to specify read
+  WAIT_FOR_TX_SPACE()
   SSI3_DR_R = WRITE(REGISTER.ADDRESS, data);
 
   FSS_ADDR = FSS_BIT;
+}
+
+void IMU_ChangeUserBank(REG_ADDRESS REGISTER)
+{
+  WAIT_FOR_TX_SPACE()
+  SSI3_DR_R = WRITE(USER_BANK_ADDR.ADDRESS, REGISTER.USER_BANK);
+
+  LastUserBank = REGISTER.USER_BANK;
 }
