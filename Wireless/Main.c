@@ -7,10 +7,11 @@
 #include "UART.h"
 #include "JDY-10M.h"
 
-uint8_t txBuf[1];
+uint8_t myLEDIdx = 0;
+uint8_t peerLEDIdx = 0;
 
 static void PortF_Init(void);
-static void SetLED(uint8_t myIdx);
+static void SetLED(void);
 
 static uint32_t baudRates[] = {1200, 2400, 4800, 9600, 19200, 38400, 57600, 115000, 115200, 230400};
 static char *commands[] = {
@@ -58,15 +59,15 @@ static void PortF_Init(void)
 	NVIC_PRI7_R = (NVIC_PRI7_R & ~NVIC_PRI7_INT30_M) | ((UART_INTERRUPT_PRIORITY + 1) << NVIC_PRI7_INT30_S);
 }
 
-static void SetLED(uint8_t myIdx)
+static void SetLED(void)
 {
 	// Turn RED on, then BLUE, then GREEN, then OFF.
-	GPIO_PORTF_DATA_R = 0x0E & (1 << myIdx);
+	GPIO_PORTF_DATA_R = 0x0E & (1 << myLEDIdx);
 }
 
 void UART4_Handler(void)
 {
-	SetLED(UART_Receive());
+	UART_Receive(&myLEDIdx, 1);
 	UART4_ICR_R |= UART_ICR_RXIC | UART_ICR_RTIC;
 }
 
@@ -78,13 +79,10 @@ void GPIOF_Handler(void)
 		GPIO_PORTF_ICR_R |= 0x01;
 
 		// Update and keep index in bounds
-		if (txBuf[0] == 3)
-			txBuf[0] = 0;
-		else
-			txBuf[0] = txBuf[0] + 1;
+		peerLEDIdx = (peerLEDIdx + 1) & 3;
 
 		// Transmit index
-		UART_Transmit(txBuf, 1);
+		UART_Transmit(&peerLEDIdx, 1);
 	}
 }
 

@@ -109,7 +109,6 @@ static void UART_LCRHConfigure(uint8_t wordLength, uint8_t parity, bool useTwoSt
 static void UART_Enable(void)
 {
   UART4_CTL_R |= UART_CTL_UARTEN | UART_CTL_TXE | UART_CTL_RXE;
-  // UART4_CTL_R |= UART_CTL_LBE;
 }
 
 // -------- UART_Disable -------
@@ -246,12 +245,16 @@ void UART_Transmit(uint8_t *data, uint8_t byteCount)
 // before returning the data
 // Input: None
 // Output: Data received from UART
-uint8_t UART_Receive(void)
+void UART_Receive(uint8_t *data, uint8_t length)
 {
   // Wait FOR Receive FIFO to have data
   while (UART4_FR_R & UART_FR_RXFE)
     ;
 
-  // Read data
-  return UART4_DR_R;
+  while (length-- > 0)
+  {
+    // Read data
+    *data = UART4_DR_R;
+    data++;
+  }
 }
