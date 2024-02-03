@@ -153,7 +153,9 @@ void IMU_Read(REG_ADDRESS REGISTER, uint16_t *result)
   if (LastUserBank != REGISTER.USER_BANK)
     IMU_ChangeUserBank(REGISTER);
 
+  SPI3_StartTransmission();
   SPI3_Read(READ(REGISTER.ADDRESS), result, 1);
+  SPI3_EndTransmission();
 
   *result &= 0xFF;
 }
@@ -166,7 +168,9 @@ void IMU_Write(REG_ADDRESS REGISTER, uint8_t data)
   if (LastUserBank != REGISTER.USER_BANK)
     IMU_ChangeUserBank(REGISTER);
 
+  SPI3_StartTransmission();
   SPI3_Write(&byte, 1);
+  SPI3_EndTransmission();
 }
 
 REG_ADDRESS WHO_AM_I_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x00};

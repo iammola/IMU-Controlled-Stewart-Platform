@@ -138,16 +138,10 @@ void SPI3_Read(uint16_t initData, uint16_t *result, uint8_t length)
         // increment pointer
         result++;
     }
-
-    // End transmission
-    SSI3_FSS_ADDR = SSI3_FSS_BIT;
 }
 
 void SPI3_Write(uint16_t *data, uint8_t length)
 {
-    // Start transmission
-    SSI3_FSS_ADDR = 0;
-
     // Send desired amount of data
     while (length-- > 0)
     {
@@ -163,7 +157,16 @@ void SPI3_Write(uint16_t *data, uint8_t length)
 
     // Wait for Idle before ending transmission
     WAIT_FOR_IDLE()
+}
 
+void SPI3_StartTransmission(void)
+{
+    // Start transmission
+    SSI3_FSS_ADDR = 0;
+}
+
+void SPI3_EndTransmission(void)
+{
     // End transmission
     SSI3_FSS_ADDR = SSI3_FSS_BIT;
 }
