@@ -11,15 +11,14 @@
 #define READ(addr) (uint16_t)(0x80FF | (addr << 8))
 #define WRITE(addr, data) (uint16_t)(0x7FFF & ((addr << 8) | data))
 
-static uint8_t dmp;
-
 static DELAY_FUNC IMU_Delay;
 // Defaults to USER_BANK_0
 static USER_BANK LastUserBank = USER_BANK_0;
 
 void GPIOD_Handler(void)
 {
-  uint8_t intStatus = 0;
+  uint16_t dmp = 0;
+  uint16_t intStatus = 0;
 
   // Ensure the interrupt is on the INT pin and is a DMP interrupt
   if (GPIO_PORTD_MIS_R & INT_BIT)

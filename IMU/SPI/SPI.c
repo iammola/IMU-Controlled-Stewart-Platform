@@ -9,8 +9,8 @@
 #define SSI3_RX_BIT 1 << 2  // (PD2) SSI3Rx
 #define SSI3_TX_BIT 1 << 3  // (PD3) SSI3Tx
 
-#define SSI3_PINS (uint8_t)(SSI3_CLK_BIT | SSI3_FSS_BIT | SSI3_RX_BIT | SSI3_TX_BIT)
-#define SSI3_PCTL (uint32_t)(GPIO_PCTL_PD0_SSI3CLK | GPIO_PCTL_PD1_SSI3FSS | GPIO_PCTL_PD2_SSI3RX | GPIO_PCTL_PD3_SSI3TX)
+#define SSI3_PINS (unsigned)(SSI3_CLK_BIT | SSI3_FSS_BIT | SSI3_RX_BIT | SSI3_TX_BIT)
+#define SSI3_PCTL (unsigned)(GPIO_PCTL_PD0_SSI3CLK | GPIO_PCTL_PD1_SSI3FSS | GPIO_PCTL_PD2_SSI3RX | GPIO_PCTL_PD3_SSI3TX)
 #define SSI3_PCTL_MASK (uint32_t)(GPIO_PCTL_PD0_M | GPIO_PCTL_PD1_M | GPIO_PCTL_PD2_M | GPIO_PCTL_PD3_M)
 
 #define SSI3_FSS_ADDR (*((volatile uint32_t *)(0x40007000 | (SSI3_FSS_BIT << 2))))
@@ -107,49 +107,63 @@ void SPI3_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, uint8_t frameConfig, uint8_t 
 
 void SPI3_Read(uint16_t initData, uint16_t *result, uint8_t length)
 {
-    uint32_t clearData = 0;
+    uint32_t __stale = 0;
 
-    // Force FSS pin low
+    // Start transmission
     SSI3_FSS_ADDR = 0;
 
     // Clear RX FIFO
     while ((SSI3_SR_R & SSI_SR_RNE) == SSI_SR_RNE)
     {
-        clearData = SSI3_DR_R;
+        __stale = SSI3_DR_R;
     }
 
+    // Wait for space in TX FIFO
     WAIT_FOR_TX_SPACE()
 
+    // Set data to initiate read
     SSI3_DR_R = initData;
 
-    // Test more without each one or the other and add limits to loops
-    WAIT_FOR_IDLE()
-
+    // Get requested amount of data
     while (length-- > 0)
     {
+        // Wait for data to be stored in FIFO. Using this
+        // over waiting for idle in case data count to be read is more than
+        // FIFO size
         WAIT_FOR_RX_DATA()
 
+        // store data
         *result = (uint16_t)SSI3_DR_R;
+
+        // increment pointer
         result++;
     }
 
-    // Force FSS pin high
+    // End transmission
     SSI3_FSS_ADDR = SSI3_FSS_BIT;
 }
 
 void SPI3_Write(uint16_t *data, uint8_t length)
 {
+    // Start transmission
     SSI3_FSS_ADDR = 0;
 
+    // Send desired amount of data
     while (length-- > 0)
     {
+        // Prevent setting data in full TX FIFO
         WAIT_FOR_TX_SPACE()
+
+        // set data to be transmitted
         SSI3_DR_R = *data;
 
+        // increment pointer
         data++;
     }
 
+    // Wait for Idle before ending transmission
     WAIT_FOR_IDLE()
 
+    // End transmission
     SSI3_FSS_ADDR = SSI3_FSS_BIT;
 }
