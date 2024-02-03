@@ -385,11 +385,6 @@
           <GroupName>Source Group 1</GroupName>
           <Files>
             <File>
-              <FileName>IMU.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\IMU.c</FilePath>
-            </File>
-            <File>
               <FileName>Main.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Main.c</FilePath>
@@ -408,6 +403,11 @@
               <FileName>SysTick.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\SysTick.c</FilePath>
+            </File>
+            <File>
+              <FileName>SPI.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\SPI\SPI.c</FilePath>
             </File>
           </Files>
         </Group>

@@ -24,7 +24,7 @@
 #define SPI_ENABLE 0x10
 
 // INT_ENABLE
-#define DMP_INT_ENABLE 0x20
+#define DMP_INT_ENABLE 0x02
 
 // INT_PIN_CFG
 #define INT_ACTIVE_LOW 0x80
@@ -80,5 +80,15 @@ extern REG_ADDRESS ACCEL_XOUT_H_ADDR;
 extern REG_ADDRESS ACCEL_XOUT_L_ADDR;
 extern REG_ADDRESS ACCEL_YOUT_H_ADDR;
 extern REG_ADDRESS ACCEL_YOUT_L_ADDR;
+
+typedef void (*DELAY_FUNC)(uint32_t timeInMs);
+
+void GPIOD_Handler(void);
+
+void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, DELAY_FUNC delay);
+
+void IMU_Read(REG_ADDRESS REGISTER, uint16_t *result);
+
+void IMU_Write(REG_ADDRESS REGISTER, uint8_t data);
 
 #endif // __ICM_20948__
