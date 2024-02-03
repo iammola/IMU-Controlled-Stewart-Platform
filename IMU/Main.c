@@ -9,25 +9,25 @@ static unsigned int time = 0;
 static uint16_t gyroXOut = 0;
 static uint16_t gyroYOut = 0;
 
-static uint16_t gyroXHOut = 0;
-static uint16_t gyroXLOut = 0;
-static uint16_t gyroYHOut = 0;
-static uint16_t gyroYLOut = 0;
+static uint8_t gyroXHOut = 0;
+static uint8_t gyroXLOut = 0;
+static uint8_t gyroYHOut = 0;
+static uint8_t gyroYLOut = 0;
 
-static uint16_t accelYOut = 0;
-static uint16_t accelXOut = 0;
+static uint8_t accelYOut = 0;
+static uint8_t accelXOut = 0;
 
-static uint16_t accelXHOut = 0;
-static uint16_t accelXLOut = 0;
-static uint16_t accelYHOut = 0;
-static uint16_t accelYLOut = 0;
+static uint8_t accelXHOut = 0;
+static uint8_t accelXLOut = 0;
+static uint8_t accelYHOut = 0;
+static uint8_t accelYLOut = 0;
 
-static uint16_t whoAmI = 0;
-static uint16_t userCtrl = 0;
-static uint16_t pwrMgmt1 = 0;
-static uint16_t pwrMgmt2 = 0;
-static uint16_t intEnable = 0;
-static uint16_t intPinCfg = 0;
+static uint8_t whoAmI = 0;
+static uint8_t userCtrl = 0;
+static uint8_t pwrMgmt1 = 0;
+static uint8_t pwrMgmt2 = 0;
+static uint8_t intEnable = 0;
+static uint8_t intPinCfg = 0;
 
 void Delay(uint32_t timeInMs);
 

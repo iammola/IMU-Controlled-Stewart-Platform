@@ -17,8 +17,8 @@ static USER_BANK LastUserBank = USER_BANK_0;
 
 void GPIOD_Handler(void)
 {
-  uint16_t dmp = 0;
-  uint16_t intStatus = 0;
+  uint8_t dmp = 0;
+  uint8_t intStatus = 0;
 
   // Ensure the interrupt is on the INT pin and is a DMP interrupt
   if (GPIO_PORTD_MIS_R & INT_BIT)
@@ -113,10 +113,10 @@ static void IMU_Config(void)
 
   // Specify the Interrupt pin is not open-drain (push-pull) and is an active high pin (falling edge interrupt)
   // also forces the Interrupt to be cleared for the level to be reset and any Read operation to clear the INT_STATUS
-  IMU_Write(INT_PIN_CFG_ADDR, (INT_LATCH_MANUAL_CLEAR | INT_READ_CLEAR) & ~(INT_ACTIVE_LOW | INT_OPEN_DRAIN));
+  // IMU_Write(INT_PIN_CFG_ADDR, (INT_LATCH_MANUAL_CLEAR | INT_READ_CLEAR) & ~(INT_ACTIVE_LOW | INT_OPEN_DRAIN));
 
   // Enable DMP interrupt
-  IMU_Write(INT_ENABLE_ADDR, DMP_INT_ENABLE);
+  // IMU_Write(INT_ENABLE_ADDR, DMP_INT_ENABLE);
 }
 
 void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, DELAY_FUNC delay)
@@ -136,28 +136,33 @@ void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, DELAY_FUNC delay)
   IMU_Config();
 
   // Configure the Interrupt pin
-  IMU_Interrupt_Init();
+  // IMU_Interrupt_Init();
 }
 
 static void IMU_ChangeUserBank(REG_ADDRESS REGISTER)
 {
   uint16_t byte = WRITE(USER_BANK_ADDR.ADDRESS, REGISTER.USER_BANK);
 
+  SPI3_StartTransmission();
   SPI3_Write(&byte, 1);
+  SPI3_EndTransmission();
+
   LastUserBank = REGISTER.USER_BANK;
 }
 
-void IMU_Read(REG_ADDRESS REGISTER, uint16_t *result)
+void IMU_Read(REG_ADDRESS REGISTER, uint8_t *dest)
 {
+  uint16_t response;
+
   // Change User Bank if Needed
   if (LastUserBank != REGISTER.USER_BANK)
     IMU_ChangeUserBank(REGISTER);
 
   SPI3_StartTransmission();
-  SPI3_Read(READ(REGISTER.ADDRESS), result, 1);
+  SPI3_Read(READ(REGISTER.ADDRESS), &response, 1);
   SPI3_EndTransmission();
 
-  *result &= 0xFF;
+  *dest = response & 0xFF;
 }
 
 void IMU_Write(REG_ADDRESS REGISTER, uint8_t data)
