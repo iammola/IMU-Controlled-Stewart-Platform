@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -6,6 +7,7 @@
 
 #include "SPI/SPI.h"
 #include "RFM69HCW.h"
+#include "CLI_UART/CLI_UART.h"
 
 #define DIO_0_INT_BIT (unsigned)(1 << 0) // PB0
 
@@ -221,7 +223,7 @@ static void RFM69HCW_Config(uint32_t bitRate, uint32_t deviation, uint8_t rxBW, 
   // Configure Listen Mode to stay in RX Mode, and only accept packets that match both the RSSI Threshold and Address
   RFM69HCW_WriteRegister(LISTEN_1, LISTEN_END_NO_ACTION | LISTEN_CRITERIA_THRESHOLD_ADDRESS | LISTEN_RESO_IRX_DEFAULT | LISTEN_RESO_IDLE_DEFAULT);
 
-  // Configure Listen Mode to stay in RX Mode, and only accept packets that match both the RSSI Threshold and Address
+  // Set RSSI Threshold
   RFM69HCW_WriteRegister(RSSI_THRESHOLD, RSSI_THRESHOLD_DEFAULT);
 
   // Enable AES encryption, automatic RX phase restart and specified Inter Packet RX Delay
@@ -237,7 +239,11 @@ static void RFM69HCW_Config(uint32_t bitRate, uint32_t deviation, uint8_t rxBW, 
 
 void RFM69HCW_Init(uint32_t SYS_CLK, uint32_t SSI_CLK)
 {
+  // Initialize SysTick
   SysTick_Init();
+
+  // Init UART COM
+  CLI_UART_Init(SYS_CLK, 115200, 3 /* UART_LCRH_WLEN_8 */, 5 /* UART_IFLS_RX4_8 */, 0x00 /* No Parity */, false);
 
   // Initialize the SPI pins
   SPI2_Init(SYS_CLK, SSI_CLK, SSI_CR0_FRF_MOTO, SSI_CR0_DSS_16);
@@ -266,11 +272,19 @@ static uint8_t RFM69HCW_ReadRegister(ADDRESS REGISTER)
 
 static void RFM69HCW_WriteRegister(ADDRESS REGISTER, uint8_t data)
 {
+  uint8_t text[500];
+  uint16_t size = 0;
   uint16_t byte = WRITE(REGISTER, data);
+
+  size = snprintf(text, 500, "\nFor Address %#010x, Setting Value to %#010x\n", REGISTER, data);
+  CLI_UART_Transmit(text, size);
 
   SPI2_StartTransmission();
   SPI2_Write(&byte, 1);
   SPI2_EndTransmission();
+
+  size = snprintf(text, 500, "\nFor Address %#010x, Value read is set to %#010x\n", REGISTER, RFM69HCW_ReadRegister(REGISTER));
+  CLI_UART_Transmit(text, size);
 }
 
 static void RFM69HCW_SetMode(MODE newMode)
@@ -312,6 +326,7 @@ void RFM69HCW_SendPacket(uint8_t *data, uint8_t length)
   do
   {
     RFM69HCW_SetMode(OPERATION_MODE_STANDBY);
+
     while ((RFM69HCW_ReadRegister(IRQ_FLAGS_1) & IRQ_1_MODE_READY) != IRQ_1_MODE_READY)
       ;
 
