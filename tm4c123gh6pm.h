@@ -2211,13 +2211,19 @@
 
 //*****************************************************************************
 //
+// SysTick registers (NVIC)
+//
+//*****************************************************************************
+#define ST_CTRL_R          (*((volatile uint32_t *)0xE000E010))
+#define ST_RELOAD_R        (*((volatile uint32_t *)0xE000E014))
+#define ST_CURRENT_R       (*((volatile uint32_t *)0xE000E018))
+
+//*****************************************************************************
+//
 // NVIC registers (NVIC)
 //
 //*****************************************************************************
 #define NVIC_ACTLR_R            (*((volatile uint32_t *)0xE000E008))
-#define NVIC_ST_CTRL_R          (*((volatile uint32_t *)0xE000E010))
-#define NVIC_ST_RELOAD_R        (*((volatile uint32_t *)0xE000E014))
-#define NVIC_ST_CURRENT_R       (*((volatile uint32_t *)0xE000E018))
 #define NVIC_EN0_R              (*((volatile uint32_t *)0xE000E100))
 #define NVIC_EN1_R              (*((volatile uint32_t *)0xE000E104))
 #define NVIC_EN2_R              (*((volatile uint32_t *)0xE000E108))
