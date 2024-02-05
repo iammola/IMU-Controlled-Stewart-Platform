@@ -143,7 +143,7 @@ void SPI3_Read(uint16_t initData, uint16_t *result, uint8_t length)
 void SPI3_Write(uint16_t *data, uint8_t length)
 {
     // Send desired amount of data
-    while (length-- > 0)
+    while (length > 0)
     {
         // Prevent setting data in full TX FIFO
         WAIT_FOR_TX_SPACE()
@@ -152,7 +152,8 @@ void SPI3_Write(uint16_t *data, uint8_t length)
         SSI3_DR_R = *data;
 
         // increment pointer
-        data++;
+        if (--length > 0)
+            data++;
     }
 
     // Wait for Idle before ending transmission

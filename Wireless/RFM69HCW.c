@@ -11,8 +11,8 @@
 
 #define INT_PCTL_M (unsigned)GPIO_PCTL_PB0_M
 
-#define READ(addr) (uint8_t)(0x7F & addr)
-#define WRITE(addr) (uint8_t)(0x80 | addr)
+#define READ(addr) (uint16_t)((0x7FFF & (addr << 8)) | data)
+#define WRITE(addr, data) (uint16_t)(0x8000 | (addr << 8) | data)
 
 #define NETWORK_ID 23
 
@@ -24,12 +24,12 @@
 #define PEER_NODE_ID 54
 #endif
 
-static void RFM69HCW_Interrupt_Init(void);
 static void RFM69HCW_Config(uint32_t bitRate, uint32_t deviation, uint8_t rxBW, uint8_t interPacketRxDelay);
-static uint8_t RFM69HCW_ReadRegister(ADDRESS REGISTER);
-static void RFM69HCW_WriteRegister(ADDRESS REGISTER, uint8_t *data, uint8_t length);
-static void RFM69HCW_WriteRegisterByte(ADDRESS REGISTER, uint8_t data);
+static void RFM69HCW_Interrupt_Init(void);
 static void RFM69HCW_SetMode(MODE newMode);
+
+static void RFM69HCW_WriteRegister(ADDRESS REGISTER, uint8_t data);
+static uint8_t RFM69HCW_ReadRegister(ADDRESS REGISTER);
 
 static uint8_t LAST_SENT_ACK = 0;
 static uint8_t deviceVersion = 0;
@@ -91,7 +91,7 @@ void GPIOB_Handler(void)
     RX_Data_Buffer[RX_Data_Metadata[0]] = 0;
 
     // Send the ACK byte received as ACK
-    RFM69HCW_WriteRegisterByte(FIFO, RX_Data_Metadata[2]);
+    RFM69HCW_WriteRegister(FIFO, RX_Data_Metadata[2]);
     RFM69HCW_SetMode(OPERATION_MODE_TX);
     while ((RFM69HCW_ReadRegister(IRQ_FLAGS_2) & IRQ_2_PACKET_SENT) != IRQ_2_PACKET_SENT)
       ;
@@ -124,7 +124,7 @@ static void RFM69HCW_Interrupt_Init(void)
   GPIO_PORTB_AMSEL_R &= ~DIO_0_INT_BIT;
 
   // Disable interrupt mask on interrupt pins
-  GPIO_PORTB_IM_R &= ~(DIO_0_INT_BIT);
+  GPIO_PORTB_IM_R &= ~DIO_0_INT_BIT;
 
   // Configure for Edge-Detect interrupts
   GPIO_PORTB_IS_R &= ~DIO_0_INT_BIT;
@@ -158,78 +158,81 @@ static void RFM69HCW_Config(uint32_t bitRate, uint32_t deviation, uint8_t rxBW, 
     while (1)
       ;
 
-  deviceVersion = RFM69HCW_ReadRegister(VERSION);
+  do
+  {
+    deviceVersion = RFM69HCW_ReadRegister(VERSION);
+  } while (deviceVersion != 0x24);
 
   // Put device in standby mode and turn on listening mode and automatic sequencing
-  RFM69HCW_WriteRegisterByte(OPERATION_MODE, (OPERATION_MODE_STANDBY | OPERATION_LISTEN_ON) & ~(OPERATION_SEQUENCER_OFF));
+  RFM69HCW_WriteRegister(OPERATION_MODE, (OPERATION_MODE_STANDBY | OPERATION_LISTEN_ON) & ~OPERATION_SEQUENCER_OFF);
 
   // Use FSK modulation, packet data mode and no modulation shaping
-  RFM69HCW_WriteRegisterByte(DATA_MODULATION, DATA_MODULATION_NO_SHAPING | DATA_MODULATION_FSK | DATA_MODULATION_MODE);
+  RFM69HCW_WriteRegister(DATA_MODULATION, DATA_MODULATION_NO_SHAPING | DATA_MODULATION_FSK | DATA_MODULATION_MODE);
 
   // Set Data Bit-Rate
   bitRate = (uint32_t)(F_XOSC / bitRate);
-  RFM69HCW_WriteRegisterByte(BITRATE_FIRST_BYTE, (bitRate & 0xFF00) >> 8);
-  RFM69HCW_WriteRegisterByte(BITRATE_LAST_BYTE, bitRate & 0xFF);
+  RFM69HCW_WriteRegister(BITRATE_FIRST_BYTE, (bitRate & 0xFF00) >> 8);
+  RFM69HCW_WriteRegister(BITRATE_LAST_BYTE, bitRate & 0xFF);
 
   // Set Frequency Deviation
   deviation = (uint32_t)(bitRate / (2 * F_STEP));
-  RFM69HCW_WriteRegisterByte(DEVIATION_FIRST_BYTE, (deviation >> 8) & 0x3F);
-  RFM69HCW_WriteRegisterByte(DEVIATION_LAST_BYTE, bitRate & 0xFF);
+  RFM69HCW_WriteRegister(DEVIATION_FIRST_BYTE, (deviation >> 8) & 0x3F);
+  RFM69HCW_WriteRegister(DEVIATION_LAST_BYTE, bitRate & 0xFF);
 
   // Set Carrier Frequency
   carrierFrequency = (uint32_t)(MODULE_FREQUENCY / F_STEP);
-  RFM69HCW_WriteRegisterByte(CARRIER_FREQUENCY_FIRST_BYTE, (carrierFrequency & 0xFF0000) >> 16);
-  RFM69HCW_WriteRegisterByte(CARRIER_FREQUENCY_MID_BYTE, (carrierFrequency & 0xFF00) >> 8);
-  RFM69HCW_WriteRegisterByte(CARRIER_FREQUENCY_LAST_BYTE, carrierFrequency & 0xFF);
+  RFM69HCW_WriteRegister(CARRIER_FREQUENCY_FIRST_BYTE, (carrierFrequency & 0xFF0000) >> 16);
+  RFM69HCW_WriteRegister(CARRIER_FREQUENCY_MID_BYTE, (carrierFrequency & 0xFF00) >> 8);
+  RFM69HCW_WriteRegister(CARRIER_FREQUENCY_LAST_BYTE, carrierFrequency & 0xFF);
 
   // Enable sync word verification, with 3 words and no tolerance for errors
-  RFM69HCW_WriteRegisterByte(SYNC_CONFIG, SYNC_WORD_VERIFICATION | SYNC_WORD_BYTE_COUNT_3 | SYNC_WORD_NO_TOLERANCE);
+  RFM69HCW_WriteRegister(SYNC_CONFIG, SYNC_WORD_VERIFICATION | SYNC_WORD_BYTE_COUNT_3 | SYNC_WORD_NO_TOLERANCE);
 
   // Verify the Bit Sync value (0xAA or 0x55), Device Version, Network ID
-  RFM69HCW_WriteRegisterByte(SYNC_VALUE_1, 0xAA);
-  RFM69HCW_WriteRegisterByte(SYNC_VALUE_2, deviceVersion);
-  RFM69HCW_WriteRegisterByte(SYNC_VALUE_3, NETWORK_ID);
+  RFM69HCW_WriteRegister(SYNC_VALUE_1, 0xAA);
+  RFM69HCW_WriteRegister(SYNC_VALUE_2, deviceVersion);
+  RFM69HCW_WriteRegister(SYNC_VALUE_3, NETWORK_ID);
 
   // Configure the Packets to be of Variable Length, with Variable lengths and the addresses to be filtered for this node
-  RFM69HCW_WriteRegisterByte(PACKET_CONFIG_1, (PACKET_VARIABLE_LENGTH | PACKET_CRC_ENABLE | PACKET_ADDRESS_FILTER_NODE) & ~PACKET_CRC_AUTO_CLEAR_OFF);
-  RFM69HCW_WriteRegisterByte(PACKET_NODE_ADDR, MY_NODE_ID);
+  RFM69HCW_WriteRegister(PACKET_CONFIG_1, (PACKET_VARIABLE_LENGTH | PACKET_CRC_ENABLE | PACKET_ADDRESS_FILTER_NODE) & ~PACKET_CRC_AUTO_CLEAR_OFF);
+  RFM69HCW_WriteRegister(PACKET_NODE_ADDR, MY_NODE_ID);
 
   // Trigger transmit start on non-empty FIFO buffer
-  RFM69HCW_WriteRegisterByte(FIFO_THRESHOLD, FIFO_TX_ON_NOT_EMPTY);
+  RFM69HCW_WriteRegister(FIFO_THRESHOLD, FIFO_TX_ON_NOT_EMPTY);
 
   // Set (max) payload length to 64
-  RFM69HCW_WriteRegisterByte(PAYLOAD_LENGTH, PAYLOAD_LENGTH_64);
+  RFM69HCW_WriteRegister(PAYLOAD_LENGTH, PAYLOAD_LENGTH_64);
 
   // Specify DC Offset to 4% of BW
-  RFM69HCW_WriteRegisterByte(RX_BANDWIDTH, RECEIVER_DC_OFFSET_CUTOFF_FREQ | rxBW);
+  RFM69HCW_WriteRegister(RX_BANDWIDTH, RECEIVER_DC_OFFSET_CUTOFF_FREQ | rxBW);
 
   // Set Ramp-Time to 40us
-  RFM69HCW_WriteRegisterByte(PA_RAMP_TIME, PA_FSK_RAMP_TIME_40u);
+  RFM69HCW_WriteRegister(PA_RAMP_TIME, PA_FSK_RAMP_TIME_40u);
 
   // Enable PA1 and use half of the max power (13dBm)
-  RFM69HCW_WriteRegisterByte(PA_LEVEL, PA1_ON | (PA_MAX_POWER / 2));
+  RFM69HCW_WriteRegister(PA_LEVEL, PA1_ON | (PA_MAX_POWER / 2));
 
   // Enable Over Current Protection (required for high power)
-  RFM69HCW_WriteRegisterByte(CURRENT_PROTECTION, CURRENT_PROTECTION_ON);
+  RFM69HCW_WriteRegister(CURRENT_PROTECTION, CURRENT_PROTECTION_ON);
 
   // Enable Automatic ACK after TX
-  // RFM69HCW_WriteRegisterByte(AUTO_MODES, AUTO_MODES_AUTO_RX_ACK);
+  // RFM69HCW_WriteRegister(AUTO_MODES, AUTO_MODES_AUTO_RX_ACK);
 
   // Configure Listen Mode to stay in RX Mode, and only accept packets that match both the RSSI Threshold and Address
-  RFM69HCW_WriteRegisterByte(LISTEN_1, LISTEN_END_NO_ACTION | LISTEN_CRITERIA_THRESHOLD_ADDRESS | LISTEN_RESO_IRX_DEFAULT | LISTEN_RESO_IDLE_DEFAULT);
+  RFM69HCW_WriteRegister(LISTEN_1, LISTEN_END_NO_ACTION | LISTEN_CRITERIA_THRESHOLD_ADDRESS | LISTEN_RESO_IRX_DEFAULT | LISTEN_RESO_IDLE_DEFAULT);
 
   // Configure Listen Mode to stay in RX Mode, and only accept packets that match both the RSSI Threshold and Address
-  RFM69HCW_WriteRegisterByte(RSSI_THRESHOLD, RSSI_THRESHOLD_DEFAULT);
+  RFM69HCW_WriteRegister(RSSI_THRESHOLD, RSSI_THRESHOLD_DEFAULT);
 
   // Enable AES encryption, automatic RX phase restart and specified Inter Packet RX Delay
-  RFM69HCW_WriteRegisterByte(PACKET_CONFIG_2, PACKET_AES_ENCRYPTION | PACKET_AUTO_RX_RESTART | (interPacketRxDelay << PACKET_INTER_RX_DELAY_S));
+  RFM69HCW_WriteRegister(PACKET_CONFIG_2, PACKET_AES_ENCRYPTION | PACKET_AUTO_RX_RESTART | (interPacketRxDelay << PACKET_INTER_RX_DELAY_S));
 
   // Set Cipher Key
   for (idx = 0; idx < AES_KEY_LAST - AES_KEY_FIRST; idx++)
-    RFM69HCW_WriteRegisterByte(AES_KEY_FIRST + idx, AES_CIPHER_KEY[idx]);
+    RFM69HCW_WriteRegister(AES_KEY_FIRST + idx, AES_CIPHER_KEY[idx]);
 
   // Disable Clock output
-  RFM69HCW_WriteRegisterByte(DIO_MAPPING_2, DIO_CLK_OUT_OFF);
+  RFM69HCW_WriteRegister(DIO_MAPPING_2, DIO_CLK_OUT_OFF);
 }
 
 void RFM69HCW_Init(uint32_t SYS_CLK, uint32_t SSI_CLK)
@@ -237,7 +240,7 @@ void RFM69HCW_Init(uint32_t SYS_CLK, uint32_t SSI_CLK)
   SysTick_Init();
 
   // Initialize the SPI pins
-  SPI2_Init(SYS_CLK, SSI_CLK, SSI_CR0_FRF_MOTO, SSI_CR0_DSS_8);
+  SPI2_Init(SYS_CLK, SSI_CLK, SSI_CR0_FRF_MOTO, SSI_CR0_DSS_16);
 
   // Configure Wireless settings
   RFM69HCW_Config(
@@ -255,25 +258,19 @@ static uint8_t RFM69HCW_ReadRegister(ADDRESS REGISTER)
   uint16_t response = 0;
 
   SPI2_StartTransmission();
-  SPI2_Read(REGISTER, &response, 1);
+  SPI2_Read(REGISTER << 8, &response, 1);
   SPI2_EndTransmission();
 
   return response & 0xFF;
 }
 
-static void RFM69HCW_WriteRegister(ADDRESS REGISTER, uint8_t *data, uint8_t length)
+static void RFM69HCW_WriteRegister(ADDRESS REGISTER, uint8_t data)
 {
-  uint16_t byte = WRITE(REGISTER);
+  uint16_t byte = WRITE(REGISTER, data);
 
   SPI2_StartTransmission();
   SPI2_Write(&byte, 1);
-  SPI2_Write((uint16_t *)data, length);
   SPI2_EndTransmission();
-}
-
-static void RFM69HCW_WriteRegisterByte(ADDRESS REGISTER, uint8_t data)
-{
-  RFM69HCW_WriteRegister(REGISTER, &data, 1);
 }
 
 static void RFM69HCW_SetMode(MODE newMode)
@@ -290,20 +287,27 @@ static void RFM69HCW_SetMode(MODE newMode)
   modeSettings &= ~OPERATION_MODE_M;
 
   // Set new Mode
-  RFM69HCW_WriteRegisterByte(OPERATION_MODE, modeSettings | newMode);
+  RFM69HCW_WriteRegister(OPERATION_MODE, modeSettings | newMode);
 
   CurrentMode = newMode;
 }
 
 void RFM69HCW_SendPacket(uint8_t *data, uint8_t length)
 {
-  uint16_t TX_Data_Bytes[MetadataLength + 1] = {
-      WRITE(FIFO),
+  uint8_t dataIdx = 0;
+  uint16_t TX_Metadata[MetadataLength + 1] = {
       // All bytes after address & payload length
-      length + MetadataLength - 1,
-      MY_NODE_ID,
-      ++LAST_SENT_ACK,
+      WRITE(FIFO, length + MetadataLength - 1),
+      (MY_NODE_ID << 8) | ++LAST_SENT_ACK,
   };
+  uint16_t TX_Payload[PAYLOAD_LENGTH_64 / 2] = {0};
+
+  // Increment by 2 since we're taking two bytes out the data
+  for (dataIdx = 0; dataIdx < length; dataIdx += 2)
+  {
+    // Merge the bytes together to form 16 bit words.
+    TX_Payload[dataIdx] = (data[dataIdx] << 8) | (((dataIdx + 1) < length) ? data[dataIdx + 1] : 0);
+  }
 
   do
   {
@@ -312,12 +316,12 @@ void RFM69HCW_SendPacket(uint8_t *data, uint8_t length)
       ;
 
     SPI2_StartTransmission();
-    SPI2_Write(TX_Data_Bytes, sizeof(TX_Data_Bytes) / sizeof(TX_Data_Bytes[0]));
-    SPI2_Write(data, length);
+    SPI2_Write(TX_Metadata, sizeof(TX_Metadata) / sizeof(TX_Metadata[0]));
+    SPI2_Write(TX_Payload, length);
     SPI2_EndTransmission();
 
     // Enable Packet Sent/CRC OK Interrupt on DIO0
-    RFM69HCW_WriteRegisterByte(DIO_MAPPING_1, DIO_0_MAPPING_00);
+    RFM69HCW_WriteRegister(DIO_MAPPING_1, DIO_0_MAPPING_00);
 
     // Start sending Packet
     RFM69HCW_SetMode(OPERATION_MODE_TX);

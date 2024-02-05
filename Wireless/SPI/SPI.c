@@ -109,9 +109,6 @@ void SPI2_Read(uint16_t initData, uint16_t *result, uint8_t length)
 {
   uint32_t __stale = 0;
 
-  // Start transmission
-  SSI2_FSS_ADDR = 0;
-
   // Clear RX FIFO
   while ((SSI2_SR_R & SSI_SR_RNE) == SSI_SR_RNE)
   {
@@ -125,7 +122,7 @@ void SPI2_Read(uint16_t initData, uint16_t *result, uint8_t length)
   SSI2_DR_R = initData;
 
   // Get requested amount of data
-  while (length-- > 0)
+  while (length > 0)
   {
     // Wait for data to be stored in FIFO. Using this
     // over waiting for idle in case data count to be read is more than
@@ -136,7 +133,8 @@ void SPI2_Read(uint16_t initData, uint16_t *result, uint8_t length)
     *result = (uint16_t)SSI2_DR_R;
 
     // increment pointer
-    result++;
+    if (--length > 0)
+      result++;
   }
 }
 
