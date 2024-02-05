@@ -11,8 +11,8 @@
 
 #define INT_PCTL_M (unsigned)GPIO_PCTL_PB0_M
 
-#define READ(addr) (uint8_t)(0x80 | addr)
-#define WRITE(addr) (uint8_t)(0x7F & addr)
+#define READ(addr) (uint8_t)(0x7F & addr)
+#define WRITE(addr) (uint8_t)(0x80 | addr)
 
 #define NETWORK_ID 23
 const char AES_CIPHER_KEY[16] = "($HJ#BUCA823nGU1";
@@ -298,7 +298,8 @@ void RFM69HCW_SendPacket(uint8_t *data, uint8_t length)
 {
   uint16_t TX_Data_Bytes[MetadataLength + 1] = {
       WRITE(FIFO),
-      length + 1,
+      // All bytes after address & payload length
+      length + MetadataLength - 1,
       MY_NODE_ID,
       ++LAST_SENT_ACK,
   };
