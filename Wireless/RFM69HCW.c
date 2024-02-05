@@ -7,9 +7,9 @@
 #include "SPI/SPI.h"
 #include "RFM69HCW.h"
 
-#define DIO_0_INT_BIT 3 // PB3
+#define DIO_0_INT_BIT (unsigned)(1 << 0) // PB0
 
-#define INT_PCTL_M GPIO_PCTL_PB2_M | GPIO_PCTL_PB3_M
+#define INT_PCTL_M (unsigned)GPIO_PCTL_PB0_M
 
 #define READ(addr) (uint8_t)(0x80 | addr)
 #define WRITE(addr) (uint8_t)(0x7F & addr)
@@ -104,35 +104,35 @@ void GPIOB_Handler(void)
 
 static void RFM69HCW_Interrupt_Init(void)
 {
-  // Enable Port D clock
+  // Enable Port B clock
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R1;
 
   // Disable Alternate Functions on interrupt pins
-  GPIO_PORTD_AFSEL_R &= ~DIO_0_INT_BIT;
+  GPIO_PORTB_AFSEL_R &= ~DIO_0_INT_BIT;
 
   // Disable Peripheral functions on the interrupt pins
-  GPIO_PORTD_PCTL_R &= ~INT_PCTL_M;
+  GPIO_PORTB_PCTL_R &= ~INT_PCTL_M;
 
   // Configure interrupt pins as inputs
-  GPIO_PORTD_DIR_R &= ~DIO_0_INT_BIT;
+  GPIO_PORTB_DIR_R &= ~DIO_0_INT_BIT;
 
   // Enable Digital Mode on interrupt pins
-  GPIO_PORTD_DEN_R |= DIO_0_INT_BIT;
+  GPIO_PORTB_DEN_R |= DIO_0_INT_BIT;
 
   // Disable Analog Mode on interrupt pins
-  GPIO_PORTD_AMSEL_R &= ~DIO_0_INT_BIT;
+  GPIO_PORTB_AMSEL_R &= ~DIO_0_INT_BIT;
 
   // Disable interrupt mask on interrupt pins
-  GPIO_PORTD_IM_R &= ~(DIO_0_INT_BIT);
+  GPIO_PORTB_IM_R &= ~(DIO_0_INT_BIT);
 
   // Configure for Edge-Detect interrupts
-  GPIO_PORTD_IS_R &= ~DIO_0_INT_BIT;
+  GPIO_PORTB_IS_R &= ~DIO_0_INT_BIT;
 
   // Only listen on one edge event on the pin
-  GPIO_PORTD_IBE_R &= ~DIO_0_INT_BIT;
+  GPIO_PORTB_IBE_R &= ~DIO_0_INT_BIT;
 
   // Trigger interrupt on rising edge
-  GPIO_PORTD_IEV_R |= DIO_0_INT_BIT;
+  GPIO_PORTB_IEV_R |= DIO_0_INT_BIT;
 
   // Enable Port B's Interrupt Handler
   NVIC_EN0_R |= NVIC_EN0_INT1;
@@ -141,10 +141,10 @@ static void RFM69HCW_Interrupt_Init(void)
   NVIC_PRI0_R = (NVIC_PRI0_R & ~NVIC_PRI0_INT1_M) | (RFM69HCW_INT_PRIORITY << NVIC_PRI0_INT1_S);
 
   // Clear the pins interrupt
-  GPIO_PORTD_ICR_R |= DIO_0_INT_BIT;
+  GPIO_PORTB_ICR_R |= DIO_0_INT_BIT;
 
   // Allow Interrupts on the pins to be detected
-  GPIO_PORTD_IM_R |= DIO_0_INT_BIT;
+  GPIO_PORTB_IM_R |= DIO_0_INT_BIT;
 }
 
 static void RFM69HCW_Config(uint32_t bitRate, uint32_t deviation, uint8_t rxBW, uint8_t interPacketRxDelay)
