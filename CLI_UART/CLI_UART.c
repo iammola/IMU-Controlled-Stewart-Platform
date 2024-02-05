@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <string.h>
 #include <stdbool.h>
 
 #include "CLI_UART.h"
@@ -46,7 +47,7 @@ static void CLI_UART_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate)
   // multiplication would not be required again. All that'll be left to do will be to filter that part out
   // using a mask with all the bits it was shifted by as ones (1). i.e (2 ^ multiplier) - 1.
   // The value would be a number between 0 and 2^multiplier. Where 0 would be 0.0, half of 2^M would be 0.5, and vice versa.
-  uint32_t fractionalPart = (BRD & FRACTIONAL_BRD_MASK) + 0.5;
+  uint32_t fractionalPart = (uint32_t)((BRD & FRACTIONAL_BRD_MASK) + 0.5);
 
   // Write calculated BRD integer part
   UART0_IBRD_R = integerPart;
@@ -59,7 +60,7 @@ static void CLI_UART_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate)
     UART0_CTL_R |= UART_CTL_HSE;
   else
     // Disable High-Speed Mode
-    UART0_CTL_R &= ~UART_CTL_HSE;
+    UART0_CTL_R &= (unsigned)~UART_CTL_HSE;
 }
 
 // --------- UART_LCRHConfigure -------------
@@ -130,10 +131,10 @@ static void CLI_UART_Disable(void)
     ;
 
   // Clear the FIFO
-  UART0_LCRH_R &= ~UART_LCRH_FEN;
+  UART0_LCRH_R &= (unsigned)~UART_LCRH_FEN;
 
   // Disable the UART
-  UART0_CTL_R &= ~(UART_CTL_UARTEN | UART_CTL_TXE | UART_CTL_RXE);
+  UART0_CTL_R &= (unsigned)~(UART_CTL_UARTEN | UART_CTL_TXE | UART_CTL_RXE);
 }
 
 // -------- UART_Disable -------
@@ -167,13 +168,13 @@ static void CLI_UART_InterruptEnable(uint8_t RXFIFOLevel)
   }
 
   // Set RX FIFO level
-  UART0_IFLS_R = (UART0_IFLS_R & ~UART_IFLS_RX_M) | RXFIFOLevel;
+  UART0_IFLS_R = (UART0_IFLS_R & (unsigned)~UART_IFLS_RX_M) | RXFIFOLevel;
 
   // Enable Interrupt 5 for UART0
   NVIC_EN0_R |= NVIC_EN0_INT5;
 
   // Set Priority
-  NVIC_PRI1_R = (NVIC_PRI1_R & ~NVIC_PRI1_INT5_M) | (UART_INTERRUPT_PRIORITY << NVIC_PRI1_INT5_S);
+  NVIC_PRI1_R = (NVIC_PRI1_R & (unsigned)~NVIC_PRI1_INT5_M) | (UART_INTERRUPT_PRIORITY << NVIC_PRI1_INT5_S);
 }
 
 // ----------- CLI_UART_Init ------------
@@ -226,12 +227,12 @@ void CLI_UART_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, ui
 // ----------- CLI_UART_Transmit -------------
 // Transmits data through the UART line. If the transmit FIFO is full, it blocks further
 // processing until there is space to prevent data loss
-// Input: data - Data buffer to transmit
-//        byteCount - The number of bytes in the data buffer to transmit
+// Input: data - String to transmit
 // Output: None
-void CLI_UART_Transmit(uint8_t *data, uint8_t byteCount)
+void CLI_UART_Transmit(char *data)
 {
   uint8_t byteIndex = 0;
+  uint32_t length = strlen((const char *)data);
 
   do
   {
@@ -244,7 +245,7 @@ void CLI_UART_Transmit(uint8_t *data, uint8_t byteCount)
 
     // Increment index tracker
     byteIndex++;
-  } while (byteIndex < byteCount);
+  } while (byteIndex < length);
 }
 
 // --------- UART_Receive ------------
@@ -252,16 +253,17 @@ void CLI_UART_Transmit(uint8_t *data, uint8_t byteCount)
 // before returning the data
 // Input: None
 // Output: Data received from UART
-void CLI_UART_Receive(uint8_t *data, uint8_t length)
+void CLI_UART_Receive(char *data, uint8_t length)
 {
   // Wait FOR Receive FIFO to have data
   while (UART0_FR_R & UART_FR_RXFE)
     ;
 
-  while (length-- > 0)
+  while (length > 0)
   {
     // Read data
-    *data = UART0_DR_R;
-    data++;
+    *data = (uint8_t)UART0_DR_R;
+    if (--length > 0)
+      data++;
   }
 }

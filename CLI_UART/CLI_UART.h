@@ -19,10 +19,9 @@ void CLI_UART_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, ui
 // ----------- UART_Transmit -------------
 // Transmits data through the UART line. If the transmit FIFO is full, it blocks further
 // processing until there is space to prevent data loss
-// Input: data - Data buffer to transmit
-//        length - The number of bytes in the data buffer to transmit
+// Input: data - String to transmit
 // Output: None
-void CLI_UART_Transmit(uint8_t *data, uint8_t length);
+void CLI_UART_Transmit(char *data);
 
 // --------- UART_Receive ------------
 // Gets the data received by the UART. It waits for the Receive FIFO to not be empty,
@@ -30,4 +29,4 @@ void CLI_UART_Transmit(uint8_t *data, uint8_t length);
 // Input: data - Location to store received data
 //        length - The number of bytes in the data buffer to transmit
 // Output: Data received from UART
-void CLI_UART_Receive(uint8_t *data, uint8_t length);
+void CLI_UART_Receive(char *data, uint8_t length);
