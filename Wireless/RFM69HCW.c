@@ -15,7 +15,6 @@
 #define WRITE(addr) (uint8_t)(0x80 | addr)
 
 #define NETWORK_ID 23
-const char AES_CIPHER_KEY[16] = "($HJ#BUCA823nGU1";
 
 #ifdef __DEVICE_1__
 #define MY_NODE_ID 54
@@ -36,11 +35,13 @@ static uint8_t LAST_SENT_ACK = 0;
 static uint8_t deviceVersion = 0;
 static uint8_t ACK_STATUS = ACK_RESET;
 
+static const char AES_CIPHER_KEY[16] = "($HJ#BUCA823nGU1";
+
 bool HasNewData = false;
 uint8_t RX_Data_Metadata[MetadataLength] = {0};
 uint8_t RX_Data_Buffer[PAYLOAD_LENGTH_64 + 1] = {0};
 
-MODE CurrentMode;
+static MODE CurrentMode;
 
 void GPIOB_Handler(void)
 {
@@ -138,7 +139,7 @@ static void RFM69HCW_Interrupt_Init(void)
   NVIC_EN0_R |= NVIC_EN0_INT1;
 
   // Configure Port B's priority
-  NVIC_PRI0_R = (NVIC_PRI0_R & ~NVIC_PRI0_INT1_M) | (RFM69HCW_INT_PRIORITY << NVIC_PRI0_INT1_S);
+  NVIC_PRI0_R = (NVIC_PRI0_R & (unsigned)~NVIC_PRI0_INT1_M) | (RFM69HCW_INT_PRIORITY << NVIC_PRI0_INT1_S);
 
   // Clear the pins interrupt
   GPIO_PORTB_ICR_R |= DIO_0_INT_BIT;
@@ -166,18 +167,18 @@ static void RFM69HCW_Config(uint32_t bitRate, uint32_t deviation, uint8_t rxBW, 
   RFM69HCW_WriteRegisterByte(DATA_MODULATION, DATA_MODULATION_NO_SHAPING | DATA_MODULATION_FSK | DATA_MODULATION_MODE);
 
   // Set Data Bit-Rate
-  bitRate = F_XOSC / bitRate;
-  RFM69HCW_WriteRegisterByte(BITRATE_FIRST_BYTE, bitRate >> 8);
+  bitRate = (uint32_t)(F_XOSC / bitRate);
+  RFM69HCW_WriteRegisterByte(BITRATE_FIRST_BYTE, (bitRate & 0xFF00) >> 8);
   RFM69HCW_WriteRegisterByte(BITRATE_LAST_BYTE, bitRate & 0xFF);
 
   // Set Frequency Deviation
-  deviation = bitRate / (2 * F_STEP);
+  deviation = (uint32_t)(bitRate / (2 * F_STEP));
   RFM69HCW_WriteRegisterByte(DEVIATION_FIRST_BYTE, (deviation >> 8) & 0x3F);
   RFM69HCW_WriteRegisterByte(DEVIATION_LAST_BYTE, bitRate & 0xFF);
 
   // Set Carrier Frequency
-  carrierFrequency = MODULE_FREQUENCY / F_STEP;
-  RFM69HCW_WriteRegisterByte(CARRIER_FREQUENCY_FIRST_BYTE, carrierFrequency >> 16);
+  carrierFrequency = (uint32_t)(MODULE_FREQUENCY / F_STEP);
+  RFM69HCW_WriteRegisterByte(CARRIER_FREQUENCY_FIRST_BYTE, (carrierFrequency & 0xFF0000) >> 16);
   RFM69HCW_WriteRegisterByte(CARRIER_FREQUENCY_MID_BYTE, (carrierFrequency & 0xFF00) >> 8);
   RFM69HCW_WriteRegisterByte(CARRIER_FREQUENCY_LAST_BYTE, carrierFrequency & 0xFF);
 

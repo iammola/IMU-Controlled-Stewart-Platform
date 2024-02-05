@@ -7,7 +7,7 @@
 #include "RFM69HCW.h"
 
 // Tracked LED for peer node
-uint8_t peerLEDIdx = 0;
+static uint8_t peerLEDIdx = 0;
 
 static void PortF_Init(void)
 {
@@ -62,7 +62,6 @@ void GPIOF_Handler(void)
 
 int main(void)
 {
-
   // Initialize PLL
   PLL_Init();
 
