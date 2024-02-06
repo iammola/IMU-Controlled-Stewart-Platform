@@ -43,6 +43,7 @@ uint8_t RX_Data_Metadata[MetadataLength] = {0};
 uint8_t RX_Data_Buffer[PAYLOAD_LENGTH_64 + 1] = {0};
 
 static MODE CurrentMode;
+static bool PendingModeChange = false;
 
 void GPIOB_Handler(void)
 {
@@ -53,6 +54,12 @@ void GPIOB_Handler(void)
   bool Handled = true;
   uint8_t dataIdx = 0;
   uint8_t interrupt2Status = RFM69HCW_ReadRegister(IRQ_FLAGS_2);
+
+  if (PendingModeChange)
+  {
+    CurrentMode = RFM69HCW_ReadRegister(OPERATION_MODE) & OPERATION_MODE_M;
+    PendingModeChange = false;
+  }
 
   if (CurrentMode == OPERATION_MODE_TX && (interrupt2Status & IRQ_2_PACKET_SENT) == IRQ_2_PACKET_SENT)
   {
@@ -109,7 +116,7 @@ void GPIOB_Handler(void)
     // Prevent Interrupt from being cleared
     Handled = false;
 
-    // Clear Interrupt
+  // Clear Interrupt
   if (Handled)
     GPIO_PORTB_ICR_R |= DIO_0_INT_BIT;
 }
@@ -295,6 +302,8 @@ static void RFM69HCW_SetMode(MODE newMode)
   // Get current operation mode settings, mask out current mode and enable automatic sequencing
   modeSettings = (RFM69HCW_ReadRegister(OPERATION_MODE) & ~(OPERATION_MODE_M | OPERATION_SEQUENCER_OFF));
 
+  PendingModeChange = true;
+
   // Have to abort Listen Mode to change Operation mode
   if (modeSettings & OPERATION_LISTEN_ON)
   {
@@ -318,10 +327,15 @@ static void RFM69HCW_SetMode(MODE newMode)
     RFM69HCW_WriteRegister(OPERATION_MODE, modeSettings | OPERATION_LISTEN_ON);
 
   // Wait for MODE_READY
-  while ((RFM69HCW_ReadRegister(IRQ_FLAGS_1) & IRQ_1_MODE_READY) != IRQ_1_MODE_READY)
+  while (PendingModeChange && (RFM69HCW_ReadRegister(IRQ_FLAGS_1) & IRQ_1_MODE_READY) != IRQ_1_MODE_READY)
     ;
 
-  CurrentMode = newMode;
+  // Only update it if the mode wasn't already changed in an interrupt
+  if (PendingModeChange)
+  {
+    CurrentMode = newMode;
+    PendingModeChange = false;
+  }
 }
 
 void RFM69HCW_SendPacket(uint8_t *data, uint8_t length)
