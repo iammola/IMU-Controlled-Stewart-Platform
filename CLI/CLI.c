@@ -1,8 +1,20 @@
+/**
+ * Name: Ademola Adedeji
+ * Date: 27th January, 2024
+ * Course-Code: ELTR-2400
+ * Course-Name: Communication Systems II
+ * 
+ * Lab Description: Initializes UART module 0 on Port A pins 4 (Tx) and 5 (Tx) for connection with the
+ *                  COM port of the PC. IT Automatically calculates the need for High Speed Mode (HSE),
+ *                  and the Integer and Fractional parts of the Baud Rate. It allows for configuration
+ *                  of the Data length, Use of Parity and number of stop bits. Only uses Receive interrupts,
+ *                  and also allows for configuration of the FIFO level to trigger the Receive FIFO interrupt.
+*/
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
 
-#include "CLI_UART.h"
+#include "CLI.h"
 #include "tm4c123gh6pm.h"
 
 #define RX_BIT 1 << 0
@@ -15,13 +27,18 @@
 #define FRACTIONAL_BRD_MULTIPLIER 6 // 2^6 = 64 or LSH 6 times
 #define FRACTIONAL_BRD_MASK (1 << FRACTIONAL_BRD_MULTIPLIER) - 1
 
-static void CLI_UART_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate);
-static void CLI_UART_LCRHConfigure(uint8_t wordLength, uint8_t parity, bool useTwoStopBits);
-static void CLI_UART_Enable(void);
-static void CLI_UART_Disable(void);
-static void CLI_UART_InterruptEnable(uint8_t RXFIFOLevel);
+/* Calculates and sets the Integer and Fractional of the BRD and HSE */
+static void UART_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate);
+/* Sets the LCRH configuration */
+static void UART_LCRHConfigure(uint8_t wordLength, uint8_t parity, bool useTwoStopBits);
+/* Enables the UART module, TX and RX operations */
+static void UART_Enable(void);
+/* Disables the UART module */
+static void UART_Disable(void);
+/* Enables the Receive Timeout and FIFO interrupts */
+static void UART_InterruptInit(uint8_t RXFIFOLevel);
 
-// ------------ CLI_UART_BRDConfigure --------------------
+// ------------ UART_BRDConfigure --------------------
 // Uses Fixed Point Arithmetic to calculate the Integer and Fractional Parts of the
 // Baud-Rate divisor required to work with the desired baud rate. It automatically
 // chooses if High-Speed Mode should be enabled depending on the parameters provided
@@ -30,7 +47,7 @@ static void CLI_UART_InterruptEnable(uint8_t RXFIFOLevel);
 // Input: SYS_CLOCK - The clock frequency of the system
 //        baudRate - The desired baud rate for UART transmission
 // Output: None
-static void CLI_UART_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate)
+static void UART_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate)
 {
   // High speed mode must be used if the BAUD rate would run faster than the system clock
   bool needsHighSpeed = (baudRate * 16) > SYS_CLOCK;
@@ -70,7 +87,7 @@ static void CLI_UART_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate)
 //                 the 2nd bit being a 1 denotes Even Parity
 //        useTwoStopBits - For two stop bits to be used at the end of transmission
 // Output: None
-static void CLI_UART_LCRHConfigure(uint8_t wordLength, uint8_t parity, bool useTwoStopBits)
+static void UART_LCRHConfigure(uint8_t wordLength, uint8_t parity, bool useTwoStopBits)
 {
   // Enable FIFO buffers
   uint32_t result = UART_LCRH_FEN;
@@ -114,7 +131,7 @@ static void CLI_UART_LCRHConfigure(uint8_t wordLength, uint8_t parity, bool useT
 // Enables the UART, Transmit and Receive operations
 // Input: None
 // Output: None
-static void CLI_UART_Enable(void)
+static void UART_Enable(void)
 {
   UART0_CTL_R |= UART_CTL_UARTEN | UART_CTL_TXE | UART_CTL_RXE;
 }
@@ -124,7 +141,7 @@ static void CLI_UART_Enable(void)
 // then disables the UART, Transmit and Receive operations
 // Input: None
 // Output: None
-static void CLI_UART_Disable(void)
+static void UART_Disable(void)
 {
   // Wait for transmission to finish
   while (UART0_FR_R & UART_FR_BUSY)
@@ -137,12 +154,12 @@ static void CLI_UART_Disable(void)
   UART0_CTL_R &= (unsigned)~(UART_CTL_UARTEN | UART_CTL_TXE | UART_CTL_RXE);
 }
 
-// -------- UART_Disable -------
+// -------- UART_InterruptEnable -------
 // Enables the UART's Interrupt handler for the Receive FIFO Level and Timeout events for software flow control,
 // also setting the Priority to 5
 // Input: RXFIFOLevel - The desired level to trigger the Receive FIFO interrupt on
 // Output: None
-static void CLI_UART_InterruptEnable(uint8_t RXFIFOLevel)
+static void UART_InterruptEnable(uint8_t RXFIFOLevel)
 {
   // Allow Receive FIFO and Timeout interrupts on to be handled by controller
   UART0_IM_R = UART_IM_RXIM | UART_IM_RTIM;
@@ -177,7 +194,7 @@ static void CLI_UART_InterruptEnable(uint8_t RXFIFOLevel)
   NVIC_PRI1_R = (NVIC_PRI1_R & (unsigned)~NVIC_PRI1_INT5_M) | (UART_INTERRUPT_PRIORITY << NVIC_PRI1_INT5_S);
 }
 
-// ----------- CLI_UART_Init ------------
+// ----------- CLI_Init ------------
 // Initializes the UART 4 module in Port C using the specified options
 // Input: SYS_CLOCK - System Clock
 //        baudRate - The desired baud rate for UART transmission
@@ -188,7 +205,7 @@ static void CLI_UART_InterruptEnable(uint8_t RXFIFOLevel)
 //                 the 2nd bit being a 1 denotes Even Parity
 //        useTwoStopBits - For two stop bits to be used at the end of transmission
 // Output: None
-void CLI_UART_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t RXFIFOLevel, uint8_t parity, bool useTwoStopBits)
+void CLI_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t RXFIFOLevel, uint8_t parity, bool useTwoStopBits)
 {
   // Enable Port A's clock
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R0;
@@ -209,27 +226,27 @@ void CLI_UART_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, ui
   GPIO_PORTA_DEN_R |= PINS;
 
   // Disable UART
-  CLI_UART_Disable();
+  UART_Disable();
 
   // Set Baud-Rate Divisor (BRD)
-  CLI_UART_BRDConfigure(SYS_CLOCK, baudRate);
+  UART_BRDConfigure(SYS_CLOCK, baudRate);
 
   // Configure (Line Control) LCRH
-  CLI_UART_LCRHConfigure(wordLength, useTwoStopBits, parity);
+  UART_LCRHConfigure(wordLength, useTwoStopBits, parity);
 
   // Enable UART 4 Interrupts
-  CLI_UART_InterruptEnable(RXFIFOLevel);
+  UART_InterruptEnable(RXFIFOLevel);
 
   // Enable UART
-  CLI_UART_Enable();
+  UART_Enable();
 }
 
-// ----------- CLI_UART_Transmit -------------
+// ----------- CLI_Write -------------
 // Transmits data through the UART line. If the transmit FIFO is full, it blocks further
 // processing until there is space to prevent data loss
 // Input: data - String to transmit
 // Output: None
-void CLI_UART_Transmit(char *data)
+void CLI_Write(char *data)
 {
   uint8_t byteIndex = 0;
   uint32_t length = strlen((const char *)data);
@@ -248,12 +265,12 @@ void CLI_UART_Transmit(char *data)
   } while (byteIndex < length);
 }
 
-// --------- UART_Receive ------------
+// --------- CLI_Receive ------------
 // Gets the data received by the UART. It waits for the Receive FIFO to not be empty,
 // before returning the data
 // Input: None
 // Output: Data received from UART
-void CLI_UART_Receive(char *data, uint8_t length)
+void CLI_Receive(char *data, uint8_t length)
 {
   // Wait FOR Receive FIFO to have data
   while (UART0_FR_R & UART_FR_RXFE)

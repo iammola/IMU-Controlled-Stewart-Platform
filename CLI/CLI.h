@@ -14,14 +14,14 @@
 //                 the 2nd bit being a 1 denotes Even Parity
 //        useTwoStopBits - For two stop bits to be used at the end of transmission
 // Output: None
-void CLI_UART_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t RXFIFOLevel, uint8_t parity, bool useTwoStopBits);
+void CLI_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t RXFIFOLevel, uint8_t parity, bool useTwoStopBits);
 
 // ----------- UART_Transmit -------------
 // Transmits data through the UART line. If the transmit FIFO is full, it blocks further
 // processing until there is space to prevent data loss
 // Input: data - String to transmit
 // Output: None
-void CLI_UART_Transmit(char *data);
+void CLI_Write(char *data);
 
 // --------- UART_Receive ------------
 // Gets the data received by the UART. It waits for the Receive FIFO to not be empty,
@@ -29,4 +29,4 @@ void CLI_UART_Transmit(char *data);
 // Input: data - Location to store received data
 //        length - The number of bytes in the data buffer to transmit
 // Output: Data received from UART
-void CLI_UART_Receive(char *data, uint8_t length);
+void CLI_Receive(char *data, uint8_t length);

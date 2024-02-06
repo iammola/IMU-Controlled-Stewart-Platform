@@ -410,9 +410,9 @@
               <FilePath>.\SPI\SPI.c</FilePath>
             </File>
             <File>
-              <FileName>CLI_UART.c</FileName>
+              <FileName>CLI.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\CLI_UART\CLI_UART.c</FilePath>
+              <FilePath>..\CLI\CLI.c</FilePath>
             </File>
           </Files>
         </Group>

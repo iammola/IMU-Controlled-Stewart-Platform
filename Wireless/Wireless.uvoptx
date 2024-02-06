@@ -304,8 +304,8 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\CLI_UART\CLI_UART.c</PathWithFileName>
-      <FilenameWithoutPath>CLI_UART.c</FilenameWithoutPath>
+      <PathWithFileName>..\CLI\CLI.c</PathWithFileName>
+      <FilenameWithoutPath>CLI.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>
