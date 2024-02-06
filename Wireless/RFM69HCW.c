@@ -7,13 +7,12 @@
 
 #include "SPI/SPI.h"
 #include "RFM69HCW.h"
-#include "CLI_UART/CLI_UART.h"
 
 #define DIO_0_INT_BIT (unsigned)(1 << 0) // PB0
 
 #define INT_PCTL_M (unsigned)GPIO_PCTL_PB0_M
 
-#define READ(addr) (uint16_t)((0x7FFF & (addr << 8)) | data)
+#define READ(addr) (uint16_t)(0x7FFF & (addr << 8))
 #define WRITE(addr, data) (uint16_t)(0x8000 | (addr << 8) | data)
 
 #define NETWORK_ID 23
@@ -47,6 +46,11 @@ static MODE CurrentMode;
 
 void GPIOB_Handler(void)
 {
+  /*
+    Tracks if the Interrupt was caused by a known event, and only clears it if so.
+    Basically polling until the event that caused the interrupt is known
+  */
+  bool Handled = true;
   uint8_t dataIdx = 0;
   uint8_t interrupt2Status = RFM69HCW_ReadRegister(IRQ_FLAGS_2);
 
@@ -101,8 +105,13 @@ void GPIOB_Handler(void)
     // Go back to StandBy Mode
     RFM69HCW_SetMode(OPERATION_MODE_STANDBY);
   }
+  else
+    // Prevent Interrupt from being cleared
+    Handled = false;
 
-  GPIO_PORTB_MIS_R |= DIO_0_INT_BIT;
+    // Clear Interrupt
+  if (Handled)
+    GPIO_PORTB_ICR_R |= DIO_0_INT_BIT;
 }
 
 static void RFM69HCW_Interrupt_Init(void)
@@ -165,8 +174,8 @@ static void RFM69HCW_Config(uint32_t bitRate, uint32_t deviation, uint8_t rxBW, 
     deviceVersion = RFM69HCW_ReadRegister(VERSION);
   } while (deviceVersion != 0x24);
 
-  // Put device in standby mode and turn on listening mode and automatic sequencing
-  RFM69HCW_WriteRegister(OPERATION_MODE, (OPERATION_MODE_STANDBY | OPERATION_LISTEN_ON) & ~OPERATION_SEQUENCER_OFF);
+  // Put device in standby mode
+  RFM69HCW_SetMode(OPERATION_MODE_STANDBY);
 
   // Use FSK modulation, packet data mode and no modulation shaping
   RFM69HCW_WriteRegister(DATA_MODULATION, DATA_MODULATION_NO_SHAPING | DATA_MODULATION_FSK | DATA_MODULATION_MODE);
@@ -227,11 +236,11 @@ static void RFM69HCW_Config(uint32_t bitRate, uint32_t deviation, uint8_t rxBW, 
   RFM69HCW_WriteRegister(RSSI_THRESHOLD, RSSI_THRESHOLD_DEFAULT);
 
   // Enable AES encryption, automatic RX phase restart and specified Inter Packet RX Delay
-  RFM69HCW_WriteRegister(PACKET_CONFIG_2, PACKET_AES_ENCRYPTION | PACKET_AUTO_RX_RESTART | (interPacketRxDelay << PACKET_INTER_RX_DELAY_S));
+  RFM69HCW_WriteRegister(PACKET_CONFIG_2, (uint8_t)(PACKET_AES_ENCRYPTION | PACKET_AUTO_RX_RESTART | (unsigned)(interPacketRxDelay << PACKET_INTER_RX_DELAY_S)));
 
   // Set Cipher Key
   for (idx = 0; idx < AES_KEY_LAST - AES_KEY_FIRST; idx++)
-    RFM69HCW_WriteRegister(AES_KEY_FIRST + idx, AES_CIPHER_KEY[idx]);
+    RFM69HCW_WriteRegister((ADDRESS)(AES_KEY_FIRST + idx), AES_CIPHER_KEY[idx]);
 
   // Disable Clock output
   RFM69HCW_WriteRegister(DIO_MAPPING_2, DIO_CLK_OUT_OFF);
@@ -241,9 +250,6 @@ void RFM69HCW_Init(uint32_t SYS_CLK, uint32_t SSI_CLK)
 {
   // Initialize SysTick
   SysTick_Init();
-
-  // Init UART COM
-  CLI_UART_Init(SYS_CLK, 115200, 3 /* UART_LCRH_WLEN_8 */, 5 /* UART_IFLS_RX4_8 */, 0x00 /* No Parity */, false);
 
   // Initialize the SPI pins
   SPI2_Init(SYS_CLK, SSI_CLK, SSI_CR0_FRF_MOTO, SSI_CR0_DSS_16);
@@ -264,7 +270,7 @@ static uint8_t RFM69HCW_ReadRegister(ADDRESS REGISTER)
   uint16_t response = 0;
 
   SPI2_StartTransmission();
-  SPI2_Read(REGISTER << 8, &response, 1);
+  SPI2_Read(READ(REGISTER), &response, 1);
   SPI2_EndTransmission();
 
   return response & 0xFF;
@@ -272,19 +278,11 @@ static uint8_t RFM69HCW_ReadRegister(ADDRESS REGISTER)
 
 static void RFM69HCW_WriteRegister(ADDRESS REGISTER, uint8_t data)
 {
-  uint8_t text[500];
-  uint16_t size = 0;
   uint16_t byte = WRITE(REGISTER, data);
-
-  size = snprintf(text, 500, "\nFor Address %#010x, Setting Value to %#010x\n", REGISTER, data);
-  CLI_UART_Transmit(text, size);
 
   SPI2_StartTransmission();
   SPI2_Write(&byte, 1);
   SPI2_EndTransmission();
-
-  size = snprintf(text, 500, "\nFor Address %#010x, Value read is set to %#010x\n", REGISTER, RFM69HCW_ReadRegister(REGISTER));
-  CLI_UART_Transmit(text, size);
 }
 
 static void RFM69HCW_SetMode(MODE newMode)
@@ -294,14 +292,34 @@ static void RFM69HCW_SetMode(MODE newMode)
   if (CurrentMode == newMode)
     return;
 
-  // Get current operation mode settings
-  modeSettings = RFM69HCW_ReadRegister(OPERATION_MODE);
+  // Get current operation mode settings, mask out current mode and enable automatic sequencing
+  modeSettings = (RFM69HCW_ReadRegister(OPERATION_MODE) & ~(OPERATION_MODE_M | OPERATION_SEQUENCER_OFF));
 
-  // Mask out current mode
-  modeSettings &= ~OPERATION_MODE_M;
+  // Have to abort Listen Mode to change Operation mode
+  if (modeSettings & OPERATION_LISTEN_ON)
+  {
+    // First stage
+    modeSettings = (modeSettings | OPERATION_LISTEN_ABORT | newMode) & ~OPERATION_LISTEN_ON;
+    RFM69HCW_WriteRegister(OPERATION_MODE, modeSettings);
 
-  // Set new Mode
-  RFM69HCW_WriteRegister(OPERATION_MODE, modeSettings | newMode);
+    // Second stage
+    modeSettings &= ~OPERATION_LISTEN_ABORT;
+    RFM69HCW_WriteRegister(OPERATION_MODE, modeSettings);
+  }
+  else
+  {
+    modeSettings |= newMode;
+
+    // Set new Mode
+    RFM69HCW_WriteRegister(OPERATION_MODE, modeSettings);
+  }
+
+  if (newMode == OPERATION_MODE_STANDBY)
+    RFM69HCW_WriteRegister(OPERATION_MODE, modeSettings | OPERATION_LISTEN_ON);
+
+  // Wait for MODE_READY
+  while ((RFM69HCW_ReadRegister(IRQ_FLAGS_1) & IRQ_1_MODE_READY) != IRQ_1_MODE_READY)
+    ;
 
   CurrentMode = newMode;
 }
@@ -309,10 +327,10 @@ static void RFM69HCW_SetMode(MODE newMode)
 void RFM69HCW_SendPacket(uint8_t *data, uint8_t length)
 {
   uint8_t dataIdx = 0;
-  uint16_t TX_Metadata[MetadataLength + 1] = {
+  uint16_t TX_Metadata[((MetadataLength - 1) / 2) + 1] = {
       // All bytes after address & payload length
       WRITE(FIFO, length + MetadataLength - 1),
-      (MY_NODE_ID << 8) | ++LAST_SENT_ACK,
+      (PEER_NODE_ID << 8) | ++LAST_SENT_ACK,
   };
   uint16_t TX_Payload[PAYLOAD_LENGTH_64 / 2] = {0};
 
@@ -320,7 +338,7 @@ void RFM69HCW_SendPacket(uint8_t *data, uint8_t length)
   for (dataIdx = 0; dataIdx < length; dataIdx += 2)
   {
     // Merge the bytes together to form 16 bit words.
-    TX_Payload[dataIdx] = (data[dataIdx] << 8) | (((dataIdx + 1) < length) ? data[dataIdx + 1] : 0);
+    TX_Payload[dataIdx] = (uint16_t)((data[dataIdx] << 8) | (((dataIdx + 1) < length) ? data[dataIdx + 1] : 0));
   }
 
   do
