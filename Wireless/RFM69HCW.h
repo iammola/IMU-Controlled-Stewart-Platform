@@ -156,3 +156,5 @@ extern uint8_t RX_Data_Buffer[PAYLOAD_LENGTH_64 + 1];
 void RFM69HCW_Init(uint32_t SYS_CLK, uint32_t SSI_CLK);
 
 void RFM69HCW_SendPacket(uint8_t *data, uint8_t length);
+
+void RFM69HCW_PrintMode(void);

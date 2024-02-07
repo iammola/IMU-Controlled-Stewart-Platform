@@ -7,6 +7,7 @@
 
 #include "SPI/SPI.h"
 #include "RFM69HCW.h"
+#include "CLI/CLI.h"
 
 #define DIO_0_INT_BIT (unsigned)(1 << 0) // PB0
 
@@ -44,39 +45,60 @@ bool HasNewData = false;
 uint8_t RX_Data_Metadata[MetadataLength] = {0};
 uint8_t RX_Data_Buffer[PAYLOAD_LENGTH_64 + 1] = {0};
 
+#define MAX_CLI_TEXT_BUFFER 500
+static char text[MAX_CLI_TEXT_BUFFER] = {0};
+
 static MODE CurrentMode;
 static bool PendingModeChange = false;
 
 void GPIOB_Handler(void)
 {
+  uint8_t metadataPlaceholder;
   uint8_t dataIdx = 0;
   uint8_t interrupt2Status = RFM69HCW_ReadRegister(IRQ_FLAGS_2);
 
   if (PendingModeChange)
   {
+    CLI_Write("\n\r Pending Mode Change \n\r");
     CurrentMode = RFM69HCW_ReadRegister(OPERATION_MODE) & OPERATION_MODE_M;
     PendingModeChange = false;
   }
 
   if (CurrentMode == OPERATION_MODE_TX && (interrupt2Status & IRQ_2_PACKET_SENT) == IRQ_2_PACKET_SENT)
   {
+    CLI_Write("\n\r Event: Packet Sent\n\r");
     // Enter RX for ACK
     RFM69HCW_SetMode(OPERATION_MODE_RX);
   }
   // While explicitly in RX mode and the CRC OK flag is set, then this should be the ACK payload
   else if (CurrentMode == OPERATION_MODE_RX && (interrupt2Status & IRQ_2_CRC_OK) == IRQ_2_CRC_OK)
   {
+    CLI_Write("\n\r Event: Received CRC OK\n\r");
+
     // Enter StandBy after ACK
     RFM69HCW_SetMode(OPERATION_MODE_STANDBY);
 
+    CLI_Write("\n\r Reading Metadata\n\r");
+
     // Read Metadata
     for (dataIdx = 0; dataIdx < MetadataLength; dataIdx++)
-      RFM69HCW_ReadRegister(FIFO);
+    {
+      metadataPlaceholder = RFM69HCW_ReadRegister(FIFO);
+      snprintf(text, MAX_CLI_TEXT_BUFFER, " %d. %#04x", dataIdx + 1, metadataPlaceholder);
+      CLI_Write(text);
+    }
 
+    CLI_Write("\n\r Metadata End\n\r");
+
+    CLI_Write(" \n\rChecking ACK\n\r");
     // Check if the Payload matches the Last Sent ACK
     if (RFM69HCW_ReadRegister(FIFO) == LAST_SENT_ACK)
+    {
       ACK_STATUS = ACK_PAYLOAD_PASSED;
+      CLI_Write(" ACK Passed\n\r");
+    }
 
+    CLI_Write(" ACK Payload Received\n\r");
     // Confirm Packet was received
     ACK_STATUS |= ACK_PAYLOAD_RECEIVED;
   }
@@ -86,25 +108,40 @@ void GPIOB_Handler(void)
   {
     HasNewData = true;
 
+    CLI_Write("\n\r Reading Metadata\n\r");
     // Read Metadata (Payload Length and Sender ID rn)
     for (dataIdx = 0; dataIdx < MetadataLength; dataIdx++)
+    {
       RX_Data_Metadata[dataIdx] = RFM69HCW_ReadRegister(FIFO);
+      snprintf(text, MAX_CLI_TEXT_BUFFER, " %d. %#04x", dataIdx + 1, RX_Data_Metadata[dataIdx]);
+      CLI_Write(text);
+    }
+    CLI_Write("\n\r Metadata End\n\r");
 
     // Remove Metadata Length from Total Payload Length
     RX_Data_Metadata[0] -= MetadataLength;
 
     // Read Data Stream
+    CLI_Write("\n\r Data Start\n\r");
     for (dataIdx = 0; dataIdx < RX_Data_Metadata[0]; dataIdx++)
+    {
       RX_Data_Buffer[dataIdx] = RFM69HCW_ReadRegister(FIFO);
+      snprintf(text, MAX_CLI_TEXT_BUFFER, " %d. %#04x", dataIdx + 1, RX_Data_Buffer[dataIdx]);
+      CLI_Write(text);
+    }
+    CLI_Write("\n\r Data End\n\r");
 
     // Null at the end of data
     RX_Data_Buffer[RX_Data_Metadata[0]] = 0;
 
+    snprintf(text, MAX_CLI_TEXT_BUFFER, " Sending ACK = %d\n\r", RX_Data_Metadata[2]);
+    CLI_Write(text);
     // Send the ACK byte received as ACK
     RFM69HCW_WriteRegister(FIFO, RX_Data_Metadata[2]);
     RFM69HCW_SetMode(OPERATION_MODE_TX);
     while ((RFM69HCW_ReadRegister(IRQ_FLAGS_2) & IRQ_2_PACKET_SENT) != IRQ_2_PACKET_SENT)
       ;
+    CLI_Write(" Recieved Packet Sent for ACK \n\r");
 
     // Go back to StandBy Mode
     RFM69HCW_SetMode(OPERATION_MODE_STANDBY);
@@ -114,6 +151,29 @@ void GPIOB_Handler(void)
 
   // Clear Interrupt
   GPIO_PORTB_ICR_R |= DIO_0_INT_BIT;
+}
+
+static bool ClearRSSIPrintLine = false;
+
+void RFM69HCW_PrintMode(void)
+{
+  if ((RFM69HCW_ReadRegister(OPERATION_MODE) & OPERATION_MODE_M) == OPERATION_MODE_RX)
+  {
+    // Trigger RSSI sampling
+    RFM69HCW_WriteRegister(RSSI_CONFIG, RSSI_CONFIG_START_SAMPLE);
+
+    // Wait for sampling to be finished
+    while (RFM69HCW_ReadRegister(RSSI_CONFIG) != RSSI_CONFIG_RESULT_AVAILABLE)
+      ;
+    if (ClearRSSIPrintLine)
+      CLI_Write("\033[K\033[100D");
+    else
+      ClearRSSIPrintLine = true;
+
+    snprintf(text, MAX_CLI_TEXT_BUFFER, " RSSI = -%d dBm", RFM69HCW_ReadRegister(RSSI_VALUE) / 2);
+    CLI_Write(text);
+    SysTick_Wait(60e5);
+  }
 }
 
 static void RFM69HCW_Interrupt_Init(void)
@@ -253,9 +313,15 @@ void RFM69HCW_Init(uint32_t SYS_CLK, uint32_t SSI_CLK)
   // Initialize SysTick
   SysTick_Init();
 
+  // Init UART COM
+  CLI_Init(SYS_CLK, 115200, 3 /* UART_LCRH_WLEN_8 */, 5 /* UART_IFLS_RX4_8 */, 0x00 /* No Parity */, false);
+
+  CLI_Write("\n\r----------------- RFM69HCW -----------------\n\r");
+
   // Initialize the SPI pins
   SPI2_Init(SYS_CLK, SSI_CLK, SSI_CR0_FRF_MOTO, SSI_CR0_DSS_16);
 
+  CLI_Write("\n\r----------------- Config Start -----------------\n\r");
   // Configure Wireless settings
   RFM69HCW_Config(
       25e3 /* 25kHz Bit-rate */,
@@ -263,6 +329,9 @@ void RFM69HCW_Init(uint32_t SYS_CLK, uint32_t SSI_CLK)
       RECEIVER_BW_MANT_20 | 5 /* Set RxBwExp to 5, and use 20 for RxBwMant */,
       0 /* For 2^0 = 1 bit delay, to get 40us Ramp */
   );
+  CLI_Write("\n\r----------------- Config End -----------------\n\r");
+  snprintf(text, MAX_CLI_TEXT_BUFFER, " ID=%d, PEER=%d\n\r", MY_NODE_ID, PEER_NODE_ID);
+  CLI_Write(text);
 
   RFM69HCW_Interrupt_Init();
 }
@@ -282,9 +351,24 @@ static void RFM69HCW_WriteRegister(ADDRESS REGISTER, uint8_t data)
 {
   uint16_t byte = WRITE(REGISTER, data);
 
+  if (RSSI_CONFIG != REGISTER)
+  {
+    snprintf(text, MAX_CLI_TEXT_BUFFER, " ADDR=%#04x,", REGISTER);
+    CLI_Write(text);
+
+    snprintf(text, MAX_CLI_TEXT_BUFFER, " WRITE=%#04x,", data);
+    CLI_Write(text);
+  }
+
   SPI2_StartTransmission();
   SPI2_Write(&byte, 1);
   SPI2_EndTransmission();
+
+  if (RSSI_CONFIG != REGISTER)
+  {
+    snprintf(text, MAX_CLI_TEXT_BUFFER, " READ=%#04x\n\r", RFM69HCW_ReadRegister(REGISTER));
+    CLI_Write(text);
+  }
 }
 
 static void RFM69HCW_SetMode(MODE newMode)
@@ -337,6 +421,9 @@ static void RFM69HCW_SetMode(MODE newMode)
     CurrentMode = newMode;
     PendingModeChange = false;
   }
+
+  snprintf(text, MAX_CLI_TEXT_BUFFER, " Operation Mode = %#04x\n\r\n\r", RFM69HCW_ReadRegister(OPERATION_MODE));
+  CLI_Write(text);
 }
 
 void RFM69HCW_SendPacket(uint8_t *data, uint8_t length)
@@ -346,15 +433,29 @@ void RFM69HCW_SendPacket(uint8_t *data, uint8_t length)
   uint8_t payloadSize = MetadataLength2Bytes + (length / 2) + 1;
   uint16_t TX_Payload[MetadataLength2Bytes + (PAYLOAD_LENGTH_64 / 2)] = {0};
 
+  CLI_Write("\n\r----------------- Send Packet Start -----------------\n\r");
+
   // Prevent sending more than max bytes
   if (length > PAYLOAD_LENGTH_64)
+  {
+    CLI_Write(" Data is more than max size.\n\r");
     return;
+  }
 
   // Set Address and Payload Length as first bytes to transfer
   TX_Payload[payloadIdx++] = WRITE(FIFO, (length + MetadataLength - 1));
 
   // Set the destination ID and ACK to return in metadata
   TX_Payload[payloadIdx++] = (PEER_NODE_ID << 8) | ++LAST_SENT_ACK;
+
+  snprintf(text, MAX_CLI_TEXT_BUFFER, "  - Total Payload Size = %d bytes\n\r", TX_Payload[0] & 0xFF);
+  CLI_Write(text);
+  snprintf(text, MAX_CLI_TEXT_BUFFER, "  - Destination Node ID = %d\n\r", (TX_Payload[1] & 0xFF00) >> 8);
+  CLI_Write(text);
+  snprintf(text, MAX_CLI_TEXT_BUFFER, "  - Sent ACK = %d\n\r", (TX_Payload[1] & 0xFF));
+  CLI_Write(text);
+  snprintf(text, MAX_CLI_TEXT_BUFFER, "\n\r Data Payload = %d bytes\n\r\n\r", length);
+  CLI_Write(text);
 
   for (; payloadIdx < payloadSize; payloadIdx++)
   {
@@ -364,7 +465,13 @@ void RFM69HCW_SendPacket(uint8_t *data, uint8_t length)
     // Add the second byte if there's more to add
     if ((dataIdx + 1) < length)
       TX_Payload[payloadIdx] |= data[dataIdx++];
+
+    snprintf(text, MAX_CLI_TEXT_BUFFER, " DoubleWord #%d (%d = %#04x. %d = %#04x)\n\r", payloadIdx - MetadataLength2Bytes + 1, dataIdx - 1, (TX_Payload[payloadIdx] & 0xFF00) >> 8, dataIdx, TX_Payload[payloadIdx] & 0xFF);
+    CLI_Write(text);
+    CLI_Write(text);
   }
+
+  CLI_Write("\n\r Data End.\n\r");
 
   do
   {
@@ -374,9 +481,13 @@ void RFM69HCW_SendPacket(uint8_t *data, uint8_t length)
     // Start Sending Packet from first byte in FIFO
     RFM69HCW_SetMode(OPERATION_MODE_TX);
 
+    CLI_Write("\n\r Starting Transmission.\n\r");
+
     SPI2_StartTransmission();
     SPI2_Write(TX_Payload, payloadIdx);
     SPI2_EndTransmission();
+
+    CLI_Write(" Ending Transmission.\n\r");
 
     // Wait for ACK confirmation in Interrupt Handler
     ACK_STATUS = ACK_RESET;
@@ -384,4 +495,6 @@ void RFM69HCW_SendPacket(uint8_t *data, uint8_t length)
       ;
     // Restart Transmission if the ACK was received but didn't match
   } while ((ACK_STATUS & ACK_PAYLOAD_PASSED) != ACK_PAYLOAD_PASSED);
+
+  CLI_Write("\n\r----------------- Send Packet End -----------------\n\r");
 }

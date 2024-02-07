@@ -83,5 +83,9 @@ int main(void)
       // Clear data flag
       HasNewData = false;
     }
+    else
+    {
+      RFM69HCW_PrintMode();
+    }
   }
 }
