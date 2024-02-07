@@ -25,6 +25,8 @@
 #define PEER_NODE_ID 54
 #endif
 
+void GPIOB_Handler(void);
+
 static void RFM69HCW_Config(uint32_t bitRate, uint32_t deviation, uint8_t rxBW, uint8_t interPacketRxDelay);
 static void RFM69HCW_Interrupt_Init(void);
 static void RFM69HCW_SetMode(MODE newMode);
@@ -47,11 +49,6 @@ static bool PendingModeChange = false;
 
 void GPIOB_Handler(void)
 {
-  /*
-    Tracks if the Interrupt was caused by a known event, and only clears it if so.
-    Basically polling until the event that caused the interrupt is known
-  */
-  bool Handled = true;
   uint8_t dataIdx = 0;
   uint8_t interrupt2Status = RFM69HCW_ReadRegister(IRQ_FLAGS_2);
 
@@ -113,12 +110,10 @@ void GPIOB_Handler(void)
     RFM69HCW_SetMode(OPERATION_MODE_STANDBY);
   }
   else
-    // Prevent Interrupt from being cleared
-    Handled = false;
+    return;
 
   // Clear Interrupt
-  if (Handled)
-    GPIO_PORTB_ICR_R |= DIO_0_INT_BIT;
+  GPIO_PORTB_ICR_R |= DIO_0_INT_BIT;
 }
 
 static void RFM69HCW_Interrupt_Init(void)
@@ -240,7 +235,7 @@ static void RFM69HCW_Config(uint32_t bitRate, uint32_t deviation, uint8_t rxBW, 
   RFM69HCW_WriteRegister(LISTEN_1, LISTEN_END_NO_ACTION | LISTEN_CRITERIA_THRESHOLD_ADDRESS | LISTEN_RESO_IRX_DEFAULT | LISTEN_RESO_IDLE_DEFAULT);
 
   // Set RSSI Threshold
-  RFM69HCW_WriteRegister(RSSI_THRESHOLD, RSSI_THRESHOLD_DEFAULT);
+  RFM69HCW_WriteRegister(RSSI_THRESHOLD, 0xFF /* RSSI_THRESHOLD_DEFAULT */);
 
   // Enable AES encryption, automatic RX phase restart and specified Inter Packet RX Delay
   RFM69HCW_WriteRegister(PACKET_CONFIG_2, (uint8_t)(PACKET_AES_ENCRYPTION | PACKET_AUTO_RX_RESTART | (unsigned)(interPacketRxDelay << PACKET_INTER_RX_DELAY_S)));
@@ -324,7 +319,13 @@ static void RFM69HCW_SetMode(MODE newMode)
   }
 
   if (newMode == OPERATION_MODE_STANDBY)
+  {
+    // Enable Listen Mode in StandBy
     RFM69HCW_WriteRegister(OPERATION_MODE, modeSettings | OPERATION_LISTEN_ON);
+
+    // Enable Payload Ready Interrupt only on StandBy/Listen Mode
+    RFM69HCW_WriteRegister(DIO_MAPPING_1, DIO_0_MAPPING_01);
+  }
 
   // Wait for MODE_READY
   while (PendingModeChange && (RFM69HCW_ReadRegister(IRQ_FLAGS_1) & IRQ_1_MODE_READY) != IRQ_1_MODE_READY)
@@ -341,43 +342,46 @@ static void RFM69HCW_SetMode(MODE newMode)
 void RFM69HCW_SendPacket(uint8_t *data, uint8_t length)
 {
   uint8_t dataIdx = 0;
-  uint16_t TX_Metadata[((MetadataLength - 1) / 2) + 1] = {
-      // All bytes after address & payload length
-      WRITE(FIFO, length + MetadataLength - 1),
-      (PEER_NODE_ID << 8) | ++LAST_SENT_ACK,
-  };
-  uint16_t TX_Payload[PAYLOAD_LENGTH_64 / 2] = {0};
+  uint8_t payloadIdx = 0;
+  uint8_t payloadSize = MetadataLength2Bytes + (length / 2) + 1;
+  uint16_t TX_Payload[MetadataLength2Bytes + (PAYLOAD_LENGTH_64 / 2)] = {0};
 
-  // Increment by 2 since we're taking two bytes out the data
-  for (dataIdx = 0; dataIdx < length; dataIdx += 2)
+  // Prevent sending more than max bytes
+  if (length > PAYLOAD_LENGTH_64)
+    return;
+
+  // Set Address and Payload Length as first bytes to transfer
+  TX_Payload[payloadIdx++] = WRITE(FIFO, (length + MetadataLength - 1));
+
+  // Set the destination ID and ACK to return in metadata
+  TX_Payload[payloadIdx++] = (PEER_NODE_ID << 8) | ++LAST_SENT_ACK;
+
+  for (; payloadIdx < payloadSize; payloadIdx++)
   {
-    // Merge the bytes together to form 16 bit words.
-    TX_Payload[dataIdx] = (uint16_t)((data[dataIdx] << 8) | (((dataIdx + 1) < length) ? data[dataIdx + 1] : 0));
+    // Set the first byte in the 16 bit merge
+    TX_Payload[payloadIdx] = (uint16_t)(data[dataIdx++] << 8);
+
+    // Add the second byte if there's more to add
+    if ((dataIdx + 1) < length)
+      TX_Payload[payloadIdx] |= data[dataIdx++];
   }
 
   do
   {
-    RFM69HCW_SetMode(OPERATION_MODE_STANDBY);
-
-    while ((RFM69HCW_ReadRegister(IRQ_FLAGS_1) & IRQ_1_MODE_READY) != IRQ_1_MODE_READY)
-      ;
-
-    SPI2_StartTransmission();
-    SPI2_Write(TX_Metadata, sizeof(TX_Metadata) / sizeof(TX_Metadata[0]));
-    SPI2_Write(TX_Payload, length);
-    SPI2_EndTransmission();
-
     // Enable Packet Sent/CRC OK Interrupt on DIO0
     RFM69HCW_WriteRegister(DIO_MAPPING_1, DIO_0_MAPPING_00);
 
-    // Start sending Packet
+    // Start Sending Packet from first byte in FIFO
     RFM69HCW_SetMode(OPERATION_MODE_TX);
+
+    SPI2_StartTransmission();
+    SPI2_Write(TX_Payload, payloadIdx);
+    SPI2_EndTransmission();
 
     // Wait for ACK confirmation in Interrupt Handler
     ACK_STATUS = ACK_RESET;
     while ((ACK_STATUS & ACK_PAYLOAD_RECEIVED) != ACK_PAYLOAD_RECEIVED)
       ;
-  }
-  // Restart Transmission if the ACK was received but didn't match
-  while ((ACK_STATUS & ACK_PAYLOAD_PASSED) != ACK_PAYLOAD_PASSED);
+    // Restart Transmission if the ACK was received but didn't match
+  } while ((ACK_STATUS & ACK_PAYLOAD_PASSED) != ACK_PAYLOAD_PASSED);
 }

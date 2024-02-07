@@ -11,6 +11,8 @@
 #define PINS (unsigned)(SW2_BIT | LED_BITS)
 #define PINS_PCTL_MASK (unsigned)(GPIO_PCTL_PF0_M | GPIO_PCTL_PF1_M | GPIO_PCTL_PF2_M | GPIO_PCTL_PF3_M)
 
+void GPIOF_Handler(void);
+
 // Tracked LED for peer node
 static uint8_t peerLEDIdx = 0;
 
@@ -44,12 +46,6 @@ static void PortF_Init(void)
   NVIC_PRI7_R = (NVIC_PRI7_R & (unsigned)~NVIC_PRI7_INT30_M) | ((RFM69HCW_INT_PRIORITY + 1) << NVIC_PRI7_INT30_S);
 }
 
-static void SetLED(uint8_t data)
-{
-  // Turn RED on, then BLUE, then GREEN, then OFF.
-  GPIO_PORTF_DATA_R = LED_BITS & (1 << data);
-}
-
 void GPIOF_Handler(void)
 {
   if (GPIO_PORTF_MIS_R & SW2_BIT)
@@ -81,8 +77,8 @@ int main(void)
     // Wait for new data to be confirmed
     if (HasNewData)
     {
-      // Toggle LED with data received
-      SetLED(RX_Data_Buffer[0]);
+      // Turn RED on, then BLUE, then GREEN, then OFF.
+      GPIO_PORTF_DATA_R = LED_BITS & (1 << RX_Data_Buffer[0]);
 
       // Clear data flag
       HasNewData = false;

@@ -27,6 +27,8 @@ typedef enum ADDRESSES
   CURRENT_PROTECTION = 0X13,
   /* RECEIVER REGISTERS */
   RX_BANDWIDTH = 0x19,
+  RSSI_CONFIG = 0x23,
+  RSSI_VALUE = 0x24,
   /* IRQ REGISTERS */
   DIO_MAPPING_1 = 0x25,
   DIO_MAPPING_2 = 0x26,
@@ -72,6 +74,10 @@ typedef enum MODES
 #define LISTEN_CRITERIA_THRESHOLD_ADDRESS (unsigned)(1 << 3) // (Bit 3)
 #define LISTEN_RESO_IRX_DEFAULT (unsigned)(1 << 4)           // (Bits 5:4) default
 #define LISTEN_RESO_IDLE_DEFAULT (unsigned)(2 << 6)          // (Bits 7:6) default
+
+// RSSI_CONFIG
+#define RSSI_CONFIG_START_SAMPLE 0x01
+#define RSSI_CONFIG_RESULT_AVAILABLE 0x02
 
 // RSSI_THRESHOLD
 #define RSSI_THRESHOLD_DEFAULT (unsigned)0xE4 // Default = 114dBm
@@ -140,6 +146,7 @@ typedef enum MODES
 #define ACK_PAYLOAD_RECEIVED (unsigned)0x01
 
 #define MetadataLength 3 // Contains Payload Length, Sender Node ID, and ACK to return
+#define MetadataLength2Bytes 2 // = ((MetadataLength / 2) + 1 / 2)
 #define RFM69HCW_INT_PRIORITY 1
 
 extern bool HasNewData;
