@@ -3,13 +3,13 @@
  * Date: 27th January, 2024
  * Course-Code: ELTR-2400
  * Course-Name: Communication Systems II
- * 
+ *
  * Lab Description: Initializes UART module 0 on Port A pins 4 (Tx) and 5 (Tx) for connection with the
  *                  COM port of the PC. IT Automatically calculates the need for High Speed Mode (HSE),
  *                  and the Integer and Fractional parts of the Baud Rate. It allows for configuration
  *                  of the Data length, Use of Parity and number of stop bits. Only uses Receive interrupts,
  *                  and also allows for configuration of the FIFO level to trigger the Receive FIFO interrupt.
-*/
+ */
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
@@ -265,22 +265,19 @@ void CLI_Write(char *data)
   } while (byteIndex < length);
 }
 
-// --------- CLI_Receive ------------
+// --------- CLI_Read ------------
 // Gets the data received by the UART. It waits for the Receive FIFO to not be empty,
 // before returning the data
 // Input: None
 // Output: Data received from UART
-void CLI_Receive(char *data, uint8_t length)
+uint8_t CLI_Read(void)
 {
+  uint8_t data;
+
   // Wait FOR Receive FIFO to have data
   while (UART0_FR_R & UART_FR_RXFE)
     ;
 
-  while (length > 0)
-  {
-    // Read data
-    *data = (uint8_t)UART0_DR_R;
-    if (--length > 0)
-      data++;
-  }
+  // Read data
+  return (uint8_t)UART0_DR_R;
 }

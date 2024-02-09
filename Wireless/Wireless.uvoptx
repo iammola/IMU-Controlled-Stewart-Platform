@@ -75,7 +75,7 @@
       <OPTFL>
         <tvExp>1</tvExp>
         <tvExpOptDlg>0</tvExpOptDlg>
-        <IsCurrentTarget>0</IsCurrentTarget>
+        <IsCurrentTarget>1</IsCurrentTarget>
       </OPTFL>
       <CpuCode>4</CpuCode>
       <DebugOpt>
@@ -273,7 +273,7 @@
       <OPTFL>
         <tvExp>1</tvExp>
         <tvExpOptDlg>0</tvExpOptDlg>
-        <IsCurrentTarget>1</IsCurrentTarget>
+        <IsCurrentTarget>0</IsCurrentTarget>
       </OPTFL>
       <CpuCode>4</CpuCode>
       <DebugOpt>
@@ -349,66 +349,34 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>109</LineNumber>
+          <LineNumber>327</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>6484</Address>
+          <Address>1002</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
           <SizeOfObject>0</SizeOfObject>
           <BreakByAccess>0</BreakByAccess>
           <BreakIfRCount>1</BreakIfRCount>
-          <Filename>.\RFM69HCW.c</Filename>
+          <Filename>RTE/Device/TM4C123GH6PM/startup_TM4C123.s</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\Wireless\RFM69HCW.c\109</Expression>
+          <Expression>\\Wireless\RTE/Device/TM4C123GH6PM/startup_TM4C123.s\327</Expression>
         </Bp>
         <Bp>
           <Number>1</Number>
           <Type>0</Type>
-          <LineNumber>79</LineNumber>
+          <LineNumber>321</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>6240</Address>
+          <Address>1000</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
           <SizeOfObject>0</SizeOfObject>
           <BreakByAccess>0</BreakByAccess>
           <BreakIfRCount>1</BreakIfRCount>
-          <Filename>.\RFM69HCW.c</Filename>
+          <Filename>RTE/Device/TM4C123GH6PM/startup_TM4C123.s</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\Wireless\RFM69HCW.c\79</Expression>
-        </Bp>
-        <Bp>
-          <Number>2</Number>
-          <Type>0</Type>
-          <LineNumber>433</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>8400</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename>.\RFM69HCW.c</Filename>
-          <ExecCommand></ExecCommand>
-          <Expression>\\Wireless\RFM69HCW.c\433</Expression>
-        </Bp>
-        <Bp>
-          <Number>3</Number>
-          <Type>0</Type>
-          <LineNumber>498</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>8888</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename>.\RFM69HCW.c</Filename>
-          <ExecCommand></ExecCommand>
-          <Expression>\\Wireless\RFM69HCW.c\498</Expression>
+          <Expression>\\Wireless\RTE/Device/TM4C123GH6PM/startup_TM4C123.s\321</Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>
@@ -426,6 +394,16 @@
           <count>2</count>
           <WinNumber>1</WinNumber>
           <ItemText>MetadataLength2Bytes</ItemText>
+        </Ww>
+        <Ww>
+          <count>3</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>CLI_Address</ItemText>
+        </Ww>
+        <Ww>
+          <count>4</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>CLI_Buffer</ItemText>
         </Ww>
       </WatchWindow1>
       <Tracepoint>
@@ -482,6 +460,10 @@
         <Entry>
           <Name>System Viewer\SYSCTL</Name>
           <WinId>35903</WinId>
+        </Entry>
+        <Entry>
+          <Name>System Viewer\UART0</Name>
+          <WinId>35902</WinId>
         </Entry>
       </SystemViewers>
     </TargetOption>

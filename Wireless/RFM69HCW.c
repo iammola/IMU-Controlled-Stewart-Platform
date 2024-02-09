@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -26,6 +27,7 @@
 #define PEER_NODE_ID 54
 #endif
 
+void UART0_Handler(void);
 void GPIOB_Handler(void);
 
 static void RFM69HCW_Config(uint32_t bitRate, uint32_t deviation, uint8_t rxBW, uint8_t interPacketRxDelay);
@@ -51,6 +53,30 @@ static char text[MAX_CLI_TEXT_BUFFER] = {0};
 static MODE CurrentMode;
 static bool PendingModeChange = false;
 
+static uint8_t CLI_Idx = 0;
+static uint16_t CLI_Address = 0;
+static char CLI_Buffer[255] = {0};
+
+void UART0_Handler(void)
+{
+  char typed = CLI_Read();
+  UART0_ICR_R |= UART_ICR_RXIC | UART_ICR_RTIC;
+
+  if (typed == 0x0D)
+  {
+    CLI_Address = (uint16_t)strtol(CLI_Buffer, NULL, 0);
+    snprintf(text, MAX_CLI_TEXT_BUFFER, "\n\r Requested Address = %#04x, READ = %#04x\n\r", CLI_Address, RFM69HCW_ReadRegister((ADDRESS)CLI_Address));
+    CLI_Write(text);
+
+    CLI_Idx = 0;
+    CLI_Address = 0;
+    return;
+  }
+
+  CLI_Buffer[CLI_Idx] = typed;
+  CLI_Idx++;
+}
+
 void GPIOB_Handler(void)
 {
   uint8_t metadataPlaceholder;
@@ -63,6 +89,9 @@ void GPIOB_Handler(void)
     CurrentMode = RFM69HCW_ReadRegister(OPERATION_MODE) & OPERATION_MODE_M;
     PendingModeChange = false;
   }
+
+  snprintf(text, MAX_CLI_TEXT_BUFFER, " Full Interrupt Status = %#04x", interrupt2Status);
+  CLI_Write(text);
 
   if (CurrentMode == OPERATION_MODE_TX && (interrupt2Status & IRQ_2_PACKET_SENT) == IRQ_2_PACKET_SENT)
   {
@@ -153,6 +182,9 @@ void GPIOB_Handler(void)
   GPIO_PORTB_ICR_R |= DIO_0_INT_BIT;
 }
 
+static uint32_t MeasuredRSSIMin = 0;
+static uint32_t MeasuredRSSIMax = 0;
+static uint32_t MeasuredRSSICur = 0;
 static bool ClearRSSIPrintLine = false;
 
 void RFM69HCW_PrintMode(void)
@@ -165,13 +197,34 @@ void RFM69HCW_PrintMode(void)
     // Wait for sampling to be finished
     while (RFM69HCW_ReadRegister(RSSI_CONFIG) != RSSI_CONFIG_RESULT_AVAILABLE)
       ;
+
+    MeasuredRSSICur = RFM69HCW_ReadRegister(RSSI_VALUE) / 2;
     if (ClearRSSIPrintLine)
       CLI_Write("\033[K\033[100D");
     else
+    {
       ClearRSSIPrintLine = true;
+      MeasuredRSSIMax = MeasuredRSSICur;
+      MeasuredRSSIMin = MeasuredRSSICur;
+    }
 
-    snprintf(text, MAX_CLI_TEXT_BUFFER, " RSSI = -%d dBm", RFM69HCW_ReadRegister(RSSI_VALUE) / 2);
+    snprintf(text, MAX_CLI_TEXT_BUFFER, " Min = -%ddBm, Max = -%ddBm, RSSI = -%ddBm", MeasuredRSSIMin, MeasuredRSSIMax, MeasuredRSSICur);
     CLI_Write(text);
+
+    if (MeasuredRSSICur > MeasuredRSSIMax)
+    {
+      MeasuredRSSIMax = MeasuredRSSICur;
+      snprintf(text, MAX_CLI_TEXT_BUFFER, "\n\r Max Change (-%ddBm)\n\r\n\r", MeasuredRSSIMax);
+      CLI_Write(text);
+    }
+
+    if (MeasuredRSSICur < MeasuredRSSIMin)
+    {
+      MeasuredRSSIMin = MeasuredRSSICur;
+      snprintf(text, MAX_CLI_TEXT_BUFFER, "\n\r Min Change (-%ddBm)\n\r\n\r", MeasuredRSSIMin);
+      CLI_Write(text);
+    }
+
     SysTick_Wait(60e5);
   }
 }
@@ -283,7 +336,7 @@ static void RFM69HCW_Config(uint32_t bitRate, uint32_t deviation, uint8_t rxBW, 
   RFM69HCW_WriteRegister(PA_RAMP_TIME, PA_FSK_RAMP_TIME_40u);
 
   // Enable PA1 and use half of the max power (13dBm)
-  RFM69HCW_WriteRegister(PA_LEVEL, PA1_ON | (PA_MAX_POWER / 2));
+  RFM69HCW_WriteRegister(PA_LEVEL, PA1_ON | PA_MAX_POWER);
 
   // Enable Over Current Protection (required for high power)
   RFM69HCW_WriteRegister(CURRENT_PROTECTION, CURRENT_PROTECTION_ON);
@@ -468,7 +521,6 @@ void RFM69HCW_SendPacket(uint8_t *data, uint8_t length)
 
     snprintf(text, MAX_CLI_TEXT_BUFFER, " DoubleWord #%d (%d = %#04x. %d = %#04x)\n\r", payloadIdx - MetadataLength2Bytes + 1, dataIdx - 1, (TX_Payload[payloadIdx] & 0xFF00) >> 8, dataIdx, TX_Payload[payloadIdx] & 0xFF);
     CLI_Write(text);
-    CLI_Write(text);
   }
 
   CLI_Write("\n\r Data End.\n\r");
@@ -497,4 +549,5 @@ void RFM69HCW_SendPacket(uint8_t *data, uint8_t length)
   } while ((ACK_STATUS & ACK_PAYLOAD_PASSED) != ACK_PAYLOAD_PASSED);
 
   CLI_Write("\n\r----------------- Send Packet End -----------------\n\r");
+  SysTick_Wait10ms(75);
 }

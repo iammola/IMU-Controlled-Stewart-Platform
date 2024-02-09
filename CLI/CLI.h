@@ -26,7 +26,6 @@ void CLI_Write(char *data);
 // --------- UART_Receive ------------
 // Gets the data received by the UART. It waits for the Receive FIFO to not be empty,
 // before returning the data
-// Input: data - Location to store received data
-//        length - The number of bytes in the data buffer to transmit
+// Input: None
 // Output: Data received from UART
-void CLI_Receive(char *data, uint8_t length);
+uint8_t CLI_Read(void);
