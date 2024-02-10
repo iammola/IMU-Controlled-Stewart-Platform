@@ -74,7 +74,7 @@ typedef enum MODES
 #define LISTEN_END_NO_ACTION (unsigned)(0 << 1)              // (Bits 2:1)
 #define LISTEN_CRITERIA_THRESHOLD_ADDRESS (unsigned)(1 << 3) // (Bit 3)
 #define LISTEN_RESO_IRX_DEFAULT (unsigned)(1 << 4)           // (Bits 5:4) default
-#define LISTEN_RESO_IDLE_DEFAULT (unsigned)(2 << 6)          // (Bits 7:6) default
+#define LISTEN_RESO_IDLE_64u (unsigned)(1 << 6)              // (Bits 7:6)
 
 // RSSI_CONFIG
 #define RSSI_CONFIG_START_SAMPLE 0x01
@@ -163,6 +163,6 @@ extern uint8_t RX_Data_Buffer[PAYLOAD_LENGTH_64 + 1];
 
 void RFM69HCW_Init(uint32_t SYS_CLK, uint32_t SSI_CLK);
 
-void RFM69HCW_SendPacket(uint8_t *data, uint8_t length);
+void RFM69HCW_SendPacket(uint8_t *data, uint8_t length, bool waitForACK);
 
 void RFM69HCW_PrintMode(void);
