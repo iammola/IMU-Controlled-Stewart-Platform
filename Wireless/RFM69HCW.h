@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define MODULE_FREQUENCY 915e6      // 915 MHz (Marked on board) (890MHz - 1020 MHz)
+#define MODULE_FREQUENCY 900e6      // 915 MHz (Marked on board) (890MHz - 1020 MHz)
 #define F_XOSC 32e6                 // 32MHz (Table 2.3.2)
 #define F_STEP (F_XOSC / (1 << 19)) // (Section 3.2.3.3)
 
@@ -35,6 +35,7 @@ typedef enum ADDRESSES
   IRQ_FLAGS_1 = 0x27,
   IRQ_FLAGS_2 = 0x28,
   RSSI_THRESHOLD = 0x29,
+  RX_TIMEOUT = 0x2B,
   /* PACKET ENGINE REGISTERS */
   SYNC_CONFIG = 0x2E,
   SYNC_VALUE_1 = 0x2F,
@@ -100,9 +101,10 @@ typedef enum MODES
 #define FIFO_TX_ON_NOT_EMPTY (unsigned)0x80
 
 // PACKET_CONFIG_2
-#define PACKET_AES_ENCRYPTION (unsigned)0x01
-#define PACKET_AUTO_RX_RESTART (unsigned)0x02
-#define PACKET_INTER_RX_DELAY_S 4 // Shift amount for bits 7:4
+#define PACKET_AES_ENCRYPTION (unsigned)(1 << 0)  // (Bit 0)
+#define PACKET_AUTO_RX_RESTART (unsigned)(1 << 1) // (Bit 1)
+#define PACKET_RX_RESTART (unsigned)(1 << 2)      // (Bit 2)
+#define PACKET_INTER_RX_DELAY_S 4                 // Shift amount for bits 7:4
 
 // PA_LEVEL
 #define PA0_ON (unsigned)0x80
@@ -114,8 +116,11 @@ typedef enum MODES
 #define CURRENT_PROTECTION_ON (unsigned)0x1A
 
 // PA_RAMP_TIME
-#define PA_FSK_RAMP_TIME_40u (unsigned)0x09 // Default
-#define PA_FSK_RAMP_TIME_20u (unsigned)0x0C // For 20us
+#define PA_FSK_RAMP_TIME_M (unsigned)0x0F    // Mask
+#define PA_FSK_RAMP_TIME_1m (unsigned)0x02   // For 1ms
+#define PA_FSK_RAMP_TIME_125u (unsigned)0x05 // For 125us
+#define PA_FSK_RAMP_TIME_40u (unsigned)0x09  // Default
+#define PA_FSK_RAMP_TIME_20u (unsigned)0x0C  // For 20us
 
 // RX_BANDWIDTH
 #define RECEIVER_DC_OFFSET_CUTOFF_FREQ (unsigned)0x40 // Default of 4% (Bits 7:5)
@@ -124,16 +129,19 @@ typedef enum MODES
 #define RECEIVER_BW_MANT_24 (unsigned)0x10            // (Bits 4:3)
 
 // DIO_MAPPING_1
+#define DIO_0_MAPPING_M (unsigned)(3 << 6)  // (Bits 7:6) Mask
 #define DIO_0_MAPPING_00 (unsigned)(0 << 6) // (Bits 7:6) Packet Sent in TX
 #define DIO_0_MAPPING_01 (unsigned)(1 << 6) // (Bits 7:6) Payload Ready in RX
-#define DIO_2_MAPPING_11 (unsigned)(3 << 2) // (Bits 3:2) Auto Mode in any mode
 
 // DIO_MAPPING_2
-#define DIO_CLK_OUT_OFF (unsigned)0x07
+#define DIO_CLK_OUT_OFF (unsigned)(7 << 0) // (Bits 2:0)
+
+#define DIO_4_MAPPING_M (unsigned)(3 << 0)  // (Bits 7:6) Mask
+#define DIO_4_MAPPING_00 (unsigned)(0 << 0) // (Bits 7:6) Timeout in RX
 
 // IRQ_FLAGS_1
 #define IRQ_1_MODE_READY (unsigned)(1 << 7) // Mode Ready Flag
-#define IRQ_1_AUTO_MODE (unsigned)(1 << 1)  // Entering Intermediate Mode Flag
+#define IRQ_1_TIMEOUT (unsigned)(1 << 2)    // Timeout Flag
 
 // IRQ_FLAGS_2
 #define IRQ_2_PACKET_SENT (unsigned)(1 << 3)   // Packet Sent Flag in TX
@@ -145,7 +153,7 @@ typedef enum MODES
 #define ACK_PAYLOAD_PASSED (unsigned)0x02
 #define ACK_PAYLOAD_RECEIVED (unsigned)0x01
 
-#define MetadataLength 3 // Contains Payload Length, Sender Node ID, and ACK to return
+#define MetadataLength 3       // Contains Payload Length, Sender Node ID, and ACK to return
 #define MetadataLength2Bytes 2 // = ((MetadataLength / 2) + 1 / 2)
 #define RFM69HCW_INT_PRIORITY 1
 
