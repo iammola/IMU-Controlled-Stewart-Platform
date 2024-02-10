@@ -23,20 +23,14 @@
 
 #define NETWORK_ID 23
 
-#ifdef __DEVICE_1__
-#define MY_NODE_ID 54
-#define PEER_NODE_ID 92
-#else
-#define MY_NODE_ID 92
-#define PEER_NODE_ID 54
-#endif
-
 void UART0_Handler(void);
 void GPIOB_Handler(void);
 
 static void RFM69HCW_Config(uint32_t bitRate, uint32_t deviation, uint8_t rxBW, uint8_t interPacketRxDelay, uint8_t rampTime);
+static void RFM69HCW_ClearCLIBuffer(void);
 static void RFM69HCW_Interrupt_Init(void);
 static void RFM69HCW_SetMode(MODE newMode);
+static void RFM69HCW_SetNodesID(void);
 
 static void RFM69HCW_WriteRegister(ADDRESS REGISTER, uint8_t data);
 static uint8_t RFM69HCW_ReadRegister(ADDRESS REGISTER);
@@ -46,6 +40,9 @@ static uint8_t deviceVersion = 0;
 static uint8_t ACK_STATUS = ACK_RESET;
 
 static const char AES_CIPHER_KEY[16] = "($HJ#BUCA823nGU1";
+
+static uint8_t NodeID = 0;
+static uint8_t PeerID = 0;
 
 bool HasNewData = false;
 uint8_t RX_Data_Metadata[MetadataLength] = {0};
@@ -60,6 +57,7 @@ static bool PendingModeChange = false;
 static uint8_t CLI_Idx = 0;
 static uint16_t CLI_Address = 0;
 static char CLI_Buffer[255] = {0};
+static bool PerformCLIAction = false;
 
 void UART0_Handler(void)
 {
@@ -68,12 +66,7 @@ void UART0_Handler(void)
 
   if (typed == 0x0D)
   {
-    CLI_Address = (uint16_t)strtol(CLI_Buffer, NULL, 0);
-    snprintf(text, MAX_CLI_TEXT_BUFFER, "\n\r Requested Address = %#04x, READ = %#04x\n\r", CLI_Address, RFM69HCW_ReadRegister((ADDRESS)CLI_Address));
-    CLI_Write(text);
-
-    CLI_Idx = 0;
-    CLI_Address = 0;
+    PerformCLIAction = true;
     return;
   }
 
@@ -249,7 +242,55 @@ void RFM69HCW_PrintMode(void)
       CLI_Write(text);
     }
 
-    SysTick_Wait(60e5);
+    SysTick_Wait(20e5);
+  }
+
+  if (PerformCLIAction)
+  {
+    PerformCLIAction = false;
+    CLI_Address = (uint16_t)strtol(CLI_Buffer, NULL, 0);
+
+    snprintf(text, MAX_CLI_TEXT_BUFFER, "\n\r Requested Address = %#04x, READ = %#04x\n\r", CLI_Address, RFM69HCW_ReadRegister((ADDRESS)CLI_Address));
+    CLI_Write(text);
+    RFM69HCW_ClearCLIBuffer();
+  }
+}
+
+static void RFM69HCW_SetNodesID(void)
+{
+  CLI_Write(" Enter this Node's Network ID \n\r");
+  while (!PerformCLIAction)
+    ;
+
+  PerformCLIAction = false;
+  NodeID = (uint8_t)strtol(CLI_Buffer, NULL, 0);
+
+  snprintf(text, MAX_CLI_TEXT_BUFFER, " Node ID set to %#04x\n\r", NodeID);
+  CLI_Write(text);
+  RFM69HCW_ClearCLIBuffer();
+
+  CLI_Write("\n\r Enter the Peer Node's Network ID \n\r");
+  while (!PerformCLIAction)
+    ;
+
+  PerformCLIAction = false;
+  PeerID = (uint8_t)strtol(CLI_Buffer, NULL, 0);
+
+  snprintf(text, MAX_CLI_TEXT_BUFFER, " Peer Node ID set to %#04x\n\r", PeerID);
+  CLI_Write(text);
+  RFM69HCW_ClearCLIBuffer();
+
+  CLI_Write("\n\r Press Enter to Continue.");
+  while (!PerformCLIAction)
+    ;
+  CLI_Write("\n\r");
+}
+
+static void RFM69HCW_ClearCLIBuffer(void)
+{
+  while (CLI_Idx > 0)
+  {
+    CLI_Buffer[--CLI_Idx] = '\0';
   }
 }
 
@@ -344,7 +385,7 @@ static void RFM69HCW_Config(uint32_t bitRate, uint32_t deviation, uint8_t rxBW, 
 
   // Configure the Packets to be of Variable Length, with Variable lengths and the addresses to be filtered for this node
   RFM69HCW_WriteRegister(PACKET_CONFIG_1, (PACKET_VARIABLE_LENGTH | PACKET_CRC_ENABLE | PACKET_ADDRESS_FILTER_NODE) & ~PACKET_CRC_AUTO_CLEAR_OFF);
-  RFM69HCW_WriteRegister(PACKET_NODE_ADDR, MY_NODE_ID);
+  RFM69HCW_WriteRegister(PACKET_NODE_ADDR, NodeID);
 
   // Trigger transmit start on non-empty FIFO buffer
   RFM69HCW_WriteRegister(FIFO_THRESHOLD, FIFO_TX_ON_NOT_EMPTY);
@@ -397,6 +438,12 @@ void RFM69HCW_Init(uint32_t SYS_CLK, uint32_t SSI_CLK)
 
   CLI_Write("\n\r----------------- RFM69HCW -----------------\n\r");
 
+  do
+  {
+    // Configure Node IDs
+    RFM69HCW_SetNodesID();
+  } while (PeerID == 0 || NodeID == 0);
+
   // Initialize the SPI pins
   SPI2_Init(SYS_CLK, SSI_CLK, SSI_CR0_FRF_MOTO, SSI_CR0_DSS_16);
 
@@ -411,9 +458,9 @@ void RFM69HCW_Init(uint32_t SYS_CLK, uint32_t SSI_CLK)
   );
 
   CLI_Write("\n\r----------------- Config End -----------------\n\r");
-  snprintf(text, MAX_CLI_TEXT_BUFFER, " ID=%d, PEER=%d\n\r", MY_NODE_ID, PEER_NODE_ID);
+  snprintf(text, MAX_CLI_TEXT_BUFFER, " ID = %d, PEER = %d\n\r", NodeID, PeerID);
   CLI_Write(text);
-  snprintf(text, MAX_CLI_TEXT_BUFFER, " DIO_MAPPING_1 Interrupt Active = %#04x\n\r, DIO_MAPPING_2 Interrupt = %#04X\n\r", RFM69HCW_ReadRegister(DIO_MAPPING_1), RFM69HCW_ReadRegister(DIO_MAPPING_2));
+  snprintf(text, MAX_CLI_TEXT_BUFFER, " DIO_MAPPING_1 Interrupt = %#04x, DIO_MAPPING_2 Interrupt = %#04X\n\r", RFM69HCW_ReadRegister(DIO_MAPPING_1), RFM69HCW_ReadRegister(DIO_MAPPING_2));
   CLI_Write(text);
   CLI_Write("\n\r");
 
@@ -530,7 +577,7 @@ void RFM69HCW_SendPacket(uint8_t *data, uint8_t length)
   TX_Payload[payloadIdx++] = WRITE(FIFO, (length + MetadataLength - 1));
 
   // Set the destination ID and ACK to return in metadata
-  TX_Payload[payloadIdx++] = (PEER_NODE_ID << 8) | ++LAST_SENT_ACK;
+  TX_Payload[payloadIdx++] = (PeerID << 8) | ++LAST_SENT_ACK;
 
   snprintf(text, MAX_CLI_TEXT_BUFFER, "  - Total Payload Size = %d bytes\n\r", TX_Payload[0] & 0xFF);
   CLI_Write(text);

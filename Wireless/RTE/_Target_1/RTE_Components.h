@@ -4,7 +4,7 @@
  *      *** Do not modify ! ***
  *
  * Project: 'Wireless' 
- * Target:  'DEVICE 2' 
+ * Target:  'Target 1' 
  */
 
 #ifndef RTE_COMPONENTS_H
