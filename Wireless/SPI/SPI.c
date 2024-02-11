@@ -14,12 +14,13 @@
 #define SSI2_PCTL_MASK (uint32_t)(GPIO_PCTL_PB4_M | GPIO_PCTL_PB5_M | GPIO_PCTL_PB6_M | GPIO_PCTL_PB7_M)
 
 #define SSI2_FSS_ADDR (*((volatile uint32_t *)(0x40005000 | (SSI2_FSS_BIT << 2))))
-
+static uint16_t itr = 0;
 #define WAIT_FOR_TX_SPACE()                      \
   while ((SSI2_SR_R & SSI_SR_TNF) != SSI_SR_TNF) \
     ;
-#define WAIT_FOR_RX_DATA()                       \
-  while ((SSI2_SR_R & SSI_SR_RNE) != SSI_SR_RNE) \
+#define WAIT_FOR_RX_DATA()                                         \
+  itr = 0;                                                         \
+  while (++itr < 0xFFFF && (SSI2_SR_R & SSI_SR_RNE) != SSI_SR_RNE) \
     ;
 #define WAIT_FOR_IDLE()                          \
   while ((SSI2_SR_R & SSI_SR_BSY) == SSI_SR_BSY) \

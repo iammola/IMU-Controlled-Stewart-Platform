@@ -272,8 +272,6 @@ void CLI_Write(char *data)
 // Output: Data received from UART
 uint8_t CLI_Read(void)
 {
-  uint8_t data;
-
   // Wait FOR Receive FIFO to have data
   while (UART0_FR_R & UART_FR_RXFE)
     ;

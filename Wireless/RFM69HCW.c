@@ -12,9 +12,11 @@
 
 #define DIO_0_INT_BIT (unsigned)(1 << 2) // PB2
 #define DIO_0_PCTL_M (unsigned)GPIO_PCTL_PB2_M
+#define DIO_4_INT_BIT (unsigned)(1 << 3) // PB3
+#define DIO_4_PCTL_M (unsigned)GPIO_PCTL_PB3_M
 
-#define INT_PINS (unsigned)(DIO_0_INT_BIT)
-#define INT_PCTL_M (unsigned)(DIO_0_PCTL_M)
+#define INT_PINS (unsigned)(DIO_0_INT_BIT | DIO_4_INT_BIT)
+#define INT_PCTL_M (unsigned)(DIO_0_PCTL_M | DIO_4_PCTL_M)
 
 #define READ(addr) (uint16_t)(0x7FFF & (addr << 8))
 #define WRITE(addr, data) (uint16_t)(0x8000 | (addr << 8) | data)
@@ -27,7 +29,7 @@ void GPIOB_Handler(void);
 static void RFM69HCW_Config(uint32_t bitRate, uint32_t deviation, uint8_t rxBW, uint8_t interPacketRxDelay, uint8_t rampTime);
 static void RFM69HCW_ClearCLIBuffer(void);
 static void RFM69HCW_Interrupt_Init(void);
-static void RFM69HCW_SetMode(MODE newMode);
+static void RFM69HCW_SetMode(MODE newMode, bool EnableListenMode);
 static void RFM69HCW_SetNodesID(void);
 static MODE RFM69HCW_GetMode(void);
 
@@ -76,19 +78,45 @@ void GPIOB_Handler(void)
 {
   uint8_t dataIdx = 0;
   uint8_t metadataPlaceholder;
-  uint8_t interruptStatus = RFM69HCW_ReadRegister(IRQ_FLAGS_2);
+  uint8_t interruptStatus = 0;
 
-  snprintf(text, MAX_CLI_TEXT_BUFFER, " Full DIO0 Interrupt Status = %#04x\n\r", interruptStatus);
+  snprintf(text, MAX_CLI_TEXT_BUFFER, "\n\r MIS = %#04x \n\r", GPIO_PORTB_MIS_R);
+  CLI_Write(text);
+  // Check if it is a Timeout Interrupt
+  if (GPIO_PORTB_MIS_R & DIO_4_INT_BIT)
+  {
+    GPIO_PORTB_ICR_R = DIO_4_INT_BIT;
+
+    CLI_Write("\n\r RSSI signal passing threshold causing Timeout\n\r");
+
+    snprintf(text, MAX_CLI_TEXT_BUFFER, "\n\r Interrupt Flags 1 = %#04x \n\r", RFM69HCW_ReadRegister(IRQ_FLAGS_1));
+    CLI_Write(text);
+
+    // Restart RX to detect preamble of signal
+    RFM69HCW_WriteRegister(PACKET_CONFIG_2, RFM69HCW_ReadRegister(PACKET_CONFIG_2) | PACKET_RX_RESTART);
+    RFM69HCW_PrintRSSI();
+  }
+
+  interruptStatus = RFM69HCW_ReadRegister(IRQ_FLAGS_2);
+
+  snprintf(text, MAX_CLI_TEXT_BUFFER, "\n\r Mode = %04x. Interrupt Flags 2 = %#04x \n\r", RFM69HCW_GetMode(), interruptStatus);
   CLI_Write(text);
 
-  if (CurrentMode == OPERATION_MODE_TX && (interruptStatus & IRQ_2_PACKET_SENT))
+  if (!(GPIO_PORTB_MIS_R & DIO_0_INT_BIT))
+  {
+    CLI_Write("Not DIO0 interrupt");
+    return;
+  }
+
+  // Must be DIO0 interrupt
+  if (interruptStatus & IRQ_2_PACKET_SENT)
   {
     CLI_Write("\n\r Event: Packet Sent\n\r");
     // Enter RX for ACK
-    RFM69HCW_SetMode(OPERATION_MODE_RX);
+    RFM69HCW_SetMode(OPERATION_MODE_RX, false);
   }
   // While in RX mode and the CRC OK flag is set, then this should be the ACK payload
-  else if (CurrentMode == OPERATION_MODE_RX && (interruptStatus & IRQ_2_CRC_OK))
+  else if (interruptStatus & IRQ_2_CRC_OK)
   {
     CLI_Write("\n\r Event: Received CRC OK\n\r");
 
@@ -116,15 +144,10 @@ void GPIOB_Handler(void)
 
     // Confirm Packet was received
     ACK_STATUS |= ACK_PAYLOAD_RECEIVED;
-
-    // Enable Payload Ready Interrupt on RX
-    RFM69HCW_WriteRegister(DIO_MAPPING_1, DIO_0_MAPPING_01);
   }
   // If in RX mode and the Payload Ready Interrupt was set
-  else if (CurrentMode == OPERATION_MODE_RX && (interruptStatus & IRQ_2_PAYLOAD_READY))
+  else if (interruptStatus & IRQ_2_PAYLOAD_READY)
   {
-    RFM69HCW_WriteRegister(PACKET_CONFIG_2, RFM69HCW_ReadRegister(PACKET_CONFIG_2) | PACKET_RX_RESTART);
-
     HasNewData = true;
 
     CLI_Write("\n\r Reading Metadata\n\r");
@@ -167,15 +190,14 @@ void GPIOB_Handler(void)
     while ((RFM69HCW_ReadRegister(IRQ_FLAGS_2) & IRQ_2_PACKET_SENT) == 0x00)
       ;
     CLI_Write(" Received Packet Sent for ACK \n\r");
-
-    // Go back to RX mode after ACK
-    RFM69HCW_SetMode(OPERATION_MODE_RX);
   }
   else
-    return;
+  {
+    CLI_Write(" Event not matched");
+  }
 
   // Clear Interrupt
-  GPIO_PORTB_ICR_R |= DIO_0_INT_BIT;
+  GPIO_PORTB_ICR_R = DIO_0_INT_BIT;
 }
 
 static uint32_t MeasuredRSSIMin = 0;
@@ -183,7 +205,7 @@ static uint32_t MeasuredRSSIMax = 0;
 static uint32_t MeasuredRSSICur = 0;
 static bool ClearRSSIPrintLine = false;
 
-void RFM69HCW_PrintMode(void)
+void RFM69HCW_PrintRSSI(void)
 {
   if (RFM69HCW_GetMode() == OPERATION_MODE_RX)
   {
@@ -210,20 +232,17 @@ void RFM69HCW_PrintMode(void)
     if (MeasuredRSSICur > MeasuredRSSIMax)
     {
       MeasuredRSSIMax = MeasuredRSSICur;
-      snprintf(text, MAX_CLI_TEXT_BUFFER, "\n\r Max Change (-%ddBm)\n\r\n\r", MeasuredRSSIMax);
-      CLI_Write(text);
     }
 
     if (MeasuredRSSICur < MeasuredRSSIMin)
     {
       MeasuredRSSIMin = MeasuredRSSICur;
-      snprintf(text, MAX_CLI_TEXT_BUFFER, "\n\r Min Change (-%ddBm)\n\r\n\r", MeasuredRSSIMin);
-      CLI_Write(text);
     }
-
-    SysTick_Wait(20e5);
   }
+}
 
+void RFM69HCW_ReadRegisterCLI(void)
+{
   if (PerformCLIAction)
   {
     PerformCLIAction = false;
@@ -263,6 +282,7 @@ static void RFM69HCW_SetNodesID(void)
   while (!PerformCLIAction)
     ;
   CLI_Write("\n\r");
+  PerformCLIAction = false;
 }
 
 static void RFM69HCW_ClearCLIBuffer(void)
@@ -351,16 +371,17 @@ static void RFM69HCW_Config(uint32_t bitRate, uint32_t deviation, uint8_t rxBW, 
   RFM69HCW_WriteRegister(CARRIER_FREQUENCY_MID_BYTE, (carrierFrequency & 0xFF00) >> 8);
   RFM69HCW_WriteRegister(CARRIER_FREQUENCY_LAST_BYTE, carrierFrequency & 0xFF);
 
-  // Enable sync word verification, with 3 words and no tolerance for errors
-  RFM69HCW_WriteRegister(SYNC_CONFIG, SYNC_WORD_VERIFICATION | SYNC_WORD_BYTE_COUNT_3 | SYNC_WORD_NO_TOLERANCE);
+  RFM69HCW_WriteRegister(PREAMBLE_LAST_BYTE, 16);
 
-  // Verify the Bit Sync value (0xAA or 0x55), Device Version, Network ID
-  RFM69HCW_WriteRegister(SYNC_VALUE_1, 0xAA);
-  RFM69HCW_WriteRegister(SYNC_VALUE_2, deviceVersion);
-  RFM69HCW_WriteRegister(SYNC_VALUE_3, NETWORK_ID);
+  // Enable sync word verification, with 3 words and no tolerance for errors
+  RFM69HCW_WriteRegister(SYNC_CONFIG, SYNC_WORD_VERIFICATION | SYNC_WORD_BYTE_COUNT_2 | SYNC_WORD_NO_TOLERANCE);
+
+  // Verify the Device Version, Network ID
+  RFM69HCW_WriteRegister(SYNC_VALUE_1, deviceVersion);
+  RFM69HCW_WriteRegister(SYNC_VALUE_2, NETWORK_ID);
 
   // Configure the Packets to be of Variable Length, with Variable lengths and the addresses to be filtered for this node
-  RFM69HCW_WriteRegister(PACKET_CONFIG_1, (PACKET_VARIABLE_LENGTH | PACKET_CRC_ENABLE /* | PACKET_ADDRESS_FILTER_NODE*/ | PACKET_CRC_AUTO_CLEAR_OFF));
+  RFM69HCW_WriteRegister(PACKET_CONFIG_1, PACKET_VARIABLE_LENGTH /* | PACKET_CRC_ENABLE | PACKET_ADDRESS_FILTER_NODE */ | PACKET_CRC_AUTO_CLEAR_OFF);
   RFM69HCW_WriteRegister(PACKET_NODE_ADDR, NodeID);
 
   // Trigger transmit start on non-empty FIFO buffer
@@ -372,7 +393,7 @@ static void RFM69HCW_Config(uint32_t bitRate, uint32_t deviation, uint8_t rxBW, 
   // Specify DC Offset to 4% of BW
   RFM69HCW_WriteRegister(RX_BANDWIDTH, RECEIVER_DC_OFFSET_CUTOFF_FREQ | rxBW);
 
-  // Set Ramp-Time to 40us
+  // Set Ramp-Time
   RFM69HCW_WriteRegister(PA_RAMP_TIME, rampTime & PA_FSK_RAMP_TIME_M);
 
   // Enable PA1 and use half of the max power (13dBm)
@@ -381,27 +402,37 @@ static void RFM69HCW_Config(uint32_t bitRate, uint32_t deviation, uint8_t rxBW, 
   // Enable Over Current Protection (required for high power)
   RFM69HCW_WriteRegister(CURRENT_PROTECTION, CURRENT_PROTECTION_ON);
 
-  // Enable Automatic ACK after TX
-  // RFM69HCW_WriteRegister(AUTO_MODES, AUTO_MODES_AUTO_RX_ACK);
+  // Set RSSI Threshold
+  RFM69HCW_WriteRegister(RSSI_THRESHOLD, 75);
 
-  // Set Timeout interrupt to occur after 10 16 bit period
-  // RFM69HCW_WriteRegister(RX_TIMEOUT, 10);
+  // Disable RX Timeout
+  RFM69HCW_WriteRegister(TIMEOUT_RX_START, 0);
+  
+  // Enable RSSI Timeout
+  RFM69HCW_WriteRegister(TIMEOUT_RSSI_THRESHOLD, 75);
 
   // Enable AES encryption, automatic RX phase restart and specified Inter Packet RX Delay
-  RFM69HCW_WriteRegister(PACKET_CONFIG_2, (uint8_t)(PACKET_AES_ENCRYPTION | PACKET_AUTO_RX_RESTART | (unsigned)(interPacketRxDelay << PACKET_INTER_RX_DELAY_S)));
+  RFM69HCW_WriteRegister(PACKET_CONFIG_2, ~PACKET_AES_ENCRYPTION & (PACKET_AUTO_RX_RESTART | PACKET_INTER_RX_DELAY_NONE));
 
   // Set Cipher Key
   for (idx = 0; idx < AES_KEY_LAST - AES_KEY_FIRST; idx++)
-    RFM69HCW_WriteRegister((ADDRESS)(AES_KEY_FIRST + idx), AES_CIPHER_KEY[idx]);
+    RFM69HCW_WriteRegister((ADDRESS)(AES_KEY_FIRST + idx), 0x00 /*AES_CIPHER_KEY[idx]*/);
 
-  // Put device in RX mode
-  RFM69HCW_SetMode(OPERATION_MODE_RX);
-
-  // Enable Payload Ready Interrupt only on RX mode
-  RFM69HCW_WriteRegister(DIO_MAPPING_1, DIO_0_MAPPING_01);
+  // Set the resolution of the Idle and RX to be the same, for only the RSSI to be matched, and to resume in Listen Mode after
+  RFM69HCW_WriteRegister(LISTEN_1, LISTEN_CRITERIA_THRESHOLD_RSSI | LISTEN_END_IDLE_RESUME | (2 << 6) | (2 << 4));
+  // Give 25% of 1s/Resolution to Idle
+  RFM69HCW_WriteRegister(LISTEN_2, 0x25);
+  // Give 75% of 1s/Resolution to RX
+  RFM69HCW_WriteRegister(LISTEN_3, 0xCF);
 
   // Disable Clock output and enable DIO4 Timeout
   RFM69HCW_WriteRegister(DIO_MAPPING_2, DIO_CLK_OUT_OFF | DIO_4_MAPPING_00);
+
+  // Improved Fading Margin for AFC LowBeta = 0
+  RFM69HCW_WriteRegister(TEST_DAGC, TEST_DAGC_IMPROVED_AFC_0);
+
+  // Enable Listen Mode
+  RFM69HCW_SetMode(OPERATION_MODE_STANDBY, true);
 }
 
 void RFM69HCW_Init(uint32_t SYS_CLK, uint32_t SSI_CLK)
@@ -418,7 +449,7 @@ void RFM69HCW_Init(uint32_t SYS_CLK, uint32_t SSI_CLK)
   {
     // Configure Node IDs
     RFM69HCW_SetNodesID();
-  } while (PeerID == 0 || NodeID == 0);
+  } while (PeerID == 0 || NodeID == 0 || PeerID == NodeID);
 
   // Initialize the SPI pins
   SPI2_Init(SYS_CLK, SSI_CLK, SSI_CR0_FRF_MOTO, SSI_CR0_DSS_16);
@@ -438,7 +469,7 @@ void RFM69HCW_Init(uint32_t SYS_CLK, uint32_t SSI_CLK)
   CLI_Write("\n\r----------------- Config End -----------------\n\r");
   snprintf(text, MAX_CLI_TEXT_BUFFER, " ID = %d, PEER = %d\n\r", NodeID, PeerID);
   CLI_Write(text);
-  snprintf(text, MAX_CLI_TEXT_BUFFER, " DIO_MAPPING_1 Interrupt = %#04x, DIO_MAPPING_2 Interrupt = %#04X\n\r", RFM69HCW_ReadRegister(DIO_MAPPING_1), RFM69HCW_ReadRegister(DIO_MAPPING_2));
+  snprintf(text, MAX_CLI_TEXT_BUFFER, " DIO_MAPPING_1 Interrupt = %#04x\n\r", RFM69HCW_ReadRegister(DIO_MAPPING_1));
   CLI_Write(text);
   CLI_Write("\n\r");
 
@@ -459,8 +490,9 @@ static uint8_t RFM69HCW_ReadRegister(ADDRESS REGISTER)
 static void RFM69HCW_WriteRegister(ADDRESS REGISTER, uint8_t data)
 {
   uint16_t byte = WRITE(REGISTER, data);
+  bool ShouldPrintDebug = RSSI_CONFIG != REGISTER && FIFO != REGISTER && (REGISTER != PACKET_CONFIG_2 || !(data & PACKET_RX_RESTART));
 
-  if (RSSI_CONFIG != REGISTER)
+  if (ShouldPrintDebug)
   {
     snprintf(text, MAX_CLI_TEXT_BUFFER, " ADDR=%#04x,", REGISTER);
     CLI_Write(text);
@@ -473,7 +505,7 @@ static void RFM69HCW_WriteRegister(ADDRESS REGISTER, uint8_t data)
   SPI2_Write(&byte, 1);
   SPI2_EndTransmission();
 
-  if (RSSI_CONFIG != REGISTER && FIFO != REGISTER)
+  if (ShouldPrintDebug)
   {
     snprintf(text, MAX_CLI_TEXT_BUFFER, " READ=%#04x\n\r", RFM69HCW_ReadRegister(REGISTER));
     CLI_Write(text);
@@ -485,37 +517,41 @@ static MODE RFM69HCW_GetMode(void)
   return RFM69HCW_ReadRegister(OPERATION_MODE) & OPERATION_MODE_M;
 }
 
-static void RFM69HCW_SetMode(MODE newMode)
+static void RFM69HCW_SetMode(MODE newMode, bool EnableListenMode)
 {
-  uint8_t modeSettings = 0;
-
-  if (CurrentMode == newMode)
-    return;
-
-  // Get current operation mode settings, mask out current mode and enable automatic sequencing
-  modeSettings = (RFM69HCW_ReadRegister(OPERATION_MODE) & ~(OPERATION_MODE_M | OPERATION_SEQUENCER_OFF));
+  // Get current operation mode settings
+  uint8_t modeSettings = RFM69HCW_ReadRegister(OPERATION_MODE) & ~OPERATION_SEQUENCER_OFF;
 
   // Have to abort Listen Mode to change Operation mode
+  // If the listen mode is not already enabled
   if (modeSettings & OPERATION_LISTEN_ON)
   {
+    if (EnableListenMode)
+    {
+      modeSettings = (modeSettings & ~OPERATION_MODE_M) | OPERATION_MODE_STANDBY;
+    }
+
     // First stage
-    modeSettings = (modeSettings | OPERATION_LISTEN_ABORT | newMode) & ~OPERATION_LISTEN_ON;
+    modeSettings = (modeSettings | OPERATION_LISTEN_ABORT) & ~OPERATION_LISTEN_ON;
     RFM69HCW_WriteRegister(OPERATION_MODE, modeSettings);
 
     // Second stage
     modeSettings &= ~OPERATION_LISTEN_ABORT;
     RFM69HCW_WriteRegister(OPERATION_MODE, modeSettings);
   }
-  else
-  {
-    modeSettings |= newMode;
 
+  if (EnableListenMode)
+  {
+    modeSettings |= OPERATION_LISTEN_ON;
+    RFM69HCW_WriteRegister(OPERATION_MODE, modeSettings);
+    // Enable Payload Ready Interrupt for RX mode
+    RFM69HCW_WriteRegister(DIO_MAPPING_1, DIO_0_MAPPING_01);
+  }
+  else if (newMode != OPERATION_MODE_STANDBY)
+  {
+    modeSettings = (modeSettings & ~OPERATION_MODE_M) | newMode;
     // Set new Mode
     RFM69HCW_WriteRegister(OPERATION_MODE, modeSettings);
-  }
-
-  if (newMode == OPERATION_MODE_RX)
-  {
   }
 
   // Wait for MODE_READY
@@ -532,10 +568,12 @@ void RFM69HCW_SendPacket(uint8_t *data, uint8_t length, bool waitForACK)
 {
   uint8_t dataIdx = 0;
   uint8_t payloadIdx = 0;
-  uint8_t payloadSize = MetadataLength2Bytes + (length / 2) + 1;
+  uint8_t payloadSize = MetadataLength2Bytes + (length / 2) + 0.5;
   uint16_t TX_Payload[MetadataLength2Bytes + (PAYLOAD_LENGTH_64 / 2)] = {0};
 
   CLI_Write("\n\r----------------- Send Packet Start -----------------\n\r");
+
+  RFM69HCW_SetMode(OPERATION_MODE_STANDBY, false);
 
   // Prevent sending more than max bytes
   if (length > PAYLOAD_LENGTH_64)
@@ -565,7 +603,7 @@ void RFM69HCW_SendPacket(uint8_t *data, uint8_t length, bool waitForACK)
     TX_Payload[payloadIdx] = (uint16_t)(data[dataIdx++] << 8);
 
     // Add the second byte if there's more to add
-    if ((dataIdx + 1) < length)
+    if ((dataIdx + 1) <= length)
       TX_Payload[payloadIdx] |= data[dataIdx++];
 
     snprintf(text, MAX_CLI_TEXT_BUFFER, " DoubleWord #%d (%d = %#04x. %d = %#04x)\n\r", payloadIdx - MetadataLength2Bytes + 1, dataIdx - 1, (TX_Payload[payloadIdx] & 0xFF00) >> 8, dataIdx, TX_Payload[payloadIdx] & 0xFF);
@@ -576,13 +614,14 @@ void RFM69HCW_SendPacket(uint8_t *data, uint8_t length, bool waitForACK)
 
   do
   {
-    RFM69HCW_WriteRegister(PACKET_CONFIG_2, RFM69HCW_ReadRegister(PACKET_CONFIG_2) | PACKET_RX_RESTART);
-
-    // Enable Packet Sent/CRC OK Interrupt on DIO0
-    RFM69HCW_WriteRegister(DIO_MAPPING_1, DIO_0_MAPPING_00);
+    if (waitForACK)
+    {
+      // Enable Packet Sent for TX and CRC OK for RX Interrupt on DIO0
+      RFM69HCW_WriteRegister(DIO_MAPPING_1, DIO_0_MAPPING_00);
+    }
 
     // Start Sending Packet from first byte in FIFO
-    RFM69HCW_SetMode(OPERATION_MODE_TX);
+    RFM69HCW_SetMode(OPERATION_MODE_TX, false);
 
     CLI_Write("\n\r Starting Transmission.\n\r");
 
@@ -601,6 +640,9 @@ void RFM69HCW_SendPacket(uint8_t *data, uint8_t length, bool waitForACK)
       ;
     // Restart Transmission if the ACK was received but didn't match
   } while ((ACK_STATUS & ACK_PAYLOAD_PASSED) != ACK_PAYLOAD_PASSED);
+
+  // Enable Listen Mode
+  RFM69HCW_SetMode(OPERATION_MODE_STANDBY, true);
 
   CLI_Write("\n\r----------------- Send Packet End -----------------\n\r");
   SysTick_Wait10ms(75);

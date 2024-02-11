@@ -20,6 +20,8 @@ typedef enum ADDRESSES
   CARRIER_FREQUENCY_MID_BYTE = 0x08,
   CARRIER_FREQUENCY_LAST_BYTE = 0x09,
   LISTEN_1 = 0x0D,
+  LISTEN_2 = 0x0E,
+  LISTEN_3 = 0x0F,
   VERSION = 0x10,
   /* TRANSMITTER REGISTERS */
   PA_LEVEL = 0x11,
@@ -35,8 +37,11 @@ typedef enum ADDRESSES
   IRQ_FLAGS_1 = 0x27,
   IRQ_FLAGS_2 = 0x28,
   RSSI_THRESHOLD = 0x29,
-  RX_TIMEOUT = 0x2B,
+  TIMEOUT_RX_START = 0x2A,
+  TIMEOUT_RSSI_THRESHOLD = 0x2B,
   /* PACKET ENGINE REGISTERS */
+  PREAMBLE_FIRST_BYTE = 0x2C,
+  PREAMBLE_LAST_BYTE = 0x2D,
   SYNC_CONFIG = 0x2E,
   SYNC_VALUE_1 = 0x2F,
   SYNC_VALUE_2 = 0x30,
@@ -49,6 +54,8 @@ typedef enum ADDRESSES
   PACKET_CONFIG_2 = 0x3D,
   AES_KEY_FIRST = 0x3E,
   AES_KEY_LAST = 0x4D,
+  /* TEST REGISTERS */
+  TEST_DAGC = 0x6F
 } ADDRESS;
 
 // OPERATION_MODE
@@ -71,7 +78,8 @@ typedef enum MODES
 #define DATA_MODULATION_MODE (unsigned)0x00       // (Bits 6:5)
 
 // LISTEN_1
-#define LISTEN_END_NO_ACTION (unsigned)(0 << 1)              // (Bits 2:1)
+#define LISTEN_END_IDLE_RESUME (unsigned)(2 << 1)            // (Bits 2:1)
+#define LISTEN_CRITERIA_THRESHOLD_RSSI (unsigned)(0 << 3)    // (Bit 3) default
 #define LISTEN_CRITERIA_THRESHOLD_ADDRESS (unsigned)(1 << 3) // (Bit 3)
 #define LISTEN_RESO_IRX_DEFAULT (unsigned)(1 << 4)           // (Bits 5:4) default
 #define LISTEN_RESO_IDLE_64u (unsigned)(1 << 6)              // (Bits 7:6)
@@ -85,8 +93,8 @@ typedef enum MODES
 
 // SYNC_CONFIG
 #define SYNC_WORD_VERIFICATION (unsigned)0x80
-#define SYNC_WORD_BYTE_COUNT_3 (unsigned)0x10 // (Bits 5:3)
-#define SYNC_WORD_NO_TOLERANCE (unsigned)0x00 // (Bits 2:0)
+#define SYNC_WORD_BYTE_COUNT_2 (unsigned)(1 << 3) // (Bits 5:3)
+#define SYNC_WORD_NO_TOLERANCE (unsigned)0x00     // (Bits 2:0)
 
 // PACKET_CONFIG_1
 #define PACKET_VARIABLE_LENGTH (unsigned)0x80
@@ -105,6 +113,7 @@ typedef enum MODES
 #define PACKET_AUTO_RX_RESTART (unsigned)(1 << 1) // (Bit 1)
 #define PACKET_RX_RESTART (unsigned)(1 << 2)      // (Bit 2)
 #define PACKET_INTER_RX_DELAY_S 4                 // Shift amount for bits 7:4
+#define PACKET_INTER_RX_DELAY_NONE (unsigned)(12 << PACKET_INTER_RX_DELAY_S)
 
 // PA_LEVEL
 #define PA0_ON (unsigned)0x80
@@ -148,6 +157,9 @@ typedef enum MODES
 #define IRQ_2_PAYLOAD_READY (unsigned)(1 << 2) // Payload Ready Flag in RX/Standby
 #define IRQ_2_CRC_OK (unsigned)(1 << 1)        // Entering Intermediate Mode Flag
 
+// TEST_DAGC
+#define TEST_DAGC_IMPROVED_AFC_0 0x30
+
 // CUSTOM ACK_STATUS
 #define ACK_RESET (unsigned)0x00
 #define ACK_PAYLOAD_PASSED (unsigned)0x02
@@ -165,4 +177,6 @@ void RFM69HCW_Init(uint32_t SYS_CLK, uint32_t SSI_CLK);
 
 void RFM69HCW_SendPacket(uint8_t *data, uint8_t length, bool waitForACK);
 
-void RFM69HCW_PrintMode(void);
+void RFM69HCW_PrintRSSI(void);
+
+void RFM69HCW_ReadRegisterCLI(void);

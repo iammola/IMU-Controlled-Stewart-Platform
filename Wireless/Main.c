@@ -57,7 +57,7 @@ void GPIOF_Handler(void)
     peerLEDIdx = (peerLEDIdx + 1) & 3;
 
     // Transmit index
-    RFM69HCW_SendPacket(&peerLEDIdx, 1);
+    RFM69HCW_SendPacket(&peerLEDIdx, 1, false);
   }
 }
 
@@ -85,7 +85,7 @@ int main(void)
     }
     else
     {
-      RFM69HCW_PrintMode();
+      RFM69HCW_ReadRegisterCLI();
     }
   }
 }

@@ -139,7 +139,7 @@
         <SetRegEntry>
           <Number>0</Number>
           <Key>lmidk-agdi</Key>
-          <Name>-U-O4622 -O4622 -S3 -FO29</Name>
+          <Name>-U0E230C33 -O4623 -S3 -FO29</Name>
         </SetRegEntry>
         <SetRegEntry>
           <Number>0</Number>
@@ -151,9 +151,9 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>185</LineNumber>
+          <LineNumber>115</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>7304</Address>
+          <Address>6704</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -162,14 +162,14 @@
           <BreakIfRCount>1</BreakIfRCount>
           <Filename>.\RFM69HCW.c</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\Wireless\RFM69HCW.c\185</Expression>
+          <Expression>\\Wireless\RFM69HCW.c\115</Expression>
         </Bp>
         <Bp>
           <Number>1</Number>
           <Type>0</Type>
-          <LineNumber>92</LineNumber>
+          <LineNumber>262</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>6508</Address>
+          <Address>9486</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -178,23 +178,7 @@
           <BreakIfRCount>1</BreakIfRCount>
           <Filename>.\RFM69HCW.c</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\Wireless\RFM69HCW.c\92</Expression>
-        </Bp>
-        <Bp>
-          <Number>2</Number>
-          <Type>0</Type>
-          <LineNumber>149</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>6906</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename>.\RFM69HCW.c</Filename>
-          <ExecCommand></ExecCommand>
-          <Expression>\\Wireless\RFM69HCW.c\149</Expression>
+          <Expression>\\Wireless\RFM69HCW.c\262</Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>
@@ -207,6 +191,16 @@
           <count>1</count>
           <WinNumber>1</WinNumber>
           <ItemText>CurrentMode</ItemText>
+        </Ww>
+        <Ww>
+          <count>2</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>PendingModeChange</ItemText>
+        </Ww>
+        <Ww>
+          <count>3</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>itr</ItemText>
         </Ww>
       </WatchWindow1>
       <Tracepoint>
@@ -255,6 +249,10 @@
         <Entry>
           <Name>System Viewer\GPIOB</Name>
           <WinId>35904</WinId>
+        </Entry>
+        <Entry>
+          <Name>System Viewer\GPIOF</Name>
+          <WinId>35902</WinId>
         </Entry>
         <Entry>
           <Name>System Viewer\SSI2</Name>
