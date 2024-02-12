@@ -82,6 +82,7 @@ void GPIOB_Handler(void)
 
   snprintf(text, MAX_CLI_TEXT_BUFFER, "\n\r MIS = %#04x \n\r", GPIO_PORTB_MIS_R);
   CLI_Write(text);
+
   // Check if it is a Timeout Interrupt
   if (GPIO_PORTB_MIS_R & DIO_4_INT_BIT)
   {
@@ -407,7 +408,7 @@ static void RFM69HCW_Config(uint32_t bitRate, uint32_t deviation, uint8_t rxBW, 
 
   // Disable RX Timeout
   RFM69HCW_WriteRegister(TIMEOUT_RX_START, 0);
-  
+
   // Enable RSSI Timeout
   RFM69HCW_WriteRegister(TIMEOUT_RSSI_THRESHOLD, 75);
 
@@ -620,9 +621,6 @@ void RFM69HCW_SendPacket(uint8_t *data, uint8_t length, bool waitForACK)
       RFM69HCW_WriteRegister(DIO_MAPPING_1, DIO_0_MAPPING_00);
     }
 
-    // Start Sending Packet from first byte in FIFO
-    RFM69HCW_SetMode(OPERATION_MODE_TX, false);
-
     CLI_Write("\n\r Starting Transmission.\n\r");
 
     SPI2_StartTransmission();
@@ -630,6 +628,9 @@ void RFM69HCW_SendPacket(uint8_t *data, uint8_t length, bool waitForACK)
     SPI2_EndTransmission();
 
     CLI_Write(" Ending Transmission.\n\r");
+
+    // Start Sending Packet from first byte in FIFO
+    RFM69HCW_SetMode(OPERATION_MODE_TX, false);
 
     if (!waitForACK)
       break;
