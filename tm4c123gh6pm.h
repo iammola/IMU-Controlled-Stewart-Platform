@@ -11552,30 +11552,30 @@
 
 //*****************************************************************************
 //
-// The following are defines for the bit fields in the NVIC_ST_CTRL register.
+// The following are defines for the bit fields in the ST_CTRL register.
 //
 //*****************************************************************************
-#define NVIC_ST_CTRL_COUNT      0x00010000  // Count Flag
-#define NVIC_ST_CTRL_CLK_SRC    0x00000004  // Clock Source
-#define NVIC_ST_CTRL_INTEN      0x00000002  // Interrupt Enable
-#define NVIC_ST_CTRL_ENABLE     0x00000001  // Enable
+#define ST_CTRL_COUNT      0x00010000  // Count Flag
+#define ST_CTRL_CLK_SRC    0x00000004  // Clock Source
+#define ST_CTRL_INTEN      0x00000002  // Interrupt Enable
+#define ST_CTRL_ENABLE     0x00000001  // Enable
 
 //*****************************************************************************
 //
-// The following are defines for the bit fields in the NVIC_ST_RELOAD register.
+// The following are defines for the bit fields in the ST_RELOAD register.
 //
 //*****************************************************************************
-#define NVIC_ST_RELOAD_M        0x00FFFFFF  // Reload Value
-#define NVIC_ST_RELOAD_S        0
+#define ST_RELOAD_M        0x00FFFFFF  // Reload Value
+#define ST_RELOAD_S        0
 
 //*****************************************************************************
 //
-// The following are defines for the bit fields in the NVIC_ST_CURRENT
+// The following are defines for the bit fields in the ST_CURRENT
 // register.
 //
 //*****************************************************************************
-#define NVIC_ST_CURRENT_M       0x00FFFFFF  // Current Value
-#define NVIC_ST_CURRENT_S       0
+#define ST_CURRENT_M       0x00FFFFFF  // Current Value
+#define ST_CURRENT_S       0
 
 //*****************************************************************************
 //

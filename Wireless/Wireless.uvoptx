@@ -119,6 +119,10 @@
       <TargetDriverDllRegistry>
         <SetRegEntry>
           <Number>0</Number>
+          <Key>DLGUARM</Key>
+        </SetRegEntry>
+        <SetRegEntry>
+          <Number>0</Number>
           <Key>ARMRTXEVENTFLAGS</Key>
           <Name>-L70 -Z18 -C0 -M0 -T1</Name>
         </SetRegEntry>
@@ -147,9 +151,9 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>115</LineNumber>
+          <LineNumber>131</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>6704</Address>
+          <Address>6774</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -158,14 +162,14 @@
           <BreakIfRCount>1</BreakIfRCount>
           <Filename>.\RFM69HCW.c</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\Wireless\RFM69HCW.c\115</Expression>
+          <Expression>\\Wireless\RFM69HCW.c\131</Expression>
         </Bp>
         <Bp>
           <Number>1</Number>
           <Type>0</Type>
-          <LineNumber>262</LineNumber>
+          <LineNumber>120</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>9486</Address>
+          <Address>6676</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -174,7 +178,23 @@
           <BreakIfRCount>1</BreakIfRCount>
           <Filename>.\RFM69HCW.c</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\Wireless\RFM69HCW.c\262</Expression>
+          <Expression>\\Wireless\RFM69HCW.c\120</Expression>
+        </Bp>
+        <Bp>
+          <Number>2</Number>
+          <Type>0</Type>
+          <LineNumber>155</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>7006</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>.\RFM69HCW.c</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\Wireless\RFM69HCW.c\155</Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>
@@ -197,6 +217,16 @@
           <count>3</count>
           <WinNumber>1</WinNumber>
           <ItemText>itr</ItemText>
+        </Ww>
+        <Ww>
+          <count>4</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>interrupt2Status</ItemText>
+        </Ww>
+        <Ww>
+          <count>5</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>RX_Data_Metadata</ItemText>
         </Ww>
       </WatchWindow1>
       <Tracepoint>
@@ -242,6 +272,10 @@
       <pSingCmdsp></pSingCmdsp>
       <pMultCmdsp></pMultCmdsp>
       <SystemViewers>
+        <Entry>
+          <Name>System Viewer\GPIOA</Name>
+          <WinId>35901</WinId>
+        </Entry>
         <Entry>
           <Name>System Viewer\GPIOB</Name>
           <WinId>35904</WinId>

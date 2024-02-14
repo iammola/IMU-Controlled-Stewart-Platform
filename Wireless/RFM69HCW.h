@@ -5,8 +5,7 @@
 #define F_XOSC 32e6                 // 32MHz (Table 2.3.2)
 #define F_STEP (F_XOSC / (1 << 19)) // (Section 3.2.3.3)
 
-typedef enum ADDRESSES
-{
+typedef enum ADDRESSES {
   /* DATA REGISTER */
   FIFO = 0x00,
   /* CONFIGURATION REGISTERS */
@@ -29,6 +28,7 @@ typedef enum ADDRESSES
   CURRENT_PROTECTION = 0X13,
   /* RECEIVER REGISTERS */
   RX_BANDWIDTH = 0x19,
+  RX_AFC_BANDWIDTH = 0x1A,
   RSSI_CONFIG = 0x23,
   RSSI_VALUE = 0x24,
   /* IRQ REGISTERS */
@@ -59,8 +59,7 @@ typedef enum ADDRESSES
 } ADDRESS;
 
 // OPERATION_MODE
-typedef enum MODES
-{
+typedef enum MODES {
   OPERATION_MODE_SLEEP = 0x00,
   OPERATION_MODE_STANDBY = 0x04,
   OPERATION_MODE_FS = 0x08,
@@ -101,12 +100,14 @@ typedef enum MODES
 #define PACKET_CRC_ENABLE (unsigned)0x10
 #define PACKET_CRC_AUTO_CLEAR_OFF (unsigned)0x08  // (Bit 3)
 #define PACKET_ADDRESS_FILTER_NODE (unsigned)0x02 // (Bits 2:1)
+#define PACKET_DC_FREE_WHITENING (unsigned)(2 << 5) // (Bits 6:5)
 
 // PAYLOAD_LENGTH
 #define PAYLOAD_LENGTH_64 (unsigned)0x40
 
 // FIFO_THRESHOLD
 #define FIFO_TX_ON_NOT_EMPTY (unsigned)0x80
+#define FIFO_THRESHOLD_LEVEL_DEFAULT (unsigned)(15 << 0) // (Bits 6:0)
 
 // PACKET_CONFIG_2
 #define PACKET_AES_ENCRYPTION (unsigned)(1 << 0)  // (Bit 0)
@@ -132,24 +133,29 @@ typedef enum MODES
 #define PA_FSK_RAMP_TIME_20u (unsigned)0x0C  // For 20us
 
 // RX_BANDWIDTH
-#define RECEIVER_DC_OFFSET_CUTOFF_FREQ (unsigned)0x40 // Default of 4% (Bits 7:5)
+#define RECEIVER_DC_OFFSET_CUTOFF_FREQ (unsigned)(7 << 5) // Default of 4% (Bits 7:5)
 #define RECEIVER_BW_MANT_16 (unsigned)0x00            // (Bits 4:3)
 #define RECEIVER_BW_MANT_20 (unsigned)0x08            // (Bits 4:3)
 #define RECEIVER_BW_MANT_24 (unsigned)0x10            // (Bits 4:3)
 
+// DIO_INTERRUPTS
+#define INTERRUPT_TIMEOUT 0
+#define INTERRUPT_PAYLOAD_READY_TX_READY 1
+// #define INTERRUPT_RX_READY 2
+
 // DIO_MAPPING_1
 #define DIO_0_MAPPING_M (unsigned)(3 << 6)  // (Bits 7:6) Mask
-#define DIO_0_MAPPING_00 (unsigned)(0 << 6) // (Bits 7:6) Packet Sent in TX
-#define DIO_0_MAPPING_01 (unsigned)(1 << 6) // (Bits 7:6) Payload Ready in RX
+#define DIO_0_INTERRUPT(mapping) (unsigned)(mapping << 6)
 
 // DIO_MAPPING_2
 #define DIO_CLK_OUT_OFF (unsigned)(7 << 0) // (Bits 2:0)
 
-#define DIO_4_MAPPING_M (unsigned)(3 << 0)  // (Bits 7:6) Mask
-#define DIO_4_MAPPING_00 (unsigned)(0 << 0) // (Bits 7:6) Timeout in RX
+#define DIO_4_INTERRUPT(MAPPING) (unsigned)(MAPPING << 6)
 
 // IRQ_FLAGS_1
 #define IRQ_1_MODE_READY (unsigned)(1 << 7) // Mode Ready Flag
+#define IRQ_1_RX_READY (unsigned)(1 << 6) // RX Ready Flag
+#define IRQ_1_TX_READY (unsigned)(1 << 5) // TX Ready Flag
 #define IRQ_1_TIMEOUT (unsigned)(1 << 2)    // Timeout Flag
 
 // IRQ_FLAGS_2
@@ -165,9 +171,15 @@ typedef enum MODES
 #define ACK_PAYLOAD_PASSED (unsigned)0x02
 #define ACK_PAYLOAD_RECEIVED (unsigned)0x01
 
-#define MetadataLength 3       // Contains Payload Length, Sender Node ID, and ACK to return
-#define MetadataLength2Bytes 2 // = ((MetadataLength / 2) + 1 / 2)
+#define CTL_IS_ACK 0x01
+
+#define MetadataLength 5       // Contains Payload Length, Destination Node ID, Source Node ID, tracking and ACK bytes in that order
+#define MetadataLength2Bytes 3 // = ((MetadataLength / 2) + 1 / 2)
 #define RFM69HCW_INT_PRIORITY 1
+
+#define PACKET_MAX_RETRIES 3
+#define PACKET_SENT_MAX_TIME 160e6 // 80MHz * 2s
+#define PACKET_ACK_MAX_TIME  40e6 // 80MHz * 500ms
 
 extern bool HasNewData;
 extern uint8_t RX_Data_Metadata[MetadataLength];
@@ -175,7 +187,7 @@ extern uint8_t RX_Data_Buffer[PAYLOAD_LENGTH_64 + 1];
 
 void RFM69HCW_Init(uint32_t SYS_CLK, uint32_t SSI_CLK);
 
-void RFM69HCW_SendPacket(uint8_t *data, uint8_t length, bool waitForACK);
+bool RFM69HCW_SendPacket(uint8_t* data, uint8_t length, bool isACK);
 
 void RFM69HCW_PrintRSSI(void);
 

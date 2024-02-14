@@ -1,3 +1,10 @@
+/**
+* Ademola Adedeji
+* February 14, 2023
+*
+* Added SysTick_Countdown function and removed NVIC_ prefix from register names
+*/
+
 // SysTick.h
 // Runs on LM4F120/TM4C123
 // Provide functions that initialize the SysTick module, wait at least a
@@ -30,39 +37,41 @@
  http://users.ece.utexas.edu/~valvano/
  */
 #include <stdint.h>
+#include <stdbool.h>
+
 #include "SysTick.h"
 #include "tm4c123gh6pm.h"
 
-
-#define ST_CTRL_COUNT      0x00010000  // Count flag
-#define ST_CTRL_CLK_SRC    0x00000004  // Clock Source
-#define ST_CTRL_INTEN      0x00000002  // Interrupt enable
-#define ST_CTRL_ENABLE     0x00000001  // Counter mode
-#define ST_RELOAD_M        0x00FFFFFF  // Counter load value
-
-// Initialize SysTick with busy wait running at bus clock.
-void SysTick_Init(void){
+ // Initialize SysTick with busy wait running at bus clock.
+void SysTick_Init(void) {
   ST_CTRL_R = 0;                   // disable SysTick during setup
   ST_RELOAD_R = ST_RELOAD_M;  // maximum reload value
   ST_CURRENT_R = 0;                // any write to current clears it
-                                        // enable SysTick with core clock
-  ST_CTRL_R = ST_CTRL_ENABLE+ST_CTRL_CLK_SRC;
+  // enable SysTick with core clock
+  ST_CTRL_R = ST_CTRL_ENABLE + ST_CTRL_CLK_SRC;
 }
+
 // Time delay using busy wait.
-// The delay parameter is in units of the core clock. (units of 20 nsec for 50 MHz clock)
-void SysTick_Wait(uint32_t delay){
+// The delay parameter is in units of the core clock. (units of 12.5 nsec for 80 MHz clock)
+void SysTick_Wait(uint32_t delay) {
   volatile uint32_t elapsedTime;
   uint32_t startTime = ST_CURRENT_R;
-  do{
-    elapsedTime = (startTime-ST_CURRENT_R)&0x00FFFFFF;
-  }
-  while(elapsedTime <= delay);
+
+  do {
+    elapsedTime = (startTime - ST_CURRENT_R) & ST_CURRENT_M;
+  } while (elapsedTime <= delay);
 }
+
 // Time delay using busy wait.
-// This assumes 50 MHz system clock.
-void SysTick_Wait10ms(uint32_t delay){
+// This assumes 80 MHz system clock.
+void SysTick_Wait10ms(uint32_t delay) {
   uint32_t i;
-  for(i=0; i<delay; i++){
+  for (i = 0; i < delay; i++) {
     SysTick_Wait(800000);  // wait 10ms (assumes 80 MHz clock)
   }
+}
+
+bool SysTick_Countdown(int32_t* from) {
+  --(*from);
+  return *from >= 0;
 }

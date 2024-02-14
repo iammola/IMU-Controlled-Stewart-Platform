@@ -30,7 +30,10 @@
  http://users.ece.utexas.edu/~valvano/
  */
 
-// Initialize SysTick with busy wait running at bus clock.
+#include <stdint.h>
+#include <stdbool.h>
+
+ // Initialize SysTick with busy wait running at bus clock.
 void SysTick_Init(void);
 
 // Time delay using busy wait.
@@ -40,3 +43,5 @@ void SysTick_Wait(uint32_t delay);
 // Time delay using busy wait.
 // This assumes 50 MHz system clock.
 void SysTick_Wait10ms(uint32_t delay);
+
+bool SysTick_Countdown(int32_t* from);

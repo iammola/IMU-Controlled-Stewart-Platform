@@ -21,12 +21,10 @@ void GPIOD_Handler(void)
   uint8_t intStatus = 0;
 
   // Ensure the interrupt is on the INT pin and is a DMP interrupt
-  if (GPIO_PORTD_MIS_R & INT_BIT)
-  {
+  if (GPIO_PORTD_MIS_R & INT_BIT) {
     IMU_Read(INT_STATUS_ADDR, &intStatus);
 
-    if (intStatus & DMP_INT)
-    {
+    if (intStatus & DMP_INT) {
       // Get DMP data from FIFO register
       IMU_Read(FIFO_R_W_ADDR, &dmp);
     }
@@ -121,8 +119,7 @@ static void IMU_Config(void)
 
 void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, DELAY_FUNC delay)
 {
-  if (delay == 0)
-  {
+  if (delay == 0) {
     while (1)
       ;
   }

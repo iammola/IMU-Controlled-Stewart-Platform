@@ -71,8 +71,7 @@ void SPI2_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, uint8_t frameConfig, uint8_t 
 
   // As a master, the system clock must be 2 times faster than the SSI_CLK and the
   // SSI_CLK cannot be more than 25MHz
-  if ((SYS_CLK < (SSI_CLK * 2)) || SSI_CLK > 25e6)
-  {
+  if ((SYS_CLK < (SSI_CLK * 2)) || SSI_CLK > 25e6) {
     while (1)
       ;
   }
@@ -87,8 +86,7 @@ void SPI2_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, uint8_t frameConfig, uint8_t 
   } while (ssiSCR > 255);
 
   // The SSI Clk frequency needs to be increased
-  if (ssiCPSR > 254)
-  {
+  if (ssiCPSR > 254) {
     while (1)
       ;
   }
@@ -111,8 +109,7 @@ void SPI2_Read(uint16_t initData, uint16_t *result, uint8_t length)
   uint32_t __stale = 0;
 
   // Clear RX FIFO
-  while ((SSI2_SR_R & SSI_SR_RNE) == SSI_SR_RNE)
-  {
+  while ((SSI2_SR_R & SSI_SR_RNE) == SSI_SR_RNE) {
     __stale = SSI2_DR_R;
   }
 
@@ -123,8 +120,7 @@ void SPI2_Read(uint16_t initData, uint16_t *result, uint8_t length)
   SSI2_DR_R = initData;
 
   // Get requested amount of data
-  while (length > 0)
-  {
+  while (length > 0) {
     // Wait for data to be stored in FIFO. Using this
     // over waiting for idle in case data count to be read is more than
     // FIFO size
@@ -142,8 +138,7 @@ void SPI2_Read(uint16_t initData, uint16_t *result, uint8_t length)
 void SPI2_Write(uint16_t *data, uint8_t length)
 {
   // Send desired amount of data
-  while (length-- > 0)
-  {
+  while (length > 0) {
     // Prevent setting data in full TX FIFO
     WAIT_FOR_TX_SPACE()
 
@@ -151,7 +146,7 @@ void SPI2_Write(uint16_t *data, uint8_t length)
     SSI2_DR_R = *data;
 
     // increment pointer
-    data++;
+    if (--length > 0) data++;
   }
 
   // Wait for Idle before ending transmission

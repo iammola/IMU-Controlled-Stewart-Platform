@@ -56,8 +56,7 @@ int main(void)
   IMU_Read(INT_ENABLE_ADDR, &intEnable);
   IMU_Read(INT_PIN_CFG_ADDR, &intPinCfg);
 
-  while (1)
-  {
+  while (1) {
     IMU_Read(GYRO_XOUT_H_ADDR, &gyroXHOut);
     IMU_Read(GYRO_XOUT_L_ADDR, &gyroXLOut);
     gyroXOut = ((gyroYHOut << 8) | gyroYLOut);

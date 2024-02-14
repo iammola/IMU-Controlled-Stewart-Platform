@@ -1,0 +1,25 @@
+---
+TabWidth: 15
+IndentCaseLabels: true
+IndentCaseBlocks: true
+SortIncludes: CaseInsensitive
+AlignConsecutiveMacros:
+  Enabled: true
+AlignConsecutiveDeclarations:
+  Enabled: true
+AlignArrayOfStructures: Left
+QualifierAlignment: Left
+AlignTrailingComments:
+  Kind: Always
+AlwaysBreakAfterReturnType: None
+AllowAllParametersOfDeclarationOnNextLine: false
+BinPackParameters: true
+ColumnLimit: 150
+SpaceBeforeParens: ControlStatements
+AllowShortBlocksOnASingleLine: Never
+IndentWrappedFunctionNames: false
+ReflowComments: true
+InsertNewlineAtEOF: true
+BinPackArguments: true
+RemoveParentheses: MultipleParentheses
+AllowShortFunctionsOnASingleLine: Empty

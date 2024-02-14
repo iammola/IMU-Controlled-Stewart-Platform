@@ -27,7 +27,7 @@
 #define FRACTIONAL_BRD_MULTIPLIER 6 // 2^6 = 64 or LSH 6 times
 #define FRACTIONAL_BRD_MASK (1 << FRACTIONAL_BRD_MULTIPLIER) - 1
 
-/* Calculates and sets the Integer and Fractional of the BRD and HSE */
+ /* Calculates and sets the Integer and Fractional of the BRD and HSE */
 static void UART_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate);
 /* Sets the LCRH configuration */
 static void UART_LCRHConfigure(uint8_t wordLength, uint8_t parity, bool useTwoStopBits);
@@ -47,8 +47,7 @@ static void UART_InterruptInit(uint8_t RXFIFOLevel);
 // Input: SYS_CLOCK - The clock frequency of the system
 //        baudRate - The desired baud rate for UART transmission
 // Output: None
-static void UART_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate)
-{
+static void UART_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate) {
   // High speed mode must be used if the BAUD rate would run faster than the system clock
   bool needsHighSpeed = (baudRate * 16) > SYS_CLOCK;
 
@@ -87,31 +86,28 @@ static void UART_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate)
 //                 the 2nd bit being a 1 denotes Even Parity
 //        useTwoStopBits - For two stop bits to be used at the end of transmission
 // Output: None
-static void UART_LCRHConfigure(uint8_t wordLength, uint8_t parity, bool useTwoStopBits)
-{
+static void UART_LCRHConfigure(uint8_t wordLength, uint8_t parity, bool useTwoStopBits) {
   // Enable FIFO buffers
   uint32_t result = UART_LCRH_FEN;
 
   // Specify word length, falling back to 5 bits.
-  switch (wordLength)
-  {
-  case 3:
-    result |= UART_LCRH_WLEN_8;
-    break;
-  case 2:
-    result |= UART_LCRH_WLEN_7;
-    break;
-  case 1:
-    result |= UART_LCRH_WLEN_6;
-    break;
-  default:
-    result |= UART_LCRH_WLEN_5;
-    break;
+  switch (wordLength) {
+    case 3:
+      result |= UART_LCRH_WLEN_8;
+      break;
+    case 2:
+      result |= UART_LCRH_WLEN_7;
+      break;
+    case 1:
+      result |= UART_LCRH_WLEN_6;
+      break;
+    default:
+      result |= UART_LCRH_WLEN_5;
+      break;
   }
 
   // If LSB is 1, then Parity should be enabled
-  if (parity & 0x1)
-  {
+  if (parity & 0x1) {
     // Enable Parity
     result |= UART_LCRH_PEN;
 
@@ -131,8 +127,7 @@ static void UART_LCRHConfigure(uint8_t wordLength, uint8_t parity, bool useTwoSt
 // Enables the UART, Transmit and Receive operations
 // Input: None
 // Output: None
-static void UART_Enable(void)
-{
+static void UART_Enable(void) {
   UART0_CTL_R |= UART_CTL_UARTEN | UART_CTL_TXE | UART_CTL_RXE;
 }
 
@@ -141,8 +136,7 @@ static void UART_Enable(void)
 // then disables the UART, Transmit and Receive operations
 // Input: None
 // Output: None
-static void UART_Disable(void)
-{
+static void UART_Disable(void) {
   // Wait for transmission to finish
   while (UART0_FR_R & UART_FR_BUSY)
     ;
@@ -159,29 +153,27 @@ static void UART_Disable(void)
 // also setting the Priority to 5
 // Input: RXFIFOLevel - The desired level to trigger the Receive FIFO interrupt on
 // Output: None
-static void UART_InterruptEnable(uint8_t RXFIFOLevel)
-{
+static void UART_InterruptEnable(uint8_t RXFIFOLevel) {
   // Allow Receive FIFO and Timeout interrupts on to be handled by controller
   UART0_IM_R = UART_IM_RXIM | UART_IM_RTIM;
 
   // Set RX Interrupt Levels
-  switch (RXFIFOLevel)
-  {
-  case 4:
-    RXFIFOLevel = UART_IFLS_RX7_8;
-    break;
-  case 3:
-    RXFIFOLevel = UART_IFLS_RX6_8;
-    break;
-  case 1:
-    RXFIFOLevel = UART_IFLS_RX2_8;
-    break;
-  case 0:
-    RXFIFOLevel = UART_IFLS_RX1_8;
-    break;
-  default:
-    RXFIFOLevel = UART_IFLS_RX4_8;
-    break;
+  switch (RXFIFOLevel) {
+    case 4:
+      RXFIFOLevel = UART_IFLS_RX7_8;
+      break;
+    case 3:
+      RXFIFOLevel = UART_IFLS_RX6_8;
+      break;
+    case 1:
+      RXFIFOLevel = UART_IFLS_RX2_8;
+      break;
+    case 0:
+      RXFIFOLevel = UART_IFLS_RX1_8;
+      break;
+    default:
+      RXFIFOLevel = UART_IFLS_RX4_8;
+      break;
   }
 
   // Set RX FIFO level
@@ -205,8 +197,7 @@ static void UART_InterruptEnable(uint8_t RXFIFOLevel)
 //                 the 2nd bit being a 1 denotes Even Parity
 //        useTwoStopBits - For two stop bits to be used at the end of transmission
 // Output: None
-void CLI_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t RXFIFOLevel, uint8_t parity, bool useTwoStopBits)
-{
+void CLI_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t RXFIFOLevel, uint8_t parity, bool useTwoStopBits) {
   // Enable Port A's clock
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R0;
 
@@ -246,10 +237,9 @@ void CLI_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t
 // processing until there is space to prevent data loss
 // Input: data - String to transmit
 // Output: None
-void CLI_Write(char *data)
-{
+void CLI_Write(char* data) {
   uint8_t byteIndex = 0;
-  uint32_t length = strlen((const char *)data);
+  uint32_t length = strlen((const char*)data);
 
   do
   {
@@ -270,8 +260,7 @@ void CLI_Write(char *data)
 // before returning the data
 // Input: None
 // Output: Data received from UART
-uint8_t CLI_Read(void)
-{
+uint8_t CLI_Read(void) {
   // Wait FOR Receive FIFO to have data
   while (UART0_FR_R & UART_FR_RXFE)
     ;
