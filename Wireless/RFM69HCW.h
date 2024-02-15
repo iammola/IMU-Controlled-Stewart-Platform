@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define MODULE_FREQUENCY 900e6      // 915 MHz (Marked on board) (890MHz - 1020 MHz)
+#define MODULE_FREQUENCY 915e6      // 915 MHz (Marked on board) (890MHz - 1020 MHz)
 #define F_XOSC 32e6                 // 32MHz (Table 2.3.2)
 #define F_STEP (F_XOSC / (1 << 19)) // (Section 3.2.3.3)
 
@@ -72,7 +72,7 @@ typedef enum MODES {
 #define OPERATION_SEQUENCER_OFF (unsigned)(1 << 7)
 
 // DATA_MODULATION
-#define DATA_MODULATION_NO_SHAPING (unsigned)0x00 // (Bits 1:0)
+#define DATA_MODULATION_GAUSSIAN_1 (unsigned)(1 << 0) // (Bits 1:0)
 #define DATA_MODULATION_FSK (unsigned)0x00        // (Bits 4:3)
 #define DATA_MODULATION_MODE (unsigned)0x00       // (Bits 6:5)
 
@@ -140,6 +140,7 @@ typedef enum MODES {
 
 // DIO_INTERRUPTS
 #define INTERRUPT_TIMEOUT 0
+#define INTERRUPT_PACKET_SENT 0 
 #define INTERRUPT_PAYLOAD_READY_TX_READY 1
 // #define INTERRUPT_RX_READY 2
 
@@ -178,8 +179,8 @@ typedef enum MODES {
 #define RFM69HCW_INT_PRIORITY 1
 
 #define PACKET_MAX_RETRIES 3
-#define PACKET_SENT_MAX_TIME 160e6 // 80MHz * 2s
-#define PACKET_ACK_MAX_TIME  40e6 // 80MHz * 500ms
+#define PACKET_SENT_MAX_TIME (unsigned)1e6 // 80MHz * 500ms
+#define PACKET_ACK_MAX_TIME  (unsigned)1e6 // 80MHz * 500ms
 
 extern bool HasNewData;
 extern uint8_t RX_Data_Metadata[MetadataLength];

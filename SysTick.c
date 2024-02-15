@@ -70,8 +70,3 @@ void SysTick_Wait10ms(uint32_t delay) {
     SysTick_Wait(800000);  // wait 10ms (assumes 80 MHz clock)
   }
 }
-
-bool SysTick_Countdown(int32_t* from) {
-  --(*from);
-  return *from >= 0;
-}

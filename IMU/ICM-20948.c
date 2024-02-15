@@ -1,22 +1,21 @@
-#include <stdbool.h>
 #include "tm4c123gh6pm.h"
+#include <stdbool.h>
 
-#include "SPI/SPI.h"
 #include "ICM-20948.h"
+#include "SPI/SPI.h"
 
-#define INT_BIT (unsigned)0x40 // (PD6) Interrupt Pin
-#define INT_PCTL_M (unsigned)GPIO_PCTL_PD6_M
+#define INT_BIT      (unsigned)0x40 // (PD6) Interrupt Pin
+#define INT_PCTL_M   (unsigned)GPIO_PCTL_PD6_M
 #define INT_PRIORITY 2
 
-#define READ(addr) (uint16_t)(0x80FF | (addr << 8))
+#define READ(addr)        (uint16_t)(0x80FF | (addr << 8))
 #define WRITE(addr, data) (uint16_t)(0x7FFF & ((addr << 8) | data))
 
 static DELAY_FUNC IMU_Delay;
 // Defaults to USER_BANK_0
 static USER_BANK LastUserBank = USER_BANK_0;
 
-void GPIOD_Handler(void)
-{
+void GPIOD_Handler(void) {
   uint8_t dmp = 0;
   uint8_t intStatus = 0;
 
@@ -34,8 +33,7 @@ void GPIOD_Handler(void)
   }
 }
 
-static void IMU_Interrupt_Init(void)
-{
+static void IMU_Interrupt_Init(void) {
   // Enable Port D clock
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R3;
 
@@ -79,8 +77,7 @@ static void IMU_Interrupt_Init(void)
   GPIO_PORTD_IM_R |= INT_BIT;
 }
 
-static void IMU_Config(void)
-{
+static void IMU_Config(void) {
   // Reset the device
   IMU_Write(PWR_MGMT_1_ADDR, DEVICE_RESET);
 
@@ -117,8 +114,7 @@ static void IMU_Config(void)
   // IMU_Write(INT_ENABLE_ADDR, DMP_INT_ENABLE);
 }
 
-void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, DELAY_FUNC delay)
-{
+void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, DELAY_FUNC delay) {
   if (delay == 0) {
     while (1)
       ;
@@ -136,8 +132,7 @@ void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, DELAY_FUNC delay)
   // IMU_Interrupt_Init();
 }
 
-static void IMU_ChangeUserBank(REG_ADDRESS REGISTER)
-{
+static void IMU_ChangeUserBank(REG_ADDRESS REGISTER) {
   uint16_t byte = WRITE(USER_BANK_ADDR.ADDRESS, REGISTER.USER_BANK);
 
   SPI3_StartTransmission();
@@ -147,8 +142,7 @@ static void IMU_ChangeUserBank(REG_ADDRESS REGISTER)
   LastUserBank = REGISTER.USER_BANK;
 }
 
-void IMU_Read(REG_ADDRESS REGISTER, uint8_t *dest)
-{
+void IMU_Read(REG_ADDRESS REGISTER, uint8_t *dest) {
   uint16_t response;
 
   // Change User Bank if Needed
@@ -162,8 +156,7 @@ void IMU_Read(REG_ADDRESS REGISTER, uint8_t *dest)
   *dest = response & 0xFF;
 }
 
-void IMU_Write(REG_ADDRESS REGISTER, uint8_t data)
-{
+void IMU_Write(REG_ADDRESS REGISTER, uint8_t data) {
   uint16_t byte = WRITE(REGISTER.ADDRESS, data);
 
   // Change User Bank if Needed

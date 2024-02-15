@@ -1,14 +1,14 @@
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "PLL.h"
 #include "tm4c123gh6pm.h"
 
 #include "RFM69HCW.h"
 
-#define SW2_BIT (unsigned)0x01
-#define LED_BITS (unsigned)0x0E
-#define PINS (unsigned)(SW2_BIT | LED_BITS)
+#define SW2_BIT        (unsigned)0x01
+#define LED_BITS       (unsigned)0x0E
+#define PINS           (unsigned)(SW2_BIT | LED_BITS)
 #define PINS_PCTL_MASK (unsigned)(GPIO_PCTL_PF0_M | GPIO_PCTL_PF1_M | GPIO_PCTL_PF2_M | GPIO_PCTL_PF3_M)
 
 void GPIOF_Handler(void);
@@ -36,7 +36,7 @@ static void PortF_Init(void) {
   GPIO_PORTF_IS_R &= ~SW2_BIT;  // Configure for Edge-Detect on PF0
   GPIO_PORTF_IBE_R &= ~SW2_BIT; // Allow GPIOIEV register to control interrupt
   GPIO_PORTF_IEV_R &= ~SW2_BIT; // Trigger falling edge on PF0
-  GPIO_PORTF_IM_R |= SW2_BIT;      // Allow interrupts to be sent
+  GPIO_PORTF_IM_R |= SW2_BIT;   // Allow interrupts to be sent
 
   // Enable Interrupt 30 for GPIO Port F
   NVIC_EN0_R |= NVIC_EN0_INT30;
@@ -66,7 +66,7 @@ int main(void) {
   PortF_Init();
 
   // Initialize RFM69HCW Wireless Module
-  RFM69HCW_Init(80e6, 1e6);
+  RFM69HCW_Init(80e6, 3e6);
 
   while (1) {
     // Wait for new data to be confirmed
@@ -76,10 +76,6 @@ int main(void) {
 
       // Clear data flag
       HasNewData = false;
-    }
-    else
-    {
-      RFM69HCW_ReadRegisterCLI();
     }
   }
 }

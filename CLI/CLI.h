@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define UART_INTERRUPT_PRIORITY 5
+#define UART_INTERRUPT_PRIORITY 1
 
 // ----------- UART_Init ------------
 // Initializes the UART 4 module in Port C using the specified options
