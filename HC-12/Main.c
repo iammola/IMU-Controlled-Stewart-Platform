@@ -58,7 +58,7 @@ int main(void) {
   PLL_Init();   // Initialize PLL
   PortF_Init(); // Initialize Port F
 
-  HC12_Init(80e6, 115200, 0); // Initialize HC12 with 115200 bps
+  HC12_Init(80e6, 9600 /* 115200 */, 0); // Initialize HC12 with 115200 bps
 
   while (1) {
     // Wait for new data to be confirmed

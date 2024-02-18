@@ -69,7 +69,7 @@ void UART_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_
 // Input: data - Data buffer to transmit
 //        length - The number of bytes in the data buffer to transmit
 // Output: None
-void UART_Transmit(uint8_t *data, uint8_t length);
+void UART_Transmit(uint8_t *data, uint32_t length);
 
 // --------- UART_Receive ------------
 // Gets the data received by the UART. It waits for the Receive FIFO to not be empty,
@@ -77,4 +77,4 @@ void UART_Transmit(uint8_t *data, uint8_t length);
 // Input: data - Location to store received data
 //        length - The number of bytes in the data buffer to transmit
 // Output: Data received from UART
-void UART_Receive(uint8_t *data, uint8_t length);
+void UART_Receive(uint8_t *data, uint32_t length);

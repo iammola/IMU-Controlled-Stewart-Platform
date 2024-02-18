@@ -214,7 +214,7 @@ void UART_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_
 // Input: data - Data buffer to transmit
 //        byteCount - The number of bytes in the data buffer to transmit
 // Output: None
-void UART_Transmit(uint8_t *data, uint8_t byteCount) {
+void UART_Transmit(uint8_t *data, uint32_t byteCount) {
   uint8_t byteIndex = 0;
 
   do {
@@ -235,10 +235,12 @@ void UART_Transmit(uint8_t *data, uint8_t byteCount) {
 // before returning the data
 // Input: None
 // Output: Data received from UART
-void UART_Receive(uint8_t *data, uint8_t length) {
+void UART_Receive(uint8_t *data, uint32_t length) {
+  uint32_t lop = 0;
   while (length > 0) {
-    while (UART1_FR_R & UART_FR_RXFE) // Wait for Receive FIFO to have data
-      ;
+    while (UART1_FR_R & UART_FR_RXFE) { // Wait for Receive FIFO to have data
+      ++lop;
+    }
 
     *data = (uint8_t)UART1_DR_R; // Read data
 
