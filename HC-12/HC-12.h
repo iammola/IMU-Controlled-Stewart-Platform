@@ -1,8 +1,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+// TRIGGER ON 12/16 bytes full
 #define METADATA_SIZE 2
-#define MAX_MESSAGE_SIZE 9
+#define MAX_MESSAGE_SIZE 10
 
 #define SYNC_WORD 0xEA
 
