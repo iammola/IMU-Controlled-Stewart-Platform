@@ -1,8 +1,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define METADATA_SIZE 3
+#define METADATA_SIZE 2
 #define MAX_MESSAGE_SIZE 9
+
+#define SYNC_WORD 0xEA
 
 typedef void (*RX_Data_Handler)(void);
 
