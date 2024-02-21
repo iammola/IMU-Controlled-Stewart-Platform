@@ -235,16 +235,18 @@ void UART_Transmit(uint8_t *data, uint32_t byteCount) {
 // before returning the data
 // Input: None
 // Output: Data received from UART
-void UART_Receive(uint8_t *data, uint32_t length) {
-  uint32_t lop = 0;
+bool UART_Receive(uint8_t *data, uint32_t length) {
+  uint16_t wait = 0;
+
   while (length > 0) {
-    while (UART1_FR_R & UART_FR_RXFE) { // Wait for Receive FIFO to have data
-      ++lop;
-    }
+    for (wait = 0xFFFF; (wait > 0) && (UART1_FR_R & UART_FR_RXFE); wait--) {
+    } // Wait for Receive FIFO to have data
 
     *data = (uint8_t)UART1_DR_R; // Read data
 
     if (--length > 0) // Increment pointer if there's still data to write
       data++;
   }
+
+  return true;
 }

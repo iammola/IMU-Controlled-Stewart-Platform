@@ -77,4 +77,4 @@ void UART_Transmit(uint8_t *data, uint32_t length);
 // Input: data - Location to store received data
 //        length - The number of bytes in the data buffer to transmit
 // Output: Data received from UART
-void UART_Receive(uint8_t *data, uint32_t length);
+bool UART_Receive(uint8_t *data, uint32_t length);
