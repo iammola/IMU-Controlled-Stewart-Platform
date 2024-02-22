@@ -314,7 +314,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>1</Optim>
+            <Optim>7</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -408,6 +408,11 @@
               <FileName>SPI.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\SPI\SPI.c</FilePath>
+            </File>
+            <File>
+              <FileName>CLI.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\CLI\CLI.c</FilePath>
             </File>
           </Files>
         </Group>

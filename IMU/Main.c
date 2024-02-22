@@ -1,76 +1,60 @@
 #include <stdint.h>
+#include <stdio.h>
 
 #include "PLL.h"
 #include "SysTick.h"
 
-#include "ICM-20948.h"
+#include "CLI/CLI.h"
+#include "IMU.h"
 
-static unsigned int time = 0;
-static uint16_t gyroXOut = 0;
-static uint16_t gyroYOut = 0;
+#define SYS_CLOCK   80e6
+#define CLI_TXT_BUF 500
 
-static uint8_t gyroXHOut = 0;
-static uint8_t gyroXLOut = 0;
-static uint8_t gyroYHOut = 0;
-static uint8_t gyroYLOut = 0;
+static char text[CLI_TXT_BUF] = "";
 
-static uint8_t accelYOut = 0;
-static uint8_t accelXOut = 0;
+void Delay(uint32_t inSeconds, int32_t powerOf10);
+void Delay(uint32_t inSeconds, int32_t powerOf10) {
+  uint32_t CLOCK = SYS_CLOCK;
 
-static uint8_t accelXHOut = 0;
-static uint8_t accelXLOut = 0;
-static uint8_t accelYHOut = 0;
-static uint8_t accelYLOut = 0;
+  while (powerOf10 < 0) {
+    CLOCK /= 10;
+    ++powerOf10;
+  }
 
-static uint8_t whoAmI = 0;
-static uint8_t userCtrl = 0;
-static uint8_t pwrMgmt1 = 0;
-static uint8_t pwrMgmt2 = 0;
-static uint8_t intEnable = 0;
-static uint8_t intPinCfg = 0;
-
-void Delay(uint32_t timeInMs);
-
-void Delay(uint32_t timeInMs)
-{
-  SysTick_Wait10ms(timeInMs / 10);
+  SysTick_Wait(inSeconds * CLOCK);
 }
 
-int main(void)
-{
+int main(void) {
+
+  Coords accel = {0};
+  Coords gyro = {0};
+  Coords mag = {0};
+
   DELAY_FUNC Delay_Func = &Delay;
 
-  // Initialize SysTick
-  SysTick_Init();
+  SysTick_Init(); // Initialize SysTick
+  PLL_Init();     // Initialize the PLL
 
-  // Initialize the PLL
-  PLL_Init();
+  CLI_Init(SYS_CLOCK, 115200, WORD_8_BIT, RX_FIFO_7_8, NO_PARITY, ONE_STOP_BIT); // Init UART COM
 
-  // Initialize the IMU with the SYS_CLOCK and to communicate at 1MHz
-  IMU_Init(80e6, 1e6, Delay_Func);
-
-  IMU_Read(WHO_AM_I_ADDR, &whoAmI);
-  IMU_Read(PWR_MGMT_1_ADDR, &pwrMgmt1);
-  IMU_Read(PWR_MGMT_2_ADDR, &pwrMgmt2);
-  IMU_Read(USER_CTRL_ADDR, &userCtrl);
-  IMU_Read(INT_ENABLE_ADDR, &intEnable);
-  IMU_Read(INT_PIN_CFG_ADDR, &intPinCfg);
+  IMU_Init(SYS_CLOCK, 1e6, Delay_Func); // Initialize the IMU with the SYS_CLOCK and to communicate at 1MHz
 
   while (1) {
-    IMU_Read(GYRO_XOUT_H_ADDR, &gyroXHOut);
-    IMU_Read(GYRO_XOUT_L_ADDR, &gyroXLOut);
-    gyroXOut = ((gyroYHOut << 8) | gyroYLOut);
+    IMU_GetGyroReadings(&accel);
+    IMU_GetAccelReadings(&gyro);
+    IMU_GetMagReadings(&mag);
 
-    IMU_Read(GYRO_YOUT_H_ADDR, &gyroYHOut);
-    IMU_Read(GYRO_YOUT_L_ADDR, &gyroYLOut);
-    gyroYOut = ((gyroYHOut << 8) | gyroYLOut);
+    snprintf(text, CLI_TXT_BUF, " Accel (X = %d, Y = %d)\n", accel.x, accel.y);
+    CLI_Write(text);
 
-    IMU_Read(ACCEL_XOUT_H_ADDR, &accelXHOut);
-    IMU_Read(ACCEL_XOUT_L_ADDR, &accelXLOut);
-    accelXOut = ((accelXHOut << 8) | accelXLOut);
+    snprintf(text, CLI_TXT_BUF, " Gyro (X = %d, Y = %d)\n", gyro.x, gyro.y);
+    CLI_Write(text);
 
-    IMU_Read(ACCEL_YOUT_H_ADDR, &accelYHOut);
-    IMU_Read(ACCEL_YOUT_L_ADDR, &accelYLOut);
-    accelYOut = ((accelYHOut << 8) | accelYLOut);
+    snprintf(text, CLI_TXT_BUF, " Mag (X = %d, Y = %d)\n", mag.x, mag.y);
+    CLI_Write(text);
+    
+    CLI_Write("\n\r");
+
+    SysTick_Wait10ms(500);
   }
 }
