@@ -24,94 +24,53 @@ void GPIOD_Handler(void) {
     IMU_Read(INT_STATUS_ADDR, &intStatus);
 
     if (intStatus & DMP_INT) {
-      // Get DMP data from FIFO register
-      IMU_Read(FIFO_R_W_ADDR, &dmp);
+      IMU_Read(FIFO_R_W_ADDR, &dmp); // Get DMP data from FIFO register
     }
 
-    // Clear Interrupt
-    GPIO_PORTD_ICR_R |= INT_BIT;
+    GPIO_PORTD_ICR_R |= INT_BIT; // Clear Interrupt
   }
 }
 
 static void IMU_Interrupt_Init(void) {
-  // Enable Port D clock
-  SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R3;
+  SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R3; // Enable Port D clock
 
-  // Disable Alternate Functions on CS pin
-  GPIO_PORTD_AFSEL_R &= ~INT_BIT;
+  GPIO_PORTD_AFSEL_R &= ~INT_BIT;   // Disable Alternate Functions on CS pin
+  GPIO_PORTD_PCTL_R &= ~INT_PCTL_M; // Disable Peripheral functions on PD6
+  GPIO_PORTD_DIR_R &= ~INT_BIT;     // Configure INT bit as input
+  GPIO_PORTD_DEN_R |= INT_BIT;      // Enable Digital Mode on pins
+  GPIO_PORTD_AMSEL_R &= ~INT_BIT;   // Disable Analog Mode on pins
+  GPIO_PORTD_IM_R &= ~INT_BIT;      // Disable the INT pin interrupt
+  GPIO_PORTD_IS_R &= ~INT_BIT;      // Configure for Edge-Detect interrupts
+  GPIO_PORTD_IBE_R &= ~INT_BIT;     // Only listen on one edge event
+  GPIO_PORTD_IEV_R |= INT_BIT;      // Trigger interrupt on rising edge
 
-  // Disable Peripheral functions on PD6
-  GPIO_PORTD_PCTL_R &= ~INT_PCTL_M;
-
-  // Configure INT bit as input
-  GPIO_PORTD_DIR_R &= ~INT_BIT;
-
-  // Enable Digital Mode on pins
-  GPIO_PORTD_DEN_R |= INT_BIT;
-
-  // Disable Analog Mode on pins
-  GPIO_PORTD_AMSEL_R &= ~INT_BIT;
-
-  // Disable the INT pin interrupt
-  GPIO_PORTD_IM_R &= ~INT_BIT;
-
-  // Configure for Edge-Detect interrupts
-  GPIO_PORTD_IS_R &= ~INT_BIT;
-
-  // Only listen on one edge event
-  GPIO_PORTD_IBE_R &= ~INT_BIT;
-
-  // Trigger interrupt on rising edge
-  GPIO_PORTD_IEV_R |= INT_BIT;
-
-  // Enable Port D's Interrupt Handler
-  NVIC_EN0_R |= NVIC_EN0_INT3;
-
-  // Configure Port D's priority
-  NVIC_PRI0_R = (NVIC_PRI0_R & ~NVIC_PRI0_INT3_M) | (INT_PRIORITY << NVIC_PRI0_INT3_S);
-
-  // Clear the INT pin's interrupt
-  GPIO_PORTD_ICR_R |= INT_BIT;
-
-  // Allow the INT pin interrupt to be detected
-  GPIO_PORTD_IM_R |= INT_BIT;
+  NVIC_EN0_R |= NVIC_EN0_INT3;                                                          // Enable Port D's Interrupt Handler
+  NVIC_PRI0_R = (NVIC_PRI0_R & ~NVIC_PRI0_INT3_M) | (INT_PRIORITY << NVIC_PRI0_INT3_S); // Configure Port D's priority
+  GPIO_PORTD_ICR_R |= INT_BIT;                                                          // Clear the INT pin's interrupt
+  GPIO_PORTD_IM_R |= INT_BIT;                                                           // Allow the INT pin interrupt to be detected
 }
 
 static void IMU_Config(void) {
-  // Reset the device
-  IMU_Write(PWR_MGMT_1_ADDR, DEVICE_RESET);
-
-  // Wait atleast 100ms after device reset
-  IMU_Delay(110);
+  IMU_Write(PWR_MGMT_1_ADDR, DEVICE_RESET); // Reset the device
+  IMU_Delay(110);                           // Wait atleast 100ms after device reset
 
   // Wake the device from sleep, disable the Temp sensor, Turn off low power mode
   // and auto-selected clock source
   IMU_Write(PWR_MGMT_1_ADDR, CLKSEL_AUTO & ~(SLEEP_ENABLE | TEMP_ENABLE | LP_ENABLE));
+  IMU_Delay(10); // Wait atleast 20us after waking from sleep
 
-  // Wait atleast 20us after device reset
-  IMU_Delay(10);
+  IMU_Write(PWR_MGMT_2_ADDR, 0x3F & ~(ACCEL_DISABLE | GYRO_DISABLE)); // Enable the Accelerometer and Gyroscope
+  IMU_Delay(10);                                                      // Wait atleast 20us after enabling accel and gyro
 
-  // Enable the Accelerometer and Gyroscope
-  IMU_Write(PWR_MGMT_2_ADDR, 0x3F & ~(ACCEL_DISABLE | GYRO_DISABLE));
-
-  // Wait atleast 20us after device reset
-  IMU_Delay(10);
-
-  // Enable DMP and FIFO, and disable I2C for SPI only
-  IMU_Write(USER_CTRL_ADDR, DMP_ENABLE | FIFO_ENABLE | SPI_ENABLE);
-
-  // Configure gyro scale to 2000dps
-  IMU_Write(GYRO_CONFIG_1_ADDR, GYRO_FS_SEL_2000);
-
-  // Configure accelerometer scale to 16G
-  IMU_Write(ACCEL_CONFIG_ADDR, ACCEL_FS_SEL_16G);
+  IMU_Write(USER_CTRL_ADDR, DMP_ENABLE | FIFO_ENABLE | SPI_ENABLE); // Enable DMP and FIFO, and disable I2C for SPI only
+  IMU_Write(GYRO_CONFIG_1_ADDR, GYRO_FS_SEL_2000);                  // Configure gyro scale to 2000dps
+  IMU_Write(ACCEL_CONFIG_ADDR, ACCEL_FS_SEL_16G);                   // Configure accelerometer scale to 16G
 
   // Specify the Interrupt pin is not open-drain (push-pull) and is an active high pin (falling edge interrupt)
   // also forces the Interrupt to be cleared for the level to be reset and any Read operation to clear the INT_STATUS
   // IMU_Write(INT_PIN_CFG_ADDR, (INT_LATCH_MANUAL_CLEAR | INT_READ_CLEAR) & ~(INT_ACTIVE_LOW | INT_OPEN_DRAIN));
 
-  // Enable DMP interrupt
-  // IMU_Write(INT_ENABLE_ADDR, DMP_INT_ENABLE);
+  // IMU_Write(INT_ENABLE_ADDR, DMP_INT_ENABLE); // Enable DMP interrupt
 }
 
 void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, DELAY_FUNC delay) {
@@ -122,11 +81,8 @@ void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, DELAY_FUNC delay) {
 
   IMU_Delay = delay;
 
-  // Initialize the SPI pins
-  SPI3_Init(SYS_CLK, SSI_CLK, SSI_CR0_FRF_MOTO | SSI_CR0_SPO | SSI_CR0_SPH, SSI_CR0_DSS_16);
-
-  // Configure the IMU configuration settings
-  IMU_Config();
+  SPI3_Init(SYS_CLK, SSI_CLK, SSI_CR0_FRF_MOTO | SSI_CR0_SPO | SSI_CR0_SPH, SSI_CR0_DSS_16); // Initialize the SPI pins
+  IMU_Config();                                                                              // Configure the IMU configuration settings
 
   // Configure the Interrupt pin
   // IMU_Interrupt_Init();
