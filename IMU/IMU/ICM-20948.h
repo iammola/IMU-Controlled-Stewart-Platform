@@ -15,20 +15,6 @@ typedef struct REG_ADDRESS_STRUCT {
   uint8_t   ADDRESS;
 } REG_ADDRESS;
 
-static void IMU_Config(void);
-static void IMU_ChangeUserBank(REG_ADDRESS REGISTER);
-static void IMU_Read(REG_ADDRESS REGISTER, uint8_t *dest);
-static void IMU_Write(REG_ADDRESS REGISTER, uint8_t data);
-static void IMU_Delay(uint32_t inSeconds, int32_t powerOf10);
-
-static void IMU_Mag_ReadWhoAMI(void);
-static void IMU_Mag_StartDataRead(void);
-static void IMU_Mag_Write(uint8_t MAG_ADDRESS, uint8_t data);
-
-static void IMU_GetMagReadings(FusionVector *dest);
-static void IMU_GetGyroReadings(FusionVector *dest);
-static void IMU_GetAccelReadings(FusionVector *dest);
-
 // 10.1.1.4. Slave Address (AK09916 data sheet)
 // "The slave address of AK09916 is 0Ch"
 #define MAG_I2C_ADDRESS 0x0C
@@ -71,6 +57,7 @@ static void IMU_GetAccelReadings(FusionVector *dest);
 #define GYRO_FS_SEL_1000_SENSITIVITY SENSITIVITY(1000, M_PI / 180)
 
 // ACCEL_CONFIG
+#define ACCEL_DLPF                    0x01
 #define ACCEL_FS_SEL_8G 0x04
 // 16 bit ADC from -32,768 to 32,768
 #define ACCEL_FS_SEL_8G_SENSITIVITY SENSITIVITY(8, 9.81)

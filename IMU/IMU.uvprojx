@@ -183,7 +183,7 @@
             <hadIRAM>1</hadIRAM>
             <hadXRAM>0</hadXRAM>
             <uocXRam>0</uocXRam>
-            <RvdsVP>1</RvdsVP>
+            <RvdsVP>2</RvdsVP>
             <RvdsMve>0</RvdsMve>
             <RvdsCdeCp>0</RvdsCdeCp>
             <nBranchProt>0</nBranchProt>
@@ -390,11 +390,6 @@
               <FilePath>.\Main.c</FilePath>
             </File>
             <File>
-              <FileName>ICM-20948.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\ICM-20948.c</FilePath>
-            </File>
-            <File>
               <FileName>PLL.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\PLL.c</FilePath>
@@ -405,14 +400,44 @@
               <FilePath>..\SysTick.c</FilePath>
             </File>
             <File>
-              <FileName>SPI.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\SPI\SPI.c</FilePath>
-            </File>
-            <File>
               <FileName>CLI.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\CLI\CLI.c</FilePath>
+            </File>
+            <File>
+              <FileName>StewartPlatform.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\StewartPlatform\StewartPlatform.c</FilePath>
+            </File>
+            <File>
+              <FileName>fpu.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\TivaWareFPU\fpu.c</FilePath>
+            </File>
+            <File>
+              <FileName>ICM-20948.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\IMU\ICM-20948.c</FilePath>
+            </File>
+            <File>
+              <FileName>FusionAhrs.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\IMU\Fusion\FusionAhrs.c</FilePath>
+            </File>
+            <File>
+              <FileName>FusionCompass.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\IMU\Fusion\FusionCompass.c</FilePath>
+            </File>
+            <File>
+              <FileName>FusionOffset.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\IMU\Fusion\FusionOffset.c</FilePath>
+            </File>
+            <File>
+              <FileName>SPI.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\IMU\SPI\SPI.c</FilePath>
             </File>
           </Files>
         </Group>

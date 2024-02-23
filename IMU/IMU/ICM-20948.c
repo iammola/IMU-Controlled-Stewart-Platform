@@ -5,7 +5,6 @@
 
 #include "Fusion/Fusion.h" // Madgwick Sensor Fusion from Seb Madgwick
 #include "SysTick.h"
-#include "TivaWare FPU/fpu.h" // FPU Driver from TI
 #include "tm4c123gh6pm.h"
 
 #define INT_BIT      (unsigned)(1 << 6) // (PD6) Interrupt Pin
@@ -18,49 +17,70 @@
 static uint32_t  SYS_CLOCK;
 static USER_BANK LastUserBank = 0xFF;
 
-uint8_t MAG_WHO_AM_I = 0x01;
-uint8_t MAG_ST1 = 0x10;
-uint8_t MAG_ST2 = 0x18;
-uint8_t MAG_CNTL2 = 0x31;
-uint8_t MAG_CNTL3 = 0x32;
+#define CLI_TXT_BUF 500
 
-REG_ADDRESS WHO_AM_I_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x00};
-REG_ADDRESS USER_CTRL_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x03};
-REG_ADDRESS PWR_MGMT_1_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x06};
-REG_ADDRESS PWR_MGMT_2_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x07};
-REG_ADDRESS USER_BANK_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x7F};
-REG_ADDRESS LP_CONFIG_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x05};
+void GPIOD_Handler(void);
 
-REG_ADDRESS GYRO_SMPLRT_DIV_ADDR = {.USER_BANK = USER_BANK_2, .ADDRESS = 0x00};
-REG_ADDRESS GYRO_CONFIG_1_ADDR = {.USER_BANK = USER_BANK_2, .ADDRESS = 0x01};
-REG_ADDRESS GYRO_XOUT_H_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x33};
-REG_ADDRESS GYRO_XOUT_L_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x34};
-REG_ADDRESS GYRO_YOUT_H_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x35};
-REG_ADDRESS GYRO_YOUT_L_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x36};
+static void IMU_Config(void);
+static void IMU_ChangeUserBank(REG_ADDRESS REGISTER);
+static void IMU_Read(REG_ADDRESS REGISTER, uint8_t *dest);
+static void IMU_Write(REG_ADDRESS REGISTER, uint8_t data);
+static void IMU_Delay(uint32_t inSeconds, int32_t powerOf10);
 
-REG_ADDRESS ACCEL_CONFIG_ADDR = {.USER_BANK = USER_BANK_2, .ADDRESS = 0x14};
-REG_ADDRESS ACCEL_XOUT_H_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x2D};
-REG_ADDRESS ACCEL_XOUT_L_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x2E};
-REG_ADDRESS ACCEL_YOUT_H_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x2F};
-REG_ADDRESS ACCEL_YOUT_L_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x30};
+static void IMU_Mag_Init(void);
+static void IMU_Mag_ReadWhoAMI(void);
+static void IMU_Mag_StartDataRead(void);
+static void IMU_Mag_Write(uint8_t MAG_ADDRESS, uint8_t data);
 
-REG_ADDRESS MAG_STATUS_1_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x3B}; // EXT_SLV_DATA_0
-REG_ADDRESS MAG_XOUT_L_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x3C};   // EXT_SLV_DATA_1
-REG_ADDRESS MAG_XOUT_H_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x3D};   // EXT_SLV_DATA_2
-REG_ADDRESS MAG_YOUT_L_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x3E};   // EXT_SLV_DATA_3
-REG_ADDRESS MAG_YOUT_H_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x3F};   // EXT_SLV_DATA_4
+static void IMU_GetMagReadings(FusionVector *dest);
+static void IMU_GetGyroReadings(FusionVector *dest);
+static void IMU_GetAccelReadings(FusionVector *dest);
 
-REG_ADDRESS I2C_MST_CTRL_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x01};
-REG_ADDRESS I2C_MST_ODR_CONFIG_ADDR = {};
+static char text[CLI_TXT_BUF] = "";
 
-REG_ADDRESS I2C_SLV_ADDR_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x03};
-REG_ADDRESS I2C_SLV_REG_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x04};
-REG_ADDRESS I2C_SLV_CTRL_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x05};
-REG_ADDRESS I2C_SLV_DO_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x06};
+static uint8_t MAG_WHO_AM_I = 0x01;
+static uint8_t MAG_ST1 = 0x10;
+static uint8_t MAG_ST2 = 0x18;
+static uint8_t MAG_CNTL2 = 0x31;
+static uint8_t MAG_CNTL3 = 0x32;
 
-REG_ADDRESS INT_STATUS_1_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x1A};
-REG_ADDRESS INT_PIN_CFG_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x0F};
-REG_ADDRESS INT_ENABLE_1_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x11};
+static REG_ADDRESS WHO_AM_I_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x00};
+static REG_ADDRESS USER_CTRL_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x03};
+static REG_ADDRESS PWR_MGMT_1_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x06};
+static REG_ADDRESS PWR_MGMT_2_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x07};
+static REG_ADDRESS LP_CONFIG_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x05};
+static REG_ADDRESS USER_BANK_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x7F};
+
+static REG_ADDRESS GYRO_SMPLRT_DIV_ADDR = {.USER_BANK = USER_BANK_2, .ADDRESS = 0x00};
+static REG_ADDRESS GYRO_CONFIG_1_ADDR = {.USER_BANK = USER_BANK_2, .ADDRESS = 0x01};
+static REG_ADDRESS GYRO_XOUT_H_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x33};
+static REG_ADDRESS GYRO_XOUT_L_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x34};
+static REG_ADDRESS GYRO_YOUT_H_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x35};
+static REG_ADDRESS GYRO_YOUT_L_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x36};
+
+static REG_ADDRESS ACCEL_CONFIG_ADDR = {.USER_BANK = USER_BANK_2, .ADDRESS = 0x14};
+static REG_ADDRESS ACCEL_XOUT_H_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x2D};
+static REG_ADDRESS ACCEL_XOUT_L_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x2E};
+static REG_ADDRESS ACCEL_YOUT_H_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x2F};
+static REG_ADDRESS ACCEL_YOUT_L_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x30};
+
+static REG_ADDRESS MAG_STATUS_1_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x3B}; // EXT_SLV_DATA_0
+static REG_ADDRESS MAG_XOUT_L_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x3C};   // EXT_SLV_DATA_1
+static REG_ADDRESS MAG_XOUT_H_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x3D};   // EXT_SLV_DATA_2
+static REG_ADDRESS MAG_YOUT_L_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x3E};   // EXT_SLV_DATA_3
+static REG_ADDRESS MAG_YOUT_H_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x3F};   // EXT_SLV_DATA_4
+
+static REG_ADDRESS I2C_MST_ODR_CONFIG_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x00};
+static REG_ADDRESS I2C_MST_CTRL_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x01};
+
+static REG_ADDRESS I2C_SLV_ADDR_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x03};
+static REG_ADDRESS I2C_SLV_REG_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x04};
+static REG_ADDRESS I2C_SLV_CTRL_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x05};
+static REG_ADDRESS I2C_SLV_DO_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x06};
+
+static REG_ADDRESS INT_PIN_CFG_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x0F};
+static REG_ADDRESS INT_ENABLE_1_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x11};
+static REG_ADDRESS INT_STATUS_1_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x1A};
 
 // Initialise algorithms
 #define SAMPLE_RATE 1.1e3 // Gyro Sample Rate of 1.1kHz
@@ -68,13 +88,15 @@ REG_ADDRESS INT_ENABLE_1_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x11};
 static uint32_t timestamp;
 static uint32_t lastTimestamp;
 
-FusionAhrs   ahrs;
-FusionOffset offset;
-FusionEuler  euler;
+static FusionAhrs   ahrs;
+static FusionOffset offset;
+FusionEuler         euler;
 
-FusionVector gyroscope = {0.0f, 0.0f, 0.0f};
-FusionVector accelerometer = {0.0f, 0.0f, 1.0f};
-FusionVector magnetometer = {1.0f, 0.0f, 0.0f};
+bool HasNewIMUAngles = false;
+
+static FusionVector gyroscope = {0.0f, 0.0f, 0.0f};
+static FusionVector accelerometer = {0.0f, 0.0f, 1.0f};
+static FusionVector magnetometer = {1.0f, 0.0f, 0.0f};
 
 void GPIOD_Handler(void) {
   uint8_t  intStatus = 0;
@@ -125,6 +147,7 @@ void GPIOD_Handler(void) {
 
     // Calculate euler angles
     euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
+    HasNewIMUAngles = true;
   }
 }
 
@@ -163,23 +186,13 @@ static void IMU_Config(void) {
   IMU_Write(PWR_MGMT_2_ADDR, ~(ACCEL_DISABLE | GYRO_DISABLE)); // Enable the Accelerometer and Gyroscope
   IMU_Delay(40, -3);                                           // Wait atleast 35ms after enabling accel and gyro
 
-  IMU_Write(USER_CTRL_ADDR, I2C_MST_ENABLE | SPI_ENABLE); // Enable SPI, reset I2C master for magnetometer
-  IMU_Delay(101, -3);                                     // Wait atleast 100ms after enabling device master
-
+  IMU_Write(USER_CTRL_ADDR, SPI_ENABLE);                       // Enable SPI
   IMU_Write(GYRO_SMPLRT_DIV_ADDR, 0x00);                       // Configure for max sample rate of 1.1kHz (1.1kHz / (1 + 0))
   IMU_Write(GYRO_CONFIG_1_ADDR, GYRO_FS_SEL_1000 | GYRO_DLPF); // Configure gyro scale to 1000dps and enable Low-pass filter
-  IMU_Write(ACCEL_CONFIG_ADDR, ACCEL_FS_SEL_8G);               // Configure accelerometer scale to 8G
+  IMU_Write(ACCEL_CONFIG_ADDR, ACCEL_FS_SEL_8G | ACCEL_DLPF);  // Configure accelerometer scale to 8G
 
-  IMU_Write(I2C_MST_CTRL_ADDR, I2C_MST_CLK_400K);      // Use Mast CLK = 345.60kHz, Duty Cycle = 46.67%
-  IMU_Write(LP_CONFIG_ADDR, I2C_MST_ODR);              // Use I2C_MST_ODR_CONFIG_ADDR for mag sampling rate
-  IMU_Write(I2C_MST_ODR_CONFIG_ADDR, I2C_MST_ODR_137); // Use 137Hz rate on magnetometer
-
-  IMU_Mag_ReadWhoAMI();
-
-  IMU_Mag_Write(MAG_CNTL3, MAG_RESET);       // reset mag
-  IMU_Delay(30, -6);                         // Wait at least 20us
-  IMU_Mag_Write(MAG_CNTL2, MAG_CONT_MODE_4); // Use 100 Hz sample rate
-  IMU_Delay(30, -6);                         // Wait at least 20us
+  IMU_Mag_Init();       // Enable I2C master for Magnetometer read
+  IMU_Mag_ReadWhoAMI(); // Confirm communication success
 
   IMU_Mag_StartDataRead(); // set mag addresses to read
   IMU_Delay(30, -6);       // Wait at least 20us
@@ -224,6 +237,24 @@ static void IMU_Write(REG_ADDRESS REGISTER, uint8_t data) {
   SPI3_StartTransmission();
   SPI3_Write(&byte, 1);
   SPI3_EndTransmission();
+}
+
+static void IMU_Mag_Init(void) {
+  uint8_t userCtrl = 0x00;
+  IMU_Read(USER_CTRL_ADDR, &userCtrl); // Get current user ctrl settings
+
+  IMU_Write(USER_CTRL_ADDR, userCtrl | I2C_MST_RST); // Reset I2C master
+  IMU_Delay(100, -3);                                // wait for 100ms after I2C master reset
+
+  IMU_Write(USER_CTRL_ADDR, userCtrl | I2C_MST_ENABLE); // enable I2C master
+  IMU_Write(I2C_MST_CTRL_ADDR, I2C_MST_CLK_400K);       // Use Mast CLK = 345.60kHz, Duty Cycle = 46.67%
+  IMU_Write(LP_CONFIG_ADDR, I2C_MST_ODR);               // Use I2C_MST_ODR_CONFIG_ADDR for mag sampling rate
+  IMU_Write(I2C_MST_ODR_CONFIG_ADDR, I2C_MST_ODR_137);  // Use 137Hz rate on magnetometer
+
+  IMU_Mag_Write(MAG_CNTL3, MAG_RESET);       // reset mag
+  IMU_Delay(105, -6);                        // Wait at least 100us
+  IMU_Mag_Write(MAG_CNTL2, MAG_CONT_MODE_4); // Use 100 Hz sample rate
+  IMU_Delay(30, -6);                         // Wait at least 20us
 }
 
 static void IMU_Mag_ReadWhoAMI(void) {
@@ -280,8 +311,6 @@ static void IMU_MadgwickFusion_Init(void) {
 
 void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK) {
   SYS_CLOCK = SYS_CLK;
-
-  FPULazyStackingEnable(); // Enable Floating Point usage especially in Interrupts
 
   SysTick_Init(); // Initialize SysTick
 
