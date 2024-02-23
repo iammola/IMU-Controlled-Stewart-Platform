@@ -23,7 +23,8 @@ static void IMU_Mag_ReadWhoAMI(void);
 static void IMU_Mag_StartDataRead(void);
 static void IMU_Mag_Write(uint8_t MAG_ADDRESS, uint8_t data);
 
-// https://www.mathworks.com/help/supportpkg/raspberrypiio/ref/icm20948-system-object.html#:~:text=%270x69%27%20is%20the%20I2C%20address%20of%20the%20accelerometer%20and%20gyroscope%20of%20ICM%2D20948.%20%270x0C%27%20is%20the%20I2C%20address%20of%20the%20magnetometer%20of%20ICM%2D20948.
+// 10.1.1.4. Slave Address (AK09916 data sheet)
+// "The slave address of AK09916 is 0Ch"
 #define MAG_I2C_ADDRESS 0x0C
 
 // PWR_MGMT_1
@@ -59,16 +60,15 @@ static void IMU_Mag_Write(uint8_t MAG_ADDRESS, uint8_t data);
 #define I2C_MST_ODR_137 3
 
 // GYRO_CONFIG_1
-#define GYRO_FS_SEL_250  0x00
-#define GYRO_FS_SEL_500  0x02
 #define GYRO_FS_SEL_1000 0x04
-#define GYRO_FS_SEL_2000 0x06
+#define GYRO_FS_SEL_1000_SENSITIVITY SENSITIVITY(1000, 11 / 630)
 
 // ACCEL_CONFIG
-#define ACCEL_FS_SEL_2G  0x00
-#define ACCEL_FS_SEL_4G  0x02
-#define ACCEL_FS_SEL_8G  0x04
-#define ACCEL_FS_SEL_16G 0x06
+#define ACCEL_FS_SEL_8G 0x04
+// 16 bit ADC from -32,768 to 32,768
+#define ACCEL_FS_SEL_8G_SENSITIVITY  SENSITIVITY(8, 9.81)
+
+#define SENSITIVITY(scale, unitRate) ((1 << 15) / (scale * unitRate))
 
 // MAG_CNTL3
 #define MAG_RESET 0x01

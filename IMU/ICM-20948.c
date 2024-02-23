@@ -68,8 +68,8 @@ static void IMU_Config(void) {
   IMU_Write(USER_CTRL_ADDR, I2C_MST_ENABLE | SPI_ENABLE); // Enable SPI, reset I2C master for magnetometer
   IMU_Delay(101, -3);                                     // Wait atleast 100ms after enabling device master
 
-  IMU_Write(GYRO_CONFIG_1_ADDR, GYRO_FS_SEL_2000); // Configure gyro scale to 2000dps
-  IMU_Write(ACCEL_CONFIG_ADDR, ACCEL_FS_SEL_16G);  // Configure accelerometer scale to 16G
+  IMU_Write(GYRO_CONFIG_1_ADDR, GYRO_FS_SEL_1000); // Configure gyro scale to 1000dps
+  IMU_Write(ACCEL_CONFIG_ADDR, ACCEL_FS_SEL_8G);   // Configure accelerometer scale to 8G
 
   IMU_Write(I2C_MST_CTRL_ADDR, I2C_MST_CLK_400K);      // Use Mast CLK = 345.60kHz, Duty Cycle = 46.67%
   IMU_Write(LP_CONFIG_ADDR, I2C_MST_ODR);              // Use I2C_MST_ODR_CONFIG_ADDR for mag sampling rate
@@ -173,8 +173,8 @@ void IMU_GetAccelReadings(Coords *dest) {
   IMU_Read(ACCEL_YOUT_H_ADDR, &accelYH);
   IMU_Read(ACCEL_YOUT_L_ADDR, &accelYL);
 
-  dest->x = ((accelXH << 8) | accelXL);
-  dest->y = ((accelYH << 8) | accelYL);
+  dest->x = ((accelXH << 8) | accelXL) / ACCEL_FS_SEL_8G_SENSITIVITY;
+  dest->y = ((accelYH << 8) | accelYL) / ACCEL_FS_SEL_8G_SENSITIVITY;
 }
 
 void IMU_GetGyroReadings(Coords *dest) {
@@ -188,8 +188,8 @@ void IMU_GetGyroReadings(Coords *dest) {
   IMU_Read(GYRO_YOUT_H_ADDR, &gyroYH);
   IMU_Read(GYRO_YOUT_L_ADDR, &gyroYL);
 
-  dest->x = ((gyroXH << 8) | gyroXL);
-  dest->y = ((gyroYH << 8) | gyroYL);
+  dest->x = ((gyroXH << 8) | gyroXL) / GYRO_FS_SEL_1000_SENSITIVITY;
+  dest->y = ((gyroYH << 8) | gyroYL) / GYRO_FS_SEL_1000_SENSITIVITY;
 }
 
 void IMU_GetMagReadings(Coords *dest) {
@@ -209,6 +209,6 @@ void IMU_GetMagReadings(Coords *dest) {
   IMU_Read(MAG_YOUT_H_ADDR, &magYH);
   IMU_Read(MAG_YOUT_L_ADDR, &magYL);
 
-  dest->x = ((magXH << 8) | magXL);
-  dest->y = ((magYH << 8) | magYL);
+  dest->x = ((magXH << 8) | magXL) / 6.66;
+  dest->y = ((magYH << 8) | magYL) / 6.66;
 }
