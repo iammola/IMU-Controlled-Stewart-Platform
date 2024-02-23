@@ -3,13 +3,13 @@
 #include "ICM-20948.h"
 #include "SPI/SPI.h"
 
+#include "SysTick.h"
 #include "tm4c123gh6pm.h"
 
 #define READ(addr)        (uint16_t)(0x80FF | (addr << 8))
 #define WRITE(addr, data) (uint16_t)(0x7FFF & ((addr << 8) | data))
 
-static DELAY_FUNC IMU_Delay;
-static USER_BANK  LastUserBank = 0xFF;
+static USER_BANK LastUserBank = 0xFF;
 
 uint8_t MAG_WHO_AM_I = 0x01;
 uint8_t MAG_ST1 = 0x10;
@@ -77,7 +77,7 @@ static void IMU_Config(void) {
 
   IMU_Mag_ReadWhoAMI();
 
-  IMU_Mag_Write(MAG_CNTL3, MAG_RESET);
+  IMU_Mag_Write(MAG_CNTL3, MAG_RESET);       // reset mag
   IMU_Delay(30, -6);                         // Wait at least 20us
   IMU_Mag_Write(MAG_CNTL2, MAG_CONT_MODE_4); // Use 100 Hz sample rate
   IMU_Delay(30, -6);                         // Wait at least 20us
@@ -147,13 +147,19 @@ static void IMU_Mag_Write(uint8_t MAG_ADDRESS, uint8_t data) {
   IMU_Write(I2C_SLV_CTRL_ADDR, 0x80 | 0x01);            // Enable 1-byte data write
 }
 
-void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, DELAY_FUNC delay) {
-  if (delay == 0) {
-    while (1)
-      ;
+static void IMU_Delay(uint32_t inSeconds, int32_t powerOf10) {
+  uint32_t CLOCK = SYS_CLOCK;
+
+  while (powerOf10 < 0) {
+    CLOCK /= 10;
+    ++powerOf10;
   }
 
-  IMU_Delay = delay;
+  SysTick_Wait(inSeconds * CLOCK);
+}
+
+void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK) {
+  SysTick_Init();
 
   SPI3_Init(SYS_CLK, SSI_CLK, SSI_CR0_FRF_MOTO | SSI_CR0_SPO | SSI_CR0_SPH, SSI_CR0_DSS_16); // Initialize the SPI pins
   IMU_Config();                                                                              // Configure the IMU configuration settings

@@ -18,6 +18,7 @@ static void IMU_Config(void);
 static void IMU_ChangeUserBank(REG_ADDRESS REGISTER);
 static void IMU_Read(REG_ADDRESS REGISTER, uint8_t *dest);
 static void IMU_Write(REG_ADDRESS REGISTER, uint8_t data);
+static void IMU_Delay(uint32_t inSeconds, int32_t powerOf10);
 
 static void IMU_Mag_ReadWhoAMI(void);
 static void IMU_Mag_StartDataRead(void);
@@ -60,13 +61,13 @@ static void IMU_Mag_Write(uint8_t MAG_ADDRESS, uint8_t data);
 #define I2C_MST_ODR_137 3
 
 // GYRO_CONFIG_1
-#define GYRO_FS_SEL_1000 0x04
+#define GYRO_FS_SEL_1000             0x04
 #define GYRO_FS_SEL_1000_SENSITIVITY SENSITIVITY(1000, 11 / 630)
 
 // ACCEL_CONFIG
 #define ACCEL_FS_SEL_8G 0x04
 // 16 bit ADC from -32,768 to 32,768
-#define ACCEL_FS_SEL_8G_SENSITIVITY  SENSITIVITY(8, 9.81)
+#define ACCEL_FS_SEL_8G_SENSITIVITY SENSITIVITY(8, 9.81)
 
 #define SENSITIVITY(scale, unitRate) ((1 << 15) / (scale * unitRate))
 
