@@ -14,15 +14,16 @@ typedef struct REG_ADDRESS_STRUCT {
   uint8_t   ADDRESS;
 } REG_ADDRESS;
 
-void        GPIOD_Handler(void);
-static void IMU_Interrupt_Init(void);
 static void IMU_Config(void);
 static void IMU_ChangeUserBank(REG_ADDRESS REGISTER);
 static void IMU_Read(REG_ADDRESS REGISTER, uint8_t *dest);
 static void IMU_Write(REG_ADDRESS REGISTER, uint8_t data);
-static void IMU_Mag_StartRead(void);
+
+static void IMU_Mag_ReadWhoAMI(void);
+static void IMU_Mag_StartDataRead(void);
 static void IMU_Mag_Write(uint8_t MAG_ADDRESS, uint8_t data);
 
+// https://www.mathworks.com/help/supportpkg/raspberrypiio/ref/icm20948-system-object.html#:~:text=%270x69%27%20is%20the%20I2C%20address%20of%20the%20accelerometer%20and%20gyroscope%20of%20ICM%2D20948.%20%270x0C%27%20is%20the%20I2C%20address%20of%20the%20magnetometer%20of%20ICM%2D20948.
 #define MAG_I2C_ADDRESS 0x0C
 
 // PWR_MGMT_1
@@ -57,18 +58,6 @@ static void IMU_Mag_Write(uint8_t MAG_ADDRESS, uint8_t data);
 #define I2C_MST_ODR_1K  0
 #define I2C_MST_ODR_137 3
 
-// INT_ENABLE
-#define DMP_INT_ENABLE 0x02
-
-// INT_PIN_CFG
-#define INT_ACTIVE_LOW         0x80
-#define INT_OPEN_DRAIN         0x40
-#define INT_LATCH_MANUAL_CLEAR 0x20
-#define INT_READ_CLEAR         0x10
-
-// INT_STATUS
-#define DMP_INT 0x02
-
 // GYRO_CONFIG_1
 #define GYRO_FS_SEL_250  0x00
 #define GYRO_FS_SEL_500  0x02
@@ -86,3 +75,6 @@ static void IMU_Mag_Write(uint8_t MAG_ADDRESS, uint8_t data);
 
 // MAG_CNTL2
 #define MAG_CONT_MODE_4 0x08
+
+// MAG_ST1
+#define MAG_DATA_RDY 0x01

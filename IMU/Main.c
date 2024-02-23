@@ -25,7 +25,6 @@ void Delay(uint32_t inSeconds, int32_t powerOf10) {
 }
 
 int main(void) {
-
   Coords accel = {0};
   Coords gyro = {0};
   Coords mag = {0};
@@ -52,7 +51,7 @@ int main(void) {
 
     snprintf(text, CLI_TXT_BUF, " Mag (X = %d, Y = %d)\n", mag.x, mag.y);
     CLI_Write(text);
-    
+
     CLI_Write("\n\r");
 
     SysTick_Wait10ms(500);
