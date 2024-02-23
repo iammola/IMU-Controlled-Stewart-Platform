@@ -1,5 +1,6 @@
 #include <stdint.h>
 
+#include "Fusion/Fusion.h"
 #include "IMU.h"
 
 typedef enum USER_BANK_STRUCT {
@@ -23,6 +24,10 @@ static void IMU_Delay(uint32_t inSeconds, int32_t powerOf10);
 static void IMU_Mag_ReadWhoAMI(void);
 static void IMU_Mag_StartDataRead(void);
 static void IMU_Mag_Write(uint8_t MAG_ADDRESS, uint8_t data);
+
+static void IMU_GetMagReadings(FusionVector *dest);
+static void IMU_GetGyroReadings(FusionVector *dest);
+static void IMU_GetAccelReadings(FusionVector *dest);
 
 // 10.1.1.4. Slave Address (AK09916 data sheet)
 // "The slave address of AK09916 is 0Ch"
@@ -61,8 +66,9 @@ static void IMU_Mag_Write(uint8_t MAG_ADDRESS, uint8_t data);
 #define I2C_MST_ODR_137 3
 
 // GYRO_CONFIG_1
+#define GYRO_DLPF                    0x01
 #define GYRO_FS_SEL_1000             0x04
-#define GYRO_FS_SEL_1000_SENSITIVITY SENSITIVITY(1000, 11 / 630)
+#define GYRO_FS_SEL_1000_SENSITIVITY SENSITIVITY(1000, M_PI / 180)
 
 // ACCEL_CONFIG
 #define ACCEL_FS_SEL_8G 0x04
@@ -79,3 +85,12 @@ static void IMU_Mag_Write(uint8_t MAG_ADDRESS, uint8_t data);
 
 // MAG_ST1
 #define MAG_DATA_RDY 0x01
+
+// INT_ENABLE_1
+#define RAW_DATA_INT_ENABLE 0x01
+
+// INT_PIN_CFG
+#define INT_ACTIVE_LOW         0x80
+#define INT_OPEN_DRAIN         0x40
+#define INT_LATCH_MANUAL_CLEAR 0x20
+#define INT_READ_CLEAR         0x10

@@ -13,10 +13,6 @@
 static char text[CLI_TXT_BUF] = "";
 
 int main(void) {
-  Coords accel = {0};
-  Coords gyro = {0};
-  Coords mag = {0};
-
   SysTick_Init(); // Initialize SysTick
   PLL_Init();     // Initialize the PLL
 
@@ -25,21 +21,6 @@ int main(void) {
   IMU_Init(SYS_CLOCK, 1e6); // Initialize the IMU with the SYS_CLOCK and to communicate at 1MHz
 
   while (1) {
-    IMU_GetGyroReadings(&accel);
-    IMU_GetAccelReadings(&gyro);
-    IMU_GetMagReadings(&mag);
-
-    snprintf(text, CLI_TXT_BUF, " Accel (X = %d, Y = %d)\n", accel.x, accel.y);
-    CLI_Write(text);
-
-    snprintf(text, CLI_TXT_BUF, " Gyro (X = %d, Y = %d)\n", gyro.x, gyro.y);
-    CLI_Write(text);
-
-    snprintf(text, CLI_TXT_BUF, " Mag (X = %d, Y = %d)\n", mag.x, mag.y);
-    CLI_Write(text);
-
-    CLI_Write("\n\r");
-
     SysTick_Wait10ms(500);
   }
 }
