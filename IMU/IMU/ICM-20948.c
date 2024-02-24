@@ -30,9 +30,8 @@ static void IMU_Write(REG_ADDRESS REGISTER, uint8_t data);
 static void IMU_Delay(uint32_t inSeconds, int32_t powerOf10);
 
 static void IMU_Mag_Init(void);
-static void IMU_Mag_StartDataRead(void);
-static void IMU_Mag_Read(uint8_t MAG_ADDRESS, uint8_t *dest);
 static void IMU_Mag_Write(uint8_t MAG_ADDRESS, uint8_t data);
+static void IMU_Mag_Read(uint8_t MAG_ADDRESS, uint8_t *dest, uint8_t length);
 
 static void IMU_GetMagReadings(FusionVector *dest);
 static void IMU_GetGyroReadings(FusionVector *dest);
@@ -61,10 +60,8 @@ static REG_ADDRESS GYRO_XOUT_H_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x33
 static REG_ADDRESS GYRO_XOUT_L_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x34};
 static REG_ADDRESS GYRO_YOUT_H_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x35};
 static REG_ADDRESS GYRO_YOUT_L_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x36};
-static REG_ADDRESS MAG_XOUT_L_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x3B}; // EXT_SLV_DATA_0
-static REG_ADDRESS MAG_XOUT_H_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x3C}; // EXT_SLV_DATA_1
-static REG_ADDRESS MAG_YOUT_L_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x3D}; // EXT_SLV_DATA_2
-static REG_ADDRESS MAG_YOUT_H_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x3E}; // EXT_SLV_DATA_3
+static REG_ADDRESS EXT_SLV_DATA_0 = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x3B};  // EXT_SLV_DATA_0
+static REG_ADDRESS EXT_SLV_DATA_23 = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x52}; // EXT_SLV_DATA_23
 
 static REG_ADDRESS USER_BANK_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x7F};
 
@@ -207,11 +204,8 @@ static void IMU_Config(void) {
   IMU_Mag_Init(); // Enable I2C master for Magnetometer read
 
   do {
-    IMU_Mag_Read(MAG_WHO_AM_I, &MAG_whoAmI); // Confirm communication success
+    IMU_Mag_Read(MAG_WHO_AM_I, &MAG_whoAmI, 1); // Confirm communication success
   } while (MAG_whoAmI != 0x09);
-
-  IMU_Mag_StartDataRead(); // set mag addresses to read
-  IMU_Delay(30, -6);       // Wait at least 20us
 
   // Specify the Interrupt pin is push-pull and is an active high pin (falling edge interrupt)
   // also forces the Interrupt to be cleared for the level to be reset and any Read operation to clear the INT_STATUS
@@ -278,23 +272,29 @@ static void IMU_Mag_Init(void) {
     IMU_Mag_Write(MAG_CNTL2, MAG_CONT_MODE_4); // Use 100 Hz sample rate
     IMU_Delay(105, -6);                        // Wait at least 100us
 
-    IMU_Mag_Read(MAG_CNTL2, &tmp);
+    IMU_Mag_Read(MAG_CNTL2, &tmp, 1);
   } while (tmp != MAG_CONT_MODE_4);
 }
 
-static void IMU_Mag_Read(uint8_t MAG_ADDRESS, uint8_t *dest) {
+static void IMU_Mag_Read(uint8_t MAG_ADDRESS, uint8_t *dest, uint8_t length) {
+  uint8_t     dataIdx = 0;
+  REG_ADDRESS EXT_REG = EXT_SLV_DATA_0;
+
+  if (length > (EXT_SLV_DATA_23.ADDRESS - EXT_SLV_DATA_0.ADDRESS)) {
+    return;
+  }
+
   IMU_Write(I2C_SLV_ADDR_ADDR, 0x80 | MAG_I2C_ADDRESS); // Read op and set Mag I2C address
-  IMU_Write(I2C_SLV_REG_ADDR, MAG_ADDRESS);             // Set Magnetometer to read from Who Am I register
-  IMU_Write(I2C_SLV_CTRL_ADDR, 0x80 | 0x01);            // Read 1 byte data
+  IMU_Write(I2C_SLV_REG_ADDR, MAG_ADDRESS);             // Set Magnetometer to start read from desired register
+  IMU_Write(I2C_SLV_CTRL_ADDR, 0x80 | length);          // Allow transmission for x bytes of data
 
-  IMU_Read(MAG_XOUT_L_ADDR, dest);
-}
+  IMU_Delay(50, -3); // Wait at least 50ms
+  for (dataIdx = 0; dataIdx < length; dataIdx++) {
+    EXT_REG.ADDRESS += dataIdx;
+    IMU_Read(EXT_REG, dest); // Read data
+  }
 
-static void IMU_Mag_StartDataRead(void) {
-  IMU_Write(I2C_SLV_ADDR_ADDR, 0x80 | MAG_I2C_ADDRESS);     // Read op and set Mag I2C address
-  IMU_Write(I2C_SLV_REG_ADDR, MAG_HXL);                     // Set Magnetometer Address to start read from ST1 register
-  IMU_Write(I2C_SLV_CTRL_ADDR, 0x80 | (MAG_ST2 - MAG_HXL)); // Read data from status 1 to status 2 register
-  IMU_Delay(100, -3);                                       // Wait at least 100ms
+  IMU_Write(I2C_SLV_CTRL_ADDR, 0x00); // Stop transmission
 }
 
 static void IMU_Mag_Write(uint8_t MAG_ADDRESS, uint8_t data) {
@@ -376,17 +376,13 @@ void IMU_GetGyroReadings(FusionVector *dest) {
 }
 
 void IMU_GetMagReadings(FusionVector *dest) {
-  uint8_t magXH = 0;
-  uint8_t magXL = 0;
-  uint8_t magYH = 0;
-  uint8_t magYL = 0;
+  uint8_t ST2 = 0;
+  uint8_t magCoords[4] = {0, 0, 0, 0};
 
-  IMU_Read(MAG_XOUT_H_ADDR, &magXH);
-  IMU_Read(MAG_XOUT_L_ADDR, &magXL);
-  IMU_Read(MAG_YOUT_H_ADDR, &magYH);
-  IMU_Read(MAG_YOUT_L_ADDR, &magYL);
+  IMU_Mag_Read(MAG_HXL, magCoords, 4); // Get the X,Y bytes data
+  IMU_Mag_Read(MAG_ST2, &ST2, 1);      // ST2 is required to be read to denote end
 
-  dest->axis.x = (int16_t)((magXH << 8) | magXL) / MAG_4912_SENSITIVITY;
-  dest->axis.y = (int16_t)((magYH << 8) | magYL) / MAG_4912_SENSITIVITY;
+  dest->axis.x = (int16_t)((magCoords[1] << 8) | magCoords[0]) / MAG_4912_SENSITIVITY;
+  dest->axis.y = (int16_t)((magCoords[3] << 8) | magCoords[2]) / MAG_4912_SENSITIVITY;
   dest->axis.z = 0; // Ignore z-axis
 }
