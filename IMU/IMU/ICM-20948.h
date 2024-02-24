@@ -48,8 +48,8 @@ typedef struct REG_ADDRESS_STRUCT {
 #define I2C_MST_ODR 0x40
 
 // I2C_MST_ODR_CONFIG_ADDR
-#define I2C_MST_ODR_1K  0
-#define I2C_MST_ODR_137 3
+#define I2C_MST_ODR_1K  0x00
+#define I2C_MST_ODR_137 0x03
 
 // GYRO_CONFIG_1
 #define GYRO_DLPF                    0x01
@@ -81,3 +81,6 @@ typedef struct REG_ADDRESS_STRUCT {
 #define INT_OPEN_DRAIN         0x40
 #define INT_LATCH_MANUAL_CLEAR 0x20
 #define INT_READ_CLEAR         0x10
+
+// ODR_ALIGN_EN
+#define ODR_ALIGN_ENABLE 0x01
