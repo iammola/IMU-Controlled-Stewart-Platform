@@ -20,6 +20,7 @@ static uint32_t  SYS_CLOCK;
 static USER_BANK LastUserBank = 0xFF;
 
 #define CLI_TXT_BUF 500
+static char text[CLI_TXT_BUF] = "";
 
 void GPIOD_Handler(void);
 
@@ -56,10 +57,14 @@ static const REG_ADDRESS ACCEL_XOUT_H_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS
 static const REG_ADDRESS ACCEL_XOUT_L_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x2E};
 static const REG_ADDRESS ACCEL_YOUT_H_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x2F};
 static const REG_ADDRESS ACCEL_YOUT_L_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x30};
+static const REG_ADDRESS ACCEL_ZOUT_H_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x31};
+static const REG_ADDRESS ACCEL_ZOUT_L_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x32};
 static const REG_ADDRESS GYRO_XOUT_H_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x33};
 static const REG_ADDRESS GYRO_XOUT_L_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x34};
 static const REG_ADDRESS GYRO_YOUT_H_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x35};
 static const REG_ADDRESS GYRO_YOUT_L_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x36};
+static const REG_ADDRESS GYRO_ZOUT_H_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x37};
+static const REG_ADDRESS GYRO_ZOUT_L_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x38};
 static const REG_ADDRESS EXT_SLV_DATA_0 = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x3B};
 static const REG_ADDRESS EXT_SLV_DATA_23 = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x52};
 
@@ -151,6 +156,9 @@ void GPIOD_Handler(void) {
     // Calculate euler angles
     euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
     HasNewIMUAngles = true;
+
+    snprintf(text, CLI_TXT_BUF, "%0.1f,\t%0.1f,\t%0.1f\n\r", euler.angle.roll, euler.angle.pitch, euler.angle.yaw);
+    CLI_Write(text);
   }
 }
 
@@ -209,8 +217,8 @@ static void IMU_Config(void) {
 
   // Specify the Interrupt pin is push-pull and is an active high pin (falling edge interrupt)
   // also forces the Interrupt to be cleared for the level to be reset and any Read operation to clear the INT_STATUS
-   IMU_Write(INT_PIN_CFG_ADDR, (INT_LATCH_MANUAL_CLEAR | INT_READ_CLEAR) & ~(INT_ACTIVE_LOW | INT_OPEN_DRAIN));
-   IMU_Write(INT_ENABLE_1_ADDR, RAW_DATA_INT_ENABLE); // Enable Raw Data interrupt
+  IMU_Write(INT_PIN_CFG_ADDR, (INT_LATCH_MANUAL_CLEAR | INT_READ_CLEAR) & ~(INT_ACTIVE_LOW | INT_OPEN_DRAIN));
+  IMU_Write(INT_ENABLE_1_ADDR, RAW_DATA_INT_ENABLE); // Enable Raw Data interrupt
 }
 
 static void IMU_ChangeUserBank(REG_ADDRESS REGISTER) {
@@ -288,10 +296,12 @@ static void IMU_Mag_Read(uint8_t MAG_ADDRESS, uint8_t *dest, uint8_t length) {
   IMU_Write(I2C_SLV_REG_ADDR, MAG_ADDRESS);             // Set Magnetometer to start read from desired register
   IMU_Write(I2C_SLV_CTRL_ADDR, 0x80 | length);          // Allow transmission for x bytes of data
 
-  IMU_Delay(50, -3); // Wait at least 50ms
+  IMU_Delay(250, -6); // Wait at least 250us
+
   for (dataIdx = 0; dataIdx < length; dataIdx++) {
-    EXT_REG.ADDRESS += dataIdx;
     IMU_Read(EXT_REG, dest); // Read data
+    EXT_REG.ADDRESS++;
+    dest++;
   }
 
   IMU_Write(I2C_SLV_CTRL_ADDR, 0x00); // Stop transmission
@@ -348,15 +358,19 @@ void IMU_GetAccelReadings(FusionVector *dest) {
   uint8_t accelXL = 0;
   uint8_t accelYH = 0;
   uint8_t accelYL = 0;
+  uint8_t accelZH = 0;
+  uint8_t accelZL = 0;
 
   IMU_Read(ACCEL_XOUT_H_ADDR, &accelXH);
   IMU_Read(ACCEL_XOUT_L_ADDR, &accelXL);
   IMU_Read(ACCEL_YOUT_H_ADDR, &accelYH);
   IMU_Read(ACCEL_YOUT_L_ADDR, &accelYL);
+  IMU_Read(ACCEL_ZOUT_H_ADDR, &accelZH);
+  IMU_Read(ACCEL_ZOUT_L_ADDR, &accelZL);
 
   dest->axis.x = (int16_t)((accelXH << 8) | accelXL) / ACCEL_FS_SEL_8G_SENSITIVITY;
   dest->axis.y = (int16_t)((accelYH << 8) | accelYL) / ACCEL_FS_SEL_8G_SENSITIVITY;
-  dest->axis.z = 0; // Ignore z-axis
+  dest->axis.z = (int16_t)((accelZH << 8) | accelZL) / ACCEL_FS_SEL_8G_SENSITIVITY;
 }
 
 void IMU_GetGyroReadings(FusionVector *dest) {
@@ -364,25 +378,29 @@ void IMU_GetGyroReadings(FusionVector *dest) {
   uint8_t gyroXL = 0;
   uint8_t gyroYH = 0;
   uint8_t gyroYL = 0;
+  uint8_t gyroZH = 0;
+  uint8_t gyroZL = 0;
 
   IMU_Read(GYRO_XOUT_H_ADDR, &gyroXH);
   IMU_Read(GYRO_XOUT_L_ADDR, &gyroXL);
   IMU_Read(GYRO_YOUT_H_ADDR, &gyroYH);
   IMU_Read(GYRO_YOUT_L_ADDR, &gyroYL);
+  IMU_Read(GYRO_ZOUT_H_ADDR, &gyroZH);
+  IMU_Read(GYRO_ZOUT_L_ADDR, &gyroZL);
 
   dest->axis.x = (int16_t)((gyroXH << 8) | gyroXL) / GYRO_FS_SEL_1000_SENSITIVITY;
   dest->axis.y = (int16_t)((gyroYH << 8) | gyroYL) / GYRO_FS_SEL_1000_SENSITIVITY;
-  dest->axis.z = 0; // Ignore z-axis
+  dest->axis.z = (int16_t)((gyroZH << 8) | gyroZL) / GYRO_FS_SEL_1000_SENSITIVITY;
 }
 
 void IMU_GetMagReadings(FusionVector *dest) {
   uint8_t ST2 = 0;
-  uint8_t magCoords[4] = {0, 0, 0, 0};
+  uint8_t magCoords[6] = {0};
 
-  IMU_Mag_Read(MAG_HXL, magCoords, 4); // Get the X,Y bytes data
+  IMU_Mag_Read(MAG_HXL, magCoords, 6); // Get the X,Y,Z bytes data
   IMU_Mag_Read(MAG_ST2, &ST2, 1);      // ST2 is required to be read to denote end
 
   dest->axis.x = (int16_t)((magCoords[1] << 8) | magCoords[0]) / MAG_4912_SENSITIVITY;
   dest->axis.y = (int16_t)((magCoords[3] << 8) | magCoords[2]) / MAG_4912_SENSITIVITY;
-  dest->axis.z = 0; // Ignore z-axis
+  dest->axis.z = (int16_t)((magCoords[5] << 8) | magCoords[4]) / MAG_4912_SENSITIVITY;
 }
