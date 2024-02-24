@@ -51,18 +51,19 @@ typedef struct REG_ADDRESS_STRUCT {
 #define I2C_MST_ODR_1K  0x00
 #define I2C_MST_ODR_137 0x03
 
+#define MAG_4912_SENSITIVITY SENSITIVITY(4912, 1)
+
 // GYRO_CONFIG_1
 #define GYRO_DLPF                    0x01
 #define GYRO_FS_SEL_1000             0x04
 #define GYRO_FS_SEL_1000_SENSITIVITY SENSITIVITY(1000, M_PI / 180)
 
 // ACCEL_CONFIG
-#define ACCEL_DLPF                    0x01
+#define ACCEL_DLPF      0x01
 #define ACCEL_FS_SEL_8G 0x04
-// 16 bit ADC from -32,768 to 32,768
 #define ACCEL_FS_SEL_8G_SENSITIVITY SENSITIVITY(8, 9.81)
 
-#define SENSITIVITY(scale, unitRate) ((1 << 15) / (scale * unitRate))
+#define SENSITIVITY(scale, unitRate) (float)((1 << 15) / (scale * unitRate))
 
 // MAG_CNTL3
 #define MAG_RESET 0x01
