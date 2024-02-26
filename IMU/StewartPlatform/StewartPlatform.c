@@ -53,7 +53,7 @@ void StewartPlatform_Init(float r_B, float r_P, float __lhl, float __ldl, float 
       TWO_THIRDS_PI - gamma_B,  // Arm #3
       TWO_THIRDS_PI + gamma_B,  // Arm #4
       FOUR_THIRDS_PI - gamma_B, // Arm #5
-      FOUR_THIRDS_PI - gamma_B  // Arm #6
+      FOUR_THIRDS_PI + gamma_B  // Arm #6
   };
   // psi_P (Polar coordinates)
   // Direction of the points where the rod is attached to the platform.
@@ -88,7 +88,7 @@ void StewartPlatform_Init(float r_B, float r_P, float __lhl, float __ldl, float 
       } else {
         // Transposed array with axis as rows and arms as column
         B[axisIdx][armIdx] = r_B * psi_B[armIdx];
-        P[axisIdx][armIdx] = r_P * psi_B[armIdx];
+        P[axisIdx][armIdx] = r_P * psi_P[armIdx];
       }
     }
   }
@@ -190,7 +190,7 @@ void StewartPlatform_Calculate(float translate[AXES_COUNT], float rotation[AXES_
   // Calculate servo angles for each leg
   for (armIdx = 0; armIdx < ARMS_COUNT; armIdx++) {
     // Calculate auxiliary quantities g, f and e
-    g = powf(lll[armIdx], 2) - powf(ldl, 2) - powf(lhl, 2);
+    g = powf(lll[armIdx], 2) - (powf(ldl, 2) - powf(lhl, 2));
     e = 2 * lhl * l[2][armIdx];
     fk = 2 * lhl * ((cosf(beta[armIdx]) * l[0][armIdx]) + (sinf(beta[armIdx]) * l[1][armIdx]));
 
