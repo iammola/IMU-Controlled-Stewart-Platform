@@ -46,14 +46,15 @@ static Coords l[] = {0}; // vector from Base anchor to Platform anchor
 void StewartPlatform_RotateVector(Coords dest, Quaternion orientation, Coords vector);
 void StewartPlatform_GetLegs(Legs    legs[],
                              uint8_t hornDirection, // If horns are pointed outwards 0, otherwise 1
-                             float   shaftDistance  // Distance between servo pair
+                             float   shaftDistance, // Distance between servo pair on base
+                             float   anchorDistance // Distance between anchor points on platform
 );
 
-void StewartPlatform_Init(float _rodLength, float _hornLength, float shaftDistance) {
+void StewartPlatform_Init(float _rodLength, float _hornLength, float shaftDistance, float anchorDistance) {
   uint8_t legIdx = 0;
   Legs    legs[LEGS_COUNT] = {0};
 
-  StewartPlatform_GetLegs(legs, 0, shaftDistance);
+  StewartPlatform_GetLegs(legs, 0, shaftDistance, anchorDistance);
 
   rodLength = _rodLength;
   hornLength = _hornLength;
@@ -81,7 +82,7 @@ void getHexPlate(Coords ret[], float r_i, float r_o, float rot) {
   }
 }
 
-void StewartPlatform_GetLegs(Legs legs[], uint8_t hornDirection, float shaftDistance) {
+void StewartPlatform_GetLegs(Legs legs[], uint8_t hornDirection, float shaftDistance, float anchorDistance) {
   uint8_t armIdx = 0;
 
   Coords baseInts[] = {0};
@@ -132,8 +133,8 @@ void StewartPlatform_GetLegs(Legs legs[], uint8_t hornDirection, float shaftDist
     legs[armIdx].baseJoint.y = baseMidY + baseDY * shaftDistance * pm;
     legs[armIdx].baseJoint.z = 0;
 
-    legs[armIdx].platformJoint.x = platMidX + baseDX * shaftDistance * pm;
-    legs[armIdx].platformJoint.y = platMidY + baseDY * shaftDistance * pm;
+    legs[armIdx].platformJoint.x = platMidX + baseDX * anchorDistance * pm;
+    legs[armIdx].platformJoint.y = platMidY + baseDY * anchorDistance * pm;
     legs[armIdx].platformJoint.z = 0;
 
     legs[armIdx].sinBeta = sinf(motorRotation);
