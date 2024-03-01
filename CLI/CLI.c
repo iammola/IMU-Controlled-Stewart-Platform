@@ -154,27 +154,30 @@ static void UART_Disable(void) {
 // Input: RXFIFOLevel - The desired level to trigger the Receive FIFO interrupt on
 // Output: None
 static void UART_InterruptEnable(uint8_t RXFIFOLevel) {
-  // Allow Receive FIFO and Timeout interrupts on to be handled by controller
-  UART0_IM_R = UART_IM_RXIM | UART_IM_RTIM;
-
   // Set RX Interrupt Levels
   switch (RXFIFOLevel) {
-    case 4:
+    case RX_FIFO_7_8:
       RXFIFOLevel = UART_IFLS_RX7_8;
       break;
-    case 3:
+    case RX_FIFO_6_8:
       RXFIFOLevel = UART_IFLS_RX6_8;
       break;
-    case 1:
+    case RX_FIFO_4_8:
+      RXFIFOLevel = UART_IFLS_RX4_8;
+      break;
+    case RX_FIFO_2_8:
       RXFIFOLevel = UART_IFLS_RX2_8;
       break;
-    case 0:
+    case RX_FIFO_1_8:
       RXFIFOLevel = UART_IFLS_RX1_8;
       break;
     default:
-      RXFIFOLevel = UART_IFLS_RX4_8;
-      break;
+      // Do not enable interrupt if not given an explicit value
+      return;
   }
+
+  // Allow Receive FIFO and Timeout interrupts on to be handled by controller
+  UART0_IM_R = UART_IM_RXIM | UART_IM_RTIM;
 
   // Set RX FIFO level
   UART0_IFLS_R = (UART0_IFLS_R & (unsigned)~UART_IFLS_RX_M) | RXFIFOLevel;

@@ -13,6 +13,7 @@
 #define TWO_STOP_BITS true
 #define ONE_STOP_BIT false
 
+#define RX_FIFO_OFF 5
 #define RX_FIFO_7_8 4
 #define RX_FIFO_6_8 3
 #define RX_FIFO_4_8 2

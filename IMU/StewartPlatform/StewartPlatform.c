@@ -1,6 +1,8 @@
 #include <math.h>
 #include <stdint.h>
 
+#include "StewartPlatform.h"
+
 #define LEGS_COUNT 6
 
 #define sqr(num)                 (num * num)
@@ -14,11 +16,9 @@
 #define SERVO_ANGLE_MIN -90
 #define SERVO_ANGLE_MAX 90
 
-typedef struct Coords {
-  float x;
-  float y;
-  float z;
-} Coords;
+#ifndef M_PI
+#define M_PI 3.14159265358979323846f
+#endif
 
 typedef struct Legs {
   float  servoAngle;
@@ -28,13 +28,6 @@ typedef struct Legs {
   Coords platformJoint; // platform joints in platform frame
 } Legs;
 
-typedef struct Quaternion {
-  float w;
-  float x;
-  float y;
-  float z;
-} Quaternion;
-
 static float rodLength = 0;
 static float hornLength = 0;
 
@@ -43,18 +36,15 @@ static Legs   legs[] = {0};
 
 static Coords l[] = {0}; // vector from Base anchor to Platform anchor
 
-void StewartPlatform_RotateVector(Coords dest, Quaternion orientation, Coords vector);
-void StewartPlatform_GetLegs(Legs    legs[],
-                             uint8_t hornDirection, // If horns are pointed outwards 0, otherwise 1
-                             float   shaftDistance, // Distance between servo pair on base
-                             float   anchorDistance // Distance between anchor points on platform
+static void StewartPlatform_RotateVector(Coords dest, Quaternion orientation, Coords vector);
+static void StewartPlatform_GetLegs(uint8_t hornDirection, // If horns are pointed outwards 0, otherwise 1
+                                    float   shaftDistance, // Distance between servo pair on base
+                                    float   anchorDistance // Distance between anchor points on platform
 );
+static void getHexPlate(Coords ret[], float r_i, float r_o, float rot);
 
 void StewartPlatform_Init(float _rodLength, float _hornLength, float shaftDistance, float anchorDistance) {
-  uint8_t legIdx = 0;
-  Legs    legs[LEGS_COUNT] = {0};
-
-  StewartPlatform_GetLegs(legs, 0, shaftDistance, anchorDistance);
+  StewartPlatform_GetLegs(0, shaftDistance, anchorDistance);
 
   rodLength = _rodLength;
   hornLength = _hornLength;
@@ -67,7 +57,7 @@ void StewartPlatform_Init(float _rodLength, float _hornLength, float shaftDistan
   );
 }
 
-void getHexPlate(Coords ret[], float r_i, float r_o, float rot) {
+static void getHexPlate(Coords ret[], float r_i, float r_o, float rot) {
   uint8_t legIdx = 0;
 
   float ap, phi;
@@ -82,7 +72,7 @@ void getHexPlate(Coords ret[], float r_i, float r_o, float rot) {
   }
 }
 
-void StewartPlatform_GetLegs(Legs legs[], uint8_t hornDirection, float shaftDistance, float anchorDistance) {
+static void StewartPlatform_GetLegs(uint8_t hornDirection, float shaftDistance, float anchorDistance) {
   uint8_t armIdx = 0;
 
   Coords baseInts[] = {0};
@@ -163,7 +153,7 @@ void StewartPlatform_Update(Coords translation, Quaternion orientation) {
   }
 }
 
-void StewartPlatform_RotateVector(Coords dest, Quaternion orientation, Coords vector) {
+static void StewartPlatform_RotateVector(Coords dest, Quaternion orientation, Coords vector) {
   float qw = orientation.w;
   float qx = orientation.x;
   float qy = orientation.y;
