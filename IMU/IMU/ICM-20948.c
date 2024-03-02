@@ -94,8 +94,7 @@ static const REG_ADDRESS I2C_SLV_DO_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS =
 // Initialise algorithms
 #define SAMPLE_RATE 1100 // Gyro Sample Rate of 1.1kHz
 
-static uint32_t timestamp = 0;
-static uint32_t lastTimestamp = 0;
+static volatile uint32_t lastTimestamp = 0;
 
 static FusionAhrs   ahrs;
 static FusionOffset offset;
@@ -147,8 +146,10 @@ static FusionVector hardIronOffset = {
 };
 
 void GPIOD_Handler(void) {
-  uint8_t  intStatus = 0;
-  uint32_t deltaTime = 0;
+  uint8_t intStatus = 0;
+
+  float             deltaTime = 0.0f;
+  volatile uint32_t timestamp = 0;
 
   // Ensure the interrupt is on the INT pin and is a DMP interrupt
   if (GPIO_PORTD_MIS_R & INT_BIT) {
@@ -174,7 +175,7 @@ void GPIOD_Handler(void) {
     gyroscope = FusionOffsetUpdate(&offset, gyroscope);
 
     // Calculate delta time (in seconds) to account for gyroscope sample clock error
-    deltaTime = (timestamp - lastTimestamp) / SYS_CLOCK;
+    deltaTime = (float)(lastTimestamp - timestamp) / (float)SYS_CLOCK;
     lastTimestamp = timestamp;
 
     // Update gyroscope AHRS algorithm
