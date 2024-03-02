@@ -136,6 +136,7 @@ void StewartPlatform_Update(Coords translation, Quaternion orientation) {
   Coords  o = {0};
   uint8_t legIdx = 0;
 
+  float angle;
   float gk, ek, fk;
 
   for (legIdx = 0; legIdx < LEGS_COUNT; legIdx++) {
@@ -149,7 +150,8 @@ void StewartPlatform_Update(Coords translation, Quaternion orientation) {
     ek = 2 * hornLength * l[legIdx].z;
     fk = 2 * hornLength * ((legs[legIdx].cosBeta * l[legIdx].x) + (legs[legIdx].sinBeta * l[legIdx].y));
 
-    legs[legIdx].servoAngle = InRange(asinf(gk / sqrtf(sqr(ek) + sqr(fk))) - atan2f(fk, ek), SERVO_ANGLE_MIN, SERVO_ANGLE_MAX);
+    angle = asinf(gk / sqrtf(sqr(ek) + sqr(fk))) - atan2f(fk, ek);
+    legs[legIdx].servoAngle = InRange(angle, SERVO_ANGLE_MIN, SERVO_ANGLE_MAX);
   }
 }
 
