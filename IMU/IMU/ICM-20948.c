@@ -185,7 +185,9 @@ void GPIOD_Handler(void) {
     euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
     HasNewIMUAngles = true;
 
-    snprintf(text, CLI_TXT_BUF, "Roll %0.1f, Pitch %0.1f, Yaw %0.1f\n", euler.angle.roll, euler.angle.pitch, euler.angle.yaw);
+    // snprintf(text, CLI_TXT_BUF, "Roll %0.1f, Pitch %0.1f, Yaw %0.1f\n", euler.angle.roll, euler.angle.pitch, euler.angle.yaw); // Simple
+    snprintf(text, CLI_TXT_BUF, "Orientation: %0.1f, %0.1f, %0.1f\n", euler.angle.roll, euler.angle.pitch,
+             euler.angle.yaw); // AdaFruit 3D Model Viewer
     CLI_Write(text);
   }
 }
