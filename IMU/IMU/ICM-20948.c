@@ -114,7 +114,7 @@ static FusionVector gyroscope = {
     .axis = {.x = 0.0f, .y = 0.0f, .z = 0.0f}
 };
 static FusionVector gyroscopeOffset = {
-    .axis = {.x = 0.0f, .y = -0.0f, .z = -0.0f}
+    .axis = {.x = 0.054f, .y = -0.022f, .z = -0.002f}
 };
 static FusionVector gyroscopeSensitivity = {
     .axis = {.x = 1.0f, .y = 1.0f, .z = 1.0f}
@@ -127,7 +127,7 @@ static FusionVector accelerometer = {
     .axis = {.x = 0.0f, .y = 0.0f, .z = 0.0f}
 };
 static FusionVector accelerometerOffset = {
-    .axis = {.x = 0.0f, .y = 0.0f, .z = 0.0f}
+    .axis = {.x = -0.050f, .y = 0.011f, .z = -1.191f}
 };
 static FusionVector accelerometerSensitivity = {
     .axis = {.x = 1.0f, .y = 1.0f, .z = 1.0f}
@@ -140,10 +140,10 @@ static FusionVector magnetometer = {
     .axis = {.x = 0.0f, .y = 0.0f, .z = 0.0f}
 };
 static FusionMatrix softIronMatrix = {
-    .array = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, -0.0f}, {0.0f, 0.0f, 1.0f}}
+    .array = {{0.921f, 0.006f, -0.002f}, {0.006f, 1.045f, +0.005f}, {-0.022f, 0.005f, 1.079f}}
 };
 static FusionVector hardIronOffset = {
-    .axis = {.x = 0.0f, .y = 0.0f, .z = 0.0f}
+    .axis = {.x = -15.11f, .y = -4.40f, .z = 51.48f}
 };
 
 void GPIOD_Handler(void) {
