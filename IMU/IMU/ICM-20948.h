@@ -91,3 +91,4 @@ typedef struct REG_ADDRESS_STRUCT {
 
 // MAG_ST1
 #define MAG_DATA_RDY 0x01
+#define MAG_DATA_OVRRUN 0x02

@@ -33,22 +33,16 @@
 #include "SysTick.h"
 #include "tm4c123gh6pm.h"
 
-#define INT_BIT      (unsigned)(1 << 6) // (PD6) Interrupt Pin
-#define INT_PCTL_M   (unsigned)GPIO_PCTL_PD6_M
-#define INT_PRIORITY 1
-
 #define READ(addr)        (uint16_t)(0x80FF | (addr << 8))
 #define WRITE(addr, data) (uint16_t)(0x7FFF & ((addr << 8) | data))
 
 static uint32_t  SYS_CLOCK;
 static USER_BANK LastUserBank = 0xFF;
 
-#define CLI_TXT_BUF 1000
-static char text[CLI_TXT_BUF] = "";
+char text[CLI_TXT_BUF] = "";
 
 void GPIOD_Handler(void);
 
-static void IMU_Config(void);
 static void IMU_ChangeUserBank(REG_ADDRESS REGISTER);
 static void IMU_Read(REG_ADDRESS REGISTER, uint8_t *dest);
 static void IMU_Write(REG_ADDRESS REGISTER, uint8_t data);
@@ -106,15 +100,16 @@ static const REG_ADDRESS I2C_SLV_CTRL_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS
 static const REG_ADDRESS I2C_SLV_DO_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x06};
 
 // Initialise algorithms
-#define SAMPLE_RATE 100 // Gyro Sample Rate of 100 Hz
+#define SAMPLE_RATE 1100 // Gyro Sample Rate of 50 Hz
 
+FusionAhrs   ahrs = {0};
+FusionOffset offset = {0};
+FusionEuler  euler = {0};
+
+volatile bool HasNewIMUAngles = false;
+
+volatile float           deltaTime = 0.0f;
 static volatile uint32_t lastTimestamp = 0;
-
-static FusionAhrs   ahrs;
-static FusionOffset offset;
-FusionEuler         euler;
-
-bool HasNewIMUAngles = false;
 
 #define SENSITIVITY(scale) scale / (1 << 15)
 static const float ACCEL_8G_SENSITIVITY = SENSITIVITY(8.0f);
@@ -123,89 +118,42 @@ static const float MAG_4912_SENSITIVITY = SENSITIVITY(4912.0f);
 static const float GYRO_250_SENSITIVITY = SENSITIVITY(250.0f);
 static const float GYRO_1000_SENSITIVITY = SENSITIVITY(1000.0f);
 
-static FusionVector gyroscope = {
+FusionVector rawGyroscope = {
     .axis = {.x = 0.0f, .y = 0.0f, .z = 0.0f}
 };
-static FusionVector gyroscopeOffset = {
-  // .axis = {.x = -1600.611f, .y = 669.281f, .z = 72.119f} // Original (250 dps)
-    .axis = {.x = -400.15275f, .y = 167.32025f, .z = 18.02975f}  // (Calculated in LSB 1000dps)
-};
-static FusionVector gyroscopeSensitivity = {
-    .axis = {.x = 1.0f, .y = 1.0f, .z = 1.0f}
-};
-static FusionMatrix gyroscopeMisalignment = {
-    .array = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}}
-};
-
-static FusionVector accelerometer = {
+FusionVector rawAccelerometer = {
     .axis = {.x = 0.0f, .y = 0.0f, .z = 0.0f}
 };
-static FusionVector accelerometerOffset = {
-  // .axis = {.x = 947.852f, .y = -413.173f,   .z = 15919.728f}  // Original (2G)
-    .axis = {.x = 236.963f, .y = -103.29325f, .z = 3979.932f}  // Original (8G)
-};
-static FusionVector accelerometerSensitivity = {
-    .axis = {.x = 1.0f, .y = 1.0f, .z = 1.0f}
-};
-static FusionMatrix accelerometerMisalignment = {
-    .array = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}}
-};
-
-static FusionVector magnetometer = {
+FusionVector rawMagnetometer = {
     .axis = {.x = 0.0f, .y = 0.0f, .z = 0.0f}
-};
-static FusionMatrix softIronMatrix = {
-    .array = {{0.988f, -0.005f, 0.001f}, {-0.005f, 0.997f, 0.006f}, {0.001f, 0.006f, 1.015f}}
-};
-static FusionVector hardIronOffset = {
-    .axis = {.x = -18.0f, .y = 6.54f, .z = -47.85f}
 };
 
 void GPIOD_Handler(void) {
-  uint8_t intStatus = 0;
-
-  float             deltaTime = 0.0f;
+  uint8_t           intStatus = 0;
   volatile uint32_t timestamp = ST_CURRENT_R;
 
-  // Ensure the interrupt is on the INT pin and is a DMP interrupt
-  if (GPIO_PORTD_MIS_R & INT_BIT) {
-    GPIO_PORTD_ICR_R |= INT_BIT; // Clear Interrupt
-    IMU_Read(INT_STATUS_1_ADDR, &intStatus);
+  GPIO_PORTD_ICR_R |= INT_BIT; // Clear Interrupt
 
-    if (!intStatus)
-      return;
+  IMU_Read(INT_STATUS_1_ADDR, &intStatus);
+  if (!intStatus)
+    return;
 
-    // Read sensor data
-    IMU_GetRawGyroReadings(&gyroscope);
-    IMU_GetRawAccelReadings(&accelerometer);
-    IMU_GetMagReadings(&magnetometer);
+  // Read sensor data
+  IMU_GetRawGyroReadings(&rawGyroscope);
+  IMU_GetRawAccelReadings(&rawAccelerometer);
+  IMU_GetMagReadings(&rawMagnetometer);
 
-    // Apply calibration
-    gyroscope = FusionCalibrationInertial(gyroscope, gyroscopeMisalignment, gyroscopeSensitivity, gyroscopeOffset);
-    accelerometer = FusionCalibrationInertial(accelerometer, accelerometerMisalignment, accelerometerSensitivity, accelerometerOffset);
-    magnetometer = FusionCalibrationMagnetic(magnetometer, softIronMatrix, hardIronOffset);
+  if (lastTimestamp == 0)
+    deltaTime = 0.0f; // Start of process
+  else if (lastTimestamp < timestamp)
+    deltaTime = ST_RELOAD_R - (timestamp - lastTimestamp); // Restarted at max reload value, so have to find ticks in reverse
+  else
+    deltaTime = lastTimestamp - timestamp; // Ticks since last interrupt
 
-    // Update gyroscope offset correction algorithm
-    gyroscope = FusionOffsetUpdate(&offset, gyroscope);
+  deltaTime /= (float)(SYS_CLOCK); // Calculate delta time (in seconds) to account for gyroscope sample clock error
+  lastTimestamp = timestamp;       // Update timestamp tracker
 
-    // Calculate delta time (in seconds) to account for gyroscope sample clock error
-    deltaTime = (float)(lastTimestamp - timestamp) / (float)SYS_CLOCK;
-    lastTimestamp = timestamp;
-
-    // Update gyroscope AHRS algorithm
-    FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, deltaTime);
-    // FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, 1.0f / SAMPLE_RATE);
-
-    // Calculate euler angles
-    euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
-    HasNewIMUAngles = true;
-
-    snprintf(text, CLI_TXT_BUF,                                   //
-             "Orientation: %0.1f,%0.1f,%0.1f\n",                  //
-             euler.angle.roll, euler.angle.pitch, euler.angle.yaw //
-    );                                                            // AdaFruit 3D Model Viewer
-    CLI_Write(text);
-  }
+  HasNewIMUAngles = true;
 }
 
 static void IMU_Interrupt_Init(void) {
@@ -225,55 +173,6 @@ static void IMU_Interrupt_Init(void) {
   NVIC_PRI0_R = (NVIC_PRI0_R & ~NVIC_PRI0_INT3_M) | (INT_PRIORITY << NVIC_PRI0_INT3_S); // Configure Port D's priority
   GPIO_PORTD_ICR_R |= INT_BIT;                                                          // Clear the INT pin's interrupt
   GPIO_PORTD_IM_R |= INT_BIT;                                                           // Allow the INT pin interrupt to be detected
-}
-
-static void IMU_Config(void) {
-  uint8_t whoAmI = 0;
-  uint8_t MAG_whoAmI = 0;
-  uint8_t userCtrl = 0;
-
-  IMU_Write(PWR_MGMT_1_ADDR, DEVICE_RESET | SLEEP_ENABLE); // Reset the device
-  IMU_Delay(101, -3);                                      // Wait atleast 100ms after device reset
-
-  IMU_Write(PWR_MGMT_1_ADDR, CLKSEL_AUTO | TEMP_ENABLE); // Disables Sleep, Low-Power Mode and Temp Sensor. Auto selects clk
-  IMU_Delay(40, -3);                                     // Wait atleast 35ms after waking from sleep
-
-  do {
-    IMU_Read(WHO_AM_I_ADDR, &whoAmI); // Read IMU Identifier
-  } while (whoAmI != 0xEA);
-
-  IMU_Write(PWR_MGMT_2_ADDR, (uint8_t) ~(ACCEL_DISABLE | GYRO_DISABLE)); // Enable the Accelerometer and Gyroscope
-  IMU_Delay(40, -3);                                                     // Wait atleast 35ms after enabling accel and gyro
-
-  IMU_Write(GYRO_CONFIG_1_ADDR, GYRO_FS_SEL_1000 | GYRO_DLPF_ENABLE); // Configure gyro scale to 1000dps and enable Low-pass filter
-  // Set sensitivity
-  gyroscopeSensitivity.axis.x = gyroscopeSensitivity.axis.y = gyroscopeSensitivity.axis.z = GYRO_1000_SENSITIVITY;
-
-  IMU_Write(ACCEL_CONFIG_ADDR, ACCEL_FS_SEL_8G | ACCEL_DLPF_ENABLE); // Configure accelerometer scale to 8G
-  // Set sensitivity
-  accelerometerSensitivity.axis.x = accelerometerSensitivity.axis.y = accelerometerSensitivity.axis.z = ACCEL_8G_SENSITIVITY;
-
-  IMU_Write(ODR_ALIGN_EN_ADDR, ODR_ALIGN_ENABLE); // Align output data rate
-  IMU_Write(GYRO_SMPLRT_DIV_ADDR, 0x0A);          // Configure for sample rate of 100Hz (1.1kHz / (1 + 10))
-  IMU_Write(ACCEL_SMPLRT_DIV_1_ADDR, 0x00);       // Configure for max sample rate of 100Hz (1.1kHz / (1 + 10))
-  IMU_Write(ACCEL_SMPLRT_DIV_2_ADDR, 0x0A);       // Configure for max sample rate of 100Hz (1.1kHz / (1 + 10))
-
-  IMU_Read(USER_CTRL_ADDR, &userCtrl);
-  IMU_Write(USER_CTRL_ADDR, (userCtrl | SPI_ENABLE) & ~(DMP_ENABLE | FIFO_ENABLE)); // Enable SPI
-
-  IMU_Mag_Init(); // Enable I2C master for Magnetometer read
-
-  do {
-    IMU_Mag_Read(MAG_WHO_AM_I, &MAG_whoAmI, 1); // Confirm communication success
-  } while (MAG_whoAmI != 0x09);
-
-  IMU_MagCalibration();       // Run Calibrations
-  IMU_AccelGyroCalibration(); // Will be empty functions if undesired
-
-  // Specify the Interrupt pin is push-pull and is an active high pin (falling edge interrupt)
-  // also forces the Interrupt to be cleared for the level to be reset and any Read operation to clear the INT_STATUS
-  IMU_Write(INT_PIN_CFG_ADDR, (INT_LATCH_MANUAL_CLEAR | INT_READ_CLEAR) & ~(INT_ACTIVE_LOW | INT_OPEN_DRAIN));
-  IMU_Write(INT_ENABLE_1_ADDR, RAW_DATA_INT_ENABLE); // Enable Raw Data interrupt
 }
 
 static void IMU_ChangeUserBank(REG_ADDRESS REGISTER) {
@@ -381,9 +280,9 @@ static void IMU_Delay(uint32_t inSeconds, int32_t powerOf10) {
 static void IMU_MadgwickFusion_Init(void) {
   const FusionAhrsSettings settings = {
       .convention = FusionConventionEnu,
-      .gain = 4.5f,
+      .gain = 1.5f,
       .gyroscopeRange = 1000, // gyroscope range in dps
-      .accelerationRejection = 5.0f,
+      .accelerationRejection = 10.0f,
       .magneticRejection = 5.0f,
       .recoveryTriggerPeriod = 5 * SAMPLE_RATE, /* 5 seconds */
   };
@@ -394,8 +293,8 @@ static void IMU_MadgwickFusion_Init(void) {
   FusionAhrsSetSettings(&ahrs, &settings);
 }
 
-// MotionCal uses 115200 Baud
 static void IMU_MagCalibration(void) {
+// MotionCal uses 115200 Baud
 #if (CALIBRATION_MODE == 5) || (CALIBRATION_MODE == 6)
   uint8_t      magStatus = 0;
   FusionVector magSample = {0};
@@ -420,7 +319,8 @@ static void IMU_MagCalibration(void) {
 #endif
 
     // Suggested to multiply by 10 for "Good Integer Value"
-    snprintf(text, 500, "Raw:0,0,0,0,0,0,%d,%d,%d\n\r", (int)(magSample.axis.x * 10), (int)(magSample.axis.y * 10), (int)(magSample.axis.z * 10));
+    snprintf(text, CLI_TXT_BUF, "Raw:0,0,0,0,0,0,%d,%d,%d\n\r", (int)(magSample.axis.x * 10), (int)(magSample.axis.y * 10),
+             (int)(magSample.axis.z * 10));
     CLI_Write(text);
 
     if (!(UART0_FR_R & UART_FR_RXFE)) {
@@ -433,20 +333,20 @@ static void IMU_MagCalibration(void) {
         // Don't care about the first 26 bytes (4 bytes per float number per axes, 3 axes, 2 sensors - Gyro & Accel )
         memcpy(offsets, calibrationData + 26, 10 * 4);
 
-        hardIronOffset.axis.x = offsets[0];
-        hardIronOffset.axis.y = offsets[1];
-        hardIronOffset.axis.z = offsets[2];
+        sampleHardIronOffset.axis.x = offsets[0];
+        sampleHardIronOffset.axis.y = offsets[1];
+        sampleHardIronOffset.axis.z = offsets[2];
 
         magField = offsets[3];
 
         // Diagonal of 3x3
-        softIronMatrix.element.xx = offsets[4];
-        softIronMatrix.element.yy = offsets[5];
-        softIronMatrix.element.zz = offsets[6];
+        sampleSoftIronMatrix.element.xx = offsets[4];
+        sampleSoftIronMatrix.element.yy = offsets[5];
+        sampleSoftIronMatrix.element.zz = offsets[6];
 
-        softIronMatrix.element.xy = softIronMatrix.element.yx = offsets[7];
-        softIronMatrix.element.xz = softIronMatrix.element.zx = offsets[8];
-        softIronMatrix.element.yz = softIronMatrix.element.zy = offsets[9];
+        sampleSoftIronMatrix.element.xy = sampleSoftIronMatrix.element.yx = offsets[7];
+        sampleSoftIronMatrix.element.xz = sampleSoftIronMatrix.element.zx = offsets[8];
+        sampleSoftIronMatrix.element.yz = sampleSoftIronMatrix.element.zy = offsets[9];
 
         while (1)
           ;
@@ -520,19 +420,7 @@ static void IMU_AccelGyroCalibration(void) {
 #endif
 }
 
-void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK) {
-  SYS_CLOCK = SYS_CLK;
-
-  SysTick_Init(); // Initialize SysTick
-
-  SPI3_Init(SYS_CLOCK, SSI_CLK, SSI_CR0_FRF_MOTO | SSI_CR0_SPO | SSI_CR0_SPH, SSI_CR0_DSS_16); // Initialize the SPI pins
-  IMU_Config();                                                                                // Configure the IMU configuration settings
-
-  IMU_MadgwickFusion_Init();
-  IMU_Interrupt_Init(); // Configure the Interrupt pin
-}
-
-void IMU_GetRawAccelReadings(FusionVector *dest) {
+static void IMU_GetRawAccelReadings(FusionVector *dest) {
   uint8_t accelXH = 0;
   uint8_t accelXL = 0;
   uint8_t accelYH = 0;
@@ -552,7 +440,7 @@ void IMU_GetRawAccelReadings(FusionVector *dest) {
   dest->axis.z = (int16_t)((accelZH << 8) | accelZL);
 }
 
-void IMU_GetRawGyroReadings(FusionVector *dest) {
+static void IMU_GetRawGyroReadings(FusionVector *dest) {
   uint8_t gyroXH = 0;
   uint8_t gyroXL = 0;
   uint8_t gyroYH = 0;
@@ -572,13 +460,13 @@ void IMU_GetRawGyroReadings(FusionVector *dest) {
   dest->axis.z = (int16_t)((gyroZH << 8) | gyroZL);
 }
 
-bool IMU_GetMagReadings(FusionVector *dest) {
+static bool IMU_GetMagReadings(FusionVector *dest) {
   uint8_t ST1 = 0;
   uint8_t magCoords[8] = {0};
 
   IMU_Mag_Read(MAG_ST1, &ST1, 1); // Get the status
 
-  if (ST1 == MAG_DATA_RDY) {
+  if (ST1 & MAG_DATA_RDY) {
     IMU_Delay(10, -6);
     IMU_Mag_Read(MAG_HXL, magCoords, 8); // Get the X,Y,Z bytes data and ST2 required for read end
 
@@ -587,9 +475,67 @@ bool IMU_GetMagReadings(FusionVector *dest) {
     dest->axis.z = (int16_t)((magCoords[5] << 8) | magCoords[4]) * MAG_4912_SENSITIVITY * -1;
 
     return true;
+  } else if (ST1 & MAG_DATA_OVRRUN) {
+    IMU_Mag_Read(MAG_ST2, &ST1, 1); // Read ST2
   }
 
   return false;
 
   // magCoords[7] = STATUS_2
+}
+
+void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, FusionVector *gyroSensitivity, FusionVector *accelSensitivity) {
+  uint8_t whoAmI = 0;
+  uint8_t MAG_whoAmI = 0;
+  uint8_t userCtrl = 0;
+
+  SYS_CLOCK = SYS_CLK;
+
+  SysTick_Init(); // Initialize SysTick
+
+  SPI3_Init(SYS_CLOCK, SSI_CLK, SSI_CR0_FRF_MOTO | SSI_CR0_SPO | SSI_CR0_SPH, SSI_CR0_DSS_16); // Initialize the SPI pins
+
+  IMU_Write(PWR_MGMT_1_ADDR, DEVICE_RESET | SLEEP_ENABLE); // Reset the device
+  IMU_Delay(101, -3);                                      // Wait atleast 100ms after device reset
+
+  IMU_Write(PWR_MGMT_1_ADDR, CLKSEL_AUTO | TEMP_ENABLE); // Disables Sleep, Low-Power Mode and Temp Sensor. Auto selects clk
+  IMU_Delay(40, -3);                                     // Wait atleast 35ms after waking from sleep
+
+  IMU_Write(PWR_MGMT_2_ADDR, (uint8_t) ~(ACCEL_DISABLE | GYRO_DISABLE)); // Enable the Accelerometer and Gyroscope
+  IMU_Delay(40, -3);                                                     // Wait atleast 35ms after enabling accel and gyro
+
+  IMU_Write(GYRO_CONFIG_1_ADDR, GYRO_FS_SEL_1000 | GYRO_DLPF_ENABLE); // Configure gyro scale to 1000dps and enable Low-pass filter
+  gyroSensitivity->axis.x = gyroSensitivity->axis.y = gyroSensitivity->axis.z = GYRO_1000_SENSITIVITY;
+
+  IMU_Write(ACCEL_CONFIG_ADDR, ACCEL_FS_SEL_8G | ACCEL_DLPF_ENABLE); // Configure accelerometer scale to 8G
+  accelSensitivity->axis.x = accelSensitivity->axis.y = accelSensitivity->axis.z = ACCEL_8G_SENSITIVITY;
+
+  IMU_Write(ODR_ALIGN_EN_ADDR, ODR_ALIGN_ENABLE); // Align output data rate
+  IMU_Write(GYRO_SMPLRT_DIV_ADDR, 0);             // Configure for sample rate of 50 Hz (1.1kHz / (1 + 21))
+  IMU_Write(ACCEL_SMPLRT_DIV_1_ADDR, 0x00);       // Configure for max sample rate of 50 Hz (1.1kHz / (1 + 21))
+  IMU_Write(ACCEL_SMPLRT_DIV_2_ADDR, 0);          // Configure for max sample rate of 50 Hz (1.1kHz / (1 + 21))
+
+  IMU_Read(USER_CTRL_ADDR, &userCtrl);
+  IMU_Write(USER_CTRL_ADDR, (userCtrl | SPI_ENABLE) & ~(DMP_ENABLE | FIFO_ENABLE)); // Enable SPI
+
+  IMU_Mag_Init(); // Enable I2C master for Magnetometer read
+
+  do {
+    IMU_Read(WHO_AM_I_ADDR, &whoAmI); // Read IMU Identifier
+  } while (whoAmI != 0xEA);
+
+  do {
+    IMU_Mag_Read(MAG_WHO_AM_I, &MAG_whoAmI, 1); // Confirm communication success
+  } while (MAG_whoAmI != 0x09);
+
+  IMU_MagCalibration();       // Run Calibrations
+  IMU_AccelGyroCalibration(); // Will be empty functions if undesired
+
+  // Specify the Interrupt pin is push-pull and is an active high pin (falling edge interrupt)
+  // also forces the Interrupt to be cleared for the level to be reset and any Read operation to clear the INT_STATUS
+  IMU_Write(INT_PIN_CFG_ADDR, INT_READ_CLEAR & ~(INT_ACTIVE_LOW | INT_OPEN_DRAIN | INT_LATCH_MANUAL_CLEAR));
+  IMU_Write(INT_ENABLE_1_ADDR, RAW_DATA_INT_ENABLE); // Enable Raw Data interrupt
+
+  IMU_MadgwickFusion_Init();
+  IMU_Interrupt_Init(); // Configure the Interrupt pin
 }
