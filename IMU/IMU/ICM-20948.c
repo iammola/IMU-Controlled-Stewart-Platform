@@ -573,20 +573,23 @@ void IMU_GetRawGyroReadings(FusionVector *dest) {
 }
 
 bool IMU_GetMagReadings(FusionVector *dest) {
-  uint8_t magCoords[9] = {0};
-  IMU_Mag_Read(MAG_ST1, magCoords, 9); // Get the X,Y,Z bytes data and ST2 required for read end
+  uint8_t ST1 = 0;
+  uint8_t magCoords[8] = {0};
 
-  // magCoords[0] = STATUS_1
+  IMU_Mag_Read(MAG_ST1, &ST1, 1); // Get the status
 
-  if (magCoords[0] == MAG_DATA_RDY) {
-    dest->axis.x = (int16_t)((magCoords[2] << 8) | magCoords[1]) * MAG_4912_SENSITIVITY;
-    dest->axis.y = (int16_t)((magCoords[4] << 8) | magCoords[3]) * MAG_4912_SENSITIVITY * -1;
-    dest->axis.z = (int16_t)((magCoords[6] << 8) | magCoords[5]) * MAG_4912_SENSITIVITY * -1;
+  if (ST1 == MAG_DATA_RDY) {
+    IMU_Delay(10, -6);
+    IMU_Mag_Read(MAG_HXL, magCoords, 8); // Get the X,Y,Z bytes data and ST2 required for read end
+
+    dest->axis.x = (int16_t)((magCoords[1] << 8) | magCoords[0]) * MAG_4912_SENSITIVITY;
+    dest->axis.y = (int16_t)((magCoords[3] << 8) | magCoords[2]) * MAG_4912_SENSITIVITY * -1;
+    dest->axis.z = (int16_t)((magCoords[5] << 8) | magCoords[4]) * MAG_4912_SENSITIVITY * -1;
 
     return true;
   }
 
   return false;
 
-  // magCoords[8] = STATUS_2
+  // magCoords[7] = STATUS_2
 }

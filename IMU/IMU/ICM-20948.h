@@ -78,6 +78,7 @@ typedef struct REG_ADDRESS_STRUCT {
 // MAG ADDRESSES
 #define MAG_WHO_AM_I 0x01
 #define MAG_ST1      0x10
+#define MAG_HXL      0x11
 #define MAG_ST2      0x18
 #define MAG_CNTL2    0x31
 #define MAG_CNTL3    0x32
