@@ -63,15 +63,6 @@ typedef struct REG_ADDRESS_STRUCT {
 #define ACCEL_FS_SEL_8G   (2 << 1)
 #define ACCEL_DLPF_246Hz  (0 << 3)
 
-// MAG_CNTL3
-#define MAG_RESET 0x01
-
-// MAG_CNTL2
-#define MAG_CONT_MODE_4 0x08
-
-// MAG_ST1
-#define MAG_DATA_RDY 0x01
-
 // INT_ENABLE_1
 #define RAW_DATA_INT_ENABLE 0x01
 
@@ -83,3 +74,19 @@ typedef struct REG_ADDRESS_STRUCT {
 
 // ODR_ALIGN_EN
 #define ODR_ALIGN_ENABLE 0x01
+
+// MAG ADDRESSES
+#define MAG_WHO_AM_I 0x01
+#define MAG_ST1      0x10
+#define MAG_ST2      0x18
+#define MAG_CNTL2    0x31
+#define MAG_CNTL3    0x32
+
+// MAG_CNTL3
+#define MAG_RESET 0x01
+
+// MAG_CNTL2
+#define MAG_CONT_MODE_4 0x08
+
+// MAG_ST1
+#define MAG_DATA_RDY 0x01

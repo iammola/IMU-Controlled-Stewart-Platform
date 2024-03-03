@@ -1,3 +1,26 @@
+//-------- <<< Use Configuration Wizard in Context Menu >>> ------------------
+//
+// This file can be used by the Keil uVision configuration wizard to set
+// the following system clock configuration values.  Or the value of the
+// macros can be directly edited below if not using the uVision configuration
+// wizard.
+//
+//--------------------- Clock Configuration ----------------------------------
+
+//      <o> CAL: Calibration
+//              < 0=>  0: Off
+//              < 1=>  1: Accelerometer
+//              < 2=>  2: Accelerometer Test
+//              < 3=>  3: Gyroscope
+//              < 4=>  4: Gyroscope Test
+//              < 5=>  5: Magnetometer
+//              < 6=>  6: Magnetometer Test
+//          <i> The calibration state to put the IMU in
+//
+#define CALIBRATION_MODE 0
+
+//-------- <<< end of configuration section >>> ------------------------------
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -20,7 +43,7 @@
 static uint32_t  SYS_CLOCK;
 static USER_BANK LastUserBank = 0xFF;
 
-#define CLI_TXT_BUF 500
+#define CLI_TXT_BUF 1000
 static char text[CLI_TXT_BUF] = "";
 
 void GPIOD_Handler(void);
@@ -31,25 +54,16 @@ static void IMU_Read(REG_ADDRESS REGISTER, uint8_t *dest);
 static void IMU_Write(REG_ADDRESS REGISTER, uint8_t data);
 static void IMU_Delay(uint32_t inSeconds, int32_t powerOf10);
 
-#if defined(MAG_CALIBRATE)
 static void IMU_MagCalibration(void);
-#elif defined(ACCEL_GYRO_CALIBRATE)
 static void IMU_AccelGyroCalibration(void);
-#endif
 
 static void IMU_Mag_Init(void);
 static void IMU_Mag_Write(uint8_t MAG_ADDRESS, uint8_t data);
 static void IMU_Mag_Read(uint8_t MAG_ADDRESS, uint8_t *dest, uint8_t length);
 
-static void IMU_GetMagReadings(FusionVector *dest);
+static bool IMU_GetMagReadings(FusionVector *dest);
 static void IMU_GetRawGyroReadings(FusionVector *dest);
 static void IMU_GetRawAccelReadings(FusionVector *dest);
-
-#define MAG_WHO_AM_I 0x01
-#define MAG_HXL      0x11
-#define MAG_ST2      0x18
-#define MAG_CNTL2    0x31
-#define MAG_CNTL3    0x32
 
 static const REG_ADDRESS WHO_AM_I_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x00};
 static const REG_ADDRESS USER_CTRL_ADDR = {.USER_BANK = USER_BANK_0, .ADDRESS = 0x03};
@@ -92,7 +106,7 @@ static const REG_ADDRESS I2C_SLV_CTRL_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS
 static const REG_ADDRESS I2C_SLV_DO_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x06};
 
 // Initialise algorithms
-#define SAMPLE_RATE 1100 // Gyro Sample Rate of 1.1kHz
+#define SAMPLE_RATE 100 // Gyro Sample Rate of 100 Hz
 
 static volatile uint32_t lastTimestamp = 0;
 
@@ -102,18 +116,19 @@ FusionEuler         euler;
 
 bool HasNewIMUAngles = false;
 
-#define SENSITIVITY(scale, unitRate) ((float)scale * (float)unitRate) / (1 << 15)
-static const float ACCEL_8G_SENSITIVITY = SENSITIVITY(8, 9.81f);
-static const float ACCEL_2G_SENSITIVITY = SENSITIVITY(2.0f, 9.81f);
-static const float MAG_4912_SENSITIVITY = SENSITIVITY(4912.0f, 1.0f);
-static const float GYRO_250_SENSITIVITY = SENSITIVITY(250.0f, M_PI / 180);
-static const float GYRO_1000_SENSITIVITY = SENSITIVITY(1000.0f, M_PI / 180);
+#define SENSITIVITY(scale) scale / (1 << 15)
+static const float ACCEL_8G_SENSITIVITY = SENSITIVITY(8.0f);
+static const float ACCEL_2G_SENSITIVITY = SENSITIVITY(2.0f);
+static const float MAG_4912_SENSITIVITY = SENSITIVITY(4912.0f);
+static const float GYRO_250_SENSITIVITY = SENSITIVITY(250.0f);
+static const float GYRO_1000_SENSITIVITY = SENSITIVITY(1000.0f);
 
 static FusionVector gyroscope = {
     .axis = {.x = 0.0f, .y = 0.0f, .z = 0.0f}
 };
 static FusionVector gyroscopeOffset = {
-    .axis = {.x = 0.054f, .y = -0.022f, .z = -0.002f}
+  // .axis = {.x = -1600.611f, .y = 669.281f, .z = 72.119f} // Original (250 dps)
+    .axis = {.x = -400.15275f, .y = 167.32025f, .z = 18.02975f}  // (Calculated in LSB 1000dps)
 };
 static FusionVector gyroscopeSensitivity = {
     .axis = {.x = 1.0f, .y = 1.0f, .z = 1.0f}
@@ -126,7 +141,8 @@ static FusionVector accelerometer = {
     .axis = {.x = 0.0f, .y = 0.0f, .z = 0.0f}
 };
 static FusionVector accelerometerOffset = {
-    .axis = {.x = -0.050f, .y = 0.011f, .z = -1.191f}
+  // .axis = {.x = 947.852f, .y = -413.173f,   .z = 15919.728f}  // Original (2G)
+    .axis = {.x = 236.963f, .y = -103.29325f, .z = 3979.932f}  // Original (8G)
 };
 static FusionVector accelerometerSensitivity = {
     .axis = {.x = 1.0f, .y = 1.0f, .z = 1.0f}
@@ -139,27 +155,25 @@ static FusionVector magnetometer = {
     .axis = {.x = 0.0f, .y = 0.0f, .z = 0.0f}
 };
 static FusionMatrix softIronMatrix = {
-    .array = {{0.921f, 0.006f, -0.002f}, {0.006f, 1.045f, +0.005f}, {-0.022f, 0.005f, 1.079f}}
+    .array = {{0.988f, -0.005f, 0.001f}, {-0.005f, 0.997f, 0.006f}, {0.001f, 0.006f, 1.015f}}
 };
 static FusionVector hardIronOffset = {
-    .axis = {.x = -15.11f, .y = -4.40f, .z = 51.48f}
+    .axis = {.x = -18.0f, .y = 6.54f, .z = -47.85f}
 };
 
 void GPIOD_Handler(void) {
   uint8_t intStatus = 0;
 
   float             deltaTime = 0.0f;
-  volatile uint32_t timestamp = 0;
+  volatile uint32_t timestamp = ST_CURRENT_R;
 
   // Ensure the interrupt is on the INT pin and is a DMP interrupt
   if (GPIO_PORTD_MIS_R & INT_BIT) {
     GPIO_PORTD_ICR_R |= INT_BIT; // Clear Interrupt
     IMU_Read(INT_STATUS_1_ADDR, &intStatus);
 
-    if (!intStatus /* || HasNewIMUAngles */)
+    if (!intStatus)
       return;
-
-    timestamp = ST_CURRENT_R;
 
     // Read sensor data
     IMU_GetRawGyroReadings(&gyroscope);
@@ -179,15 +193,17 @@ void GPIOD_Handler(void) {
     lastTimestamp = timestamp;
 
     // Update gyroscope AHRS algorithm
-    FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, (float)deltaTime);
+    FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, deltaTime);
+    // FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, 1.0f / SAMPLE_RATE);
 
     // Calculate euler angles
     euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
     HasNewIMUAngles = true;
 
-    // snprintf(text, CLI_TXT_BUF, "Roll %0.1f, Pitch %0.1f, Yaw %0.1f\n", euler.angle.roll, euler.angle.pitch, euler.angle.yaw); // Simple
-    snprintf(text, CLI_TXT_BUF, "Orientation: %0.1f, %0.1f, %0.1f\n", euler.angle.roll, euler.angle.pitch,
-             euler.angle.yaw); // AdaFruit 3D Model Viewer
+    snprintf(text, CLI_TXT_BUF,                                   //
+             "Orientation: %0.1f,%0.1f,%0.1f\n",                  //
+             euler.angle.roll, euler.angle.pitch, euler.angle.yaw //
+    );                                                            // AdaFruit 3D Model Viewer
     CLI_Write(text);
   }
 }
@@ -238,9 +254,9 @@ static void IMU_Config(void) {
   accelerometerSensitivity.axis.x = accelerometerSensitivity.axis.y = accelerometerSensitivity.axis.z = ACCEL_8G_SENSITIVITY;
 
   IMU_Write(ODR_ALIGN_EN_ADDR, ODR_ALIGN_ENABLE); // Align output data rate
-  IMU_Write(GYRO_SMPLRT_DIV_ADDR, 0x00);          // Configure for max sample rate of 1.1kHz (1.1kHz / (1 + 0))
-  IMU_Write(ACCEL_SMPLRT_DIV_1_ADDR, 0x00);       // Configure for max sample rate of 1.1kHz (1.1kHz / (1 + 0))
-  IMU_Write(ACCEL_SMPLRT_DIV_2_ADDR, 0x00);       // Configure for max sample rate of 1.1kHz (1.1kHz / (1 + 0))
+  IMU_Write(GYRO_SMPLRT_DIV_ADDR, 0x0A);          // Configure for sample rate of 100Hz (1.1kHz / (1 + 10))
+  IMU_Write(ACCEL_SMPLRT_DIV_1_ADDR, 0x00);       // Configure for max sample rate of 100Hz (1.1kHz / (1 + 10))
+  IMU_Write(ACCEL_SMPLRT_DIV_2_ADDR, 0x0A);       // Configure for max sample rate of 100Hz (1.1kHz / (1 + 10))
 
   IMU_Read(USER_CTRL_ADDR, &userCtrl);
   IMU_Write(USER_CTRL_ADDR, (userCtrl | SPI_ENABLE) & ~(DMP_ENABLE | FIFO_ENABLE)); // Enable SPI
@@ -251,15 +267,8 @@ static void IMU_Config(void) {
     IMU_Mag_Read(MAG_WHO_AM_I, &MAG_whoAmI, 1); // Confirm communication success
   } while (MAG_whoAmI != 0x09);
 
-#if defined(MAG_CALIBRATE)
-  IMU_MagCalibration();
-  while (1)
-    ;
-#elif defined(ACCEL_GYRO_CALIBRATE)
-  IMU_AccelGyroCalibration();
-  while (1)
-    ;
-#endif
+  IMU_MagCalibration();       // Run Calibrations
+  IMU_AccelGyroCalibration(); // Will be empty functions if undesired
 
   // Specify the Interrupt pin is push-pull and is an active high pin (falling edge interrupt)
   // also forces the Interrupt to be cleared for the level to be reset and any Read operation to clear the INT_STATUS
@@ -342,15 +351,13 @@ static void IMU_Mag_Read(uint8_t MAG_ADDRESS, uint8_t *dest, uint8_t length) {
   IMU_Write(I2C_SLV_REG_ADDR, MAG_ADDRESS);             // Set Magnetometer to start read from desired register
   IMU_Write(I2C_SLV_CTRL_ADDR, 0x80 | length);          // Allow transmission for x bytes of data
 
-  IMU_Delay(250, -6); // Wait at least 250us
+  IMU_Delay(10, -6); // Wait 10 us
 
   for (dataIdx = 0; dataIdx < length; dataIdx++) {
     IMU_Read(EXT_REG, dest); // Read data
     EXT_REG.ADDRESS++;
     dest++;
   }
-
-  IMU_Write(I2C_SLV_CTRL_ADDR, 0x00); // Stop transmission
 }
 
 static void IMU_Mag_Write(uint8_t MAG_ADDRESS, uint8_t data) {
@@ -387,10 +394,17 @@ static void IMU_MadgwickFusion_Init(void) {
   FusionAhrsSetSettings(&ahrs, &settings);
 }
 
-#if defined(MAG_CALIBRATE)
+// MotionCal uses 115200 Baud
 static void IMU_MagCalibration(void) {
+#if (CALIBRATION_MODE == 5) || (CALIBRATION_MODE == 6)
   uint8_t      magStatus = 0;
   FusionVector magSample = {0};
+  FusionMatrix sampleSoftIronMatrix = {
+      .array = {{1.f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}}
+  };
+  FusionVector sampleHardIronOffset = {
+      .axis = {.x = 0.0f, .y = 0.0f, .z = 0.0f}
+  };
 
   uint8_t calibrationDataIdx = 0;
   uint8_t calibrationData[68] = {0};
@@ -399,13 +413,11 @@ static void IMU_MagCalibration(void) {
   float offsets[10] = {0};
 
   while (1) {
-    do {
-      IMU_Mag_Read(MAG_HXL - 1, &magStatus, 1);
-    } while (magStatus == 0);
-
-    IMU_GetMagReadings(&magSample);
-    // Uncomment if calibrated to test set calibration offsets
-    // magSample = FusionCalibrationMagnetic(magSample, softIronMatrix, hardIronOffset);
+    if (!IMU_GetMagReadings(&magSample))
+      continue;
+#if CALIBRATION_MODE == 6
+    magSample = FusionCalibrationMagnetic(magSample, sampleSoftIronMatrix, sampleHardIronOffset);
+#endif
 
     // Suggested to multiply by 10 for "Good Integer Value"
     snprintf(text, 500, "Raw:0,0,0,0,0,0,%d,%d,%d\n\r", (int)(magSample.axis.x * 10), (int)(magSample.axis.y * 10), (int)(magSample.axis.z * 10));
@@ -435,67 +447,78 @@ static void IMU_MagCalibration(void) {
         softIronMatrix.element.xy = softIronMatrix.element.yx = offsets[7];
         softIronMatrix.element.xz = softIronMatrix.element.zx = offsets[8];
         softIronMatrix.element.yz = softIronMatrix.element.zy = offsets[9];
+
+        while (1)
+          ;
       }
     }
   }
+#endif
 }
-#elif defined(ACCEL_GYRO_CALIBRATE)
+
 static void IMU_AccelGyroCalibration(void) {
+#if (CALIBRATION_MODE > 0) && (CALIBRATION_MODE < 5)
   const int32_t SAMPLES_COUNT = 1e4;
 
-  FusionVector lastSample = {0};
-  uint32_t     SAMPLES_LEFT = 0;
+  FusionVector sample = {
+      .axis = {.x = 0.0f, .y = 0.0f, .z = 0.0f}
+  };
+  FusionVector totalSamples = {
+      .axis = {.x = 0.0f, .y = 0.0f, .z = 0.0f}
+  };
+  FusionVector sampleOffset = {
+      .axis = {.x = 0.0f, .y = 0.0f, .z = 0.0f}
+  };
+  FusionVector sampleSensitivity = {
+      .axis = {.x = 1.0f, .y = 1.0f, .z = 1.0f}
+  };
+  FusionMatrix sampleMisalignment = {
+      .array = {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}}
+  };
+  uint32_t SAMPLES_LEFT = 0;
 
-  IMU_Write(GYRO_CONFIG_1_ADDR, GYRO_DLPF_12HZ | GYRO_FS_SEL_250 | GYRO_DLPF_ENABLE);   // Most sensitive scale 250dps, 200Hz BW
-  IMU_Write(ACCEL_CONFIG_ADDR, ACCEL_DLPF_246Hz | ACCEL_FS_SEL_2G | ACCEL_DLPF_ENABLE); // Most sensitive range 2G full scale, 246Hz BW
-
-  for (SAMPLES_LEFT = SAMPLES_COUNT; SAMPLES_LEFT > 0; SAMPLES_LEFT--) {
-    IMU_GetRawGyroReadings(&lastSample);
-    lastSample.axis.x *= GYRO_250_SENSITIVITY;
-    lastSample.axis.y *= GYRO_250_SENSITIVITY;
-    lastSample.axis.z *= GYRO_250_SENSITIVITY;
-
-    gyroscopeOffset.axis.x += lastSample.axis.x;
-    gyroscopeOffset.axis.y += lastSample.axis.y;
-    gyroscopeOffset.axis.z += lastSample.axis.z;
-
-    snprintf(text, CLI_TXT_BUF, "X= %0.3f, Y=%0.3f, Z=%0.3f\n", lastSample.axis.x, lastSample.axis.y, lastSample.axis.z);
-    CLI_Write(text);
-  }
-
-  // Get average of samples and after using 250dps sensitivity, need to divide by 4 to get the 1000 dps for storing.
-  gyroscopeOffset.axis.x /= (SAMPLES_COUNT * -4);
-  gyroscopeOffset.axis.y /= (SAMPLES_COUNT * -4);
-  gyroscopeOffset.axis.z /= (SAMPLES_COUNT * -4);
-
-  snprintf(text, CLI_TXT_BUF, "Gyro Measurement finished.\nX = %0.3f\nY = %0.3f\nZ = %0.3f\n", gyroscopeOffset.axis.x, gyroscopeOffset.axis.y,
-           gyroscopeOffset.axis.z);
-  CLI_Write(text);
-
-  for (SAMPLES_LEFT = SAMPLES_COUNT; SAMPLES_LEFT > 0; SAMPLES_LEFT--) {
-    IMU_GetRawAccelReadings(&lastSample);
-    lastSample.axis.x *= ACCEL_2G_SENSITIVITY;
-    lastSample.axis.y *= ACCEL_2G_SENSITIVITY;
-    lastSample.axis.z *= ACCEL_2G_SENSITIVITY;
-
-    accelerometerOffset.axis.x += lastSample.axis.x;
-    accelerometerOffset.axis.y += lastSample.axis.y;
-    accelerometerOffset.axis.z += lastSample.axis.z;
-
-    snprintf(text, CLI_TXT_BUF, "X= %0.3f, Y= %0.3f, Z= %0.3f\n", lastSample.axis.x, lastSample.axis.y, lastSample.axis.z);
-    CLI_Write(text);
-  }
-
-  // Get average of samples and after using 2G sensitivity, need to divide by 8 to get the 16G full scale for storing.
-  accelerometerOffset.axis.x /= (-8 * SAMPLES_COUNT);
-  accelerometerOffset.axis.y /= (-8 * SAMPLES_COUNT);
-  accelerometerOffset.axis.z /= (-8 * SAMPLES_COUNT);
-
-  snprintf(text, CLI_TXT_BUF, "Accel Measurement finished.\nX= %0.3f\nY = %0.3f\nZ = %0.3f\n", accelerometerOffset.axis.x, accelerometerOffset.axis.y,
-           accelerometerOffset.axis.z);
-  CLI_Write(text);
-}
+#if (CALIBRATION_MODE == 3) || (CALIBRATION_MODE == 1)
+  // Reset offset if not in test mode, for new calibration values
+  sampleOffset.axis.x = sampleOffset.axis.y = sampleOffset.axis.z = 0;
 #endif
+
+#if (CALIBRATION_MODE == 3) || (CALIBRATION_MODE == 4)
+  IMU_Write(GYRO_CONFIG_1_ADDR, GYRO_DLPF_12HZ | GYRO_FS_SEL_250 | GYRO_DLPF_ENABLE); // Most sensitive scale 250dps, 200Hz BW
+  sampleSensitivity.axis.x = sampleSensitivity.axis.y = sampleSensitivity.axis.z = GYRO_250_SENSITIVITY;
+#elif (CALIBRATION_MODE == 1) || (CALIBRATION_MODE == 2)
+  IMU_Write(ACCEL_CONFIG_ADDR, ACCEL_DLPF_246Hz | ACCEL_FS_SEL_2G | ACCEL_DLPF_ENABLE); // Most sensitive range 2G full scale, 246Hz BW
+  sampleSensitivity.axis.x = sampleSensitivity.axis.y = sampleSensitivity.axis.z = ACCEL_2G_SENSITIVITY;
+#endif
+
+  for (SAMPLES_LEFT = SAMPLES_COUNT; SAMPLES_LEFT > 0; SAMPLES_LEFT--) {
+#if (CALIBRATION_MODE == 3) || (CALIBRATION_MODE == 4)
+    IMU_GetRawGyroReadings(&sample);
+#elif (CALIBRATION_MODE == 1) || (CALIBRATION_MODE == 2)
+    IMU_GetRawAccelReadings(&sample);
+#endif
+    sample = FusionCalibrationInertial(sample, sampleMisalignment, sampleSensitivity, sampleOffset);
+
+    totalSamples.axis.x += sample.axis.x;
+    totalSamples.axis.y += sample.axis.y;
+    totalSamples.axis.z += sample.axis.z;
+
+    snprintf(text, CLI_TXT_BUF, "X= %0.3f, Y=%0.3f, Z=%0.3f\n", sample.axis.x, sample.axis.y, sample.axis.z);
+    CLI_Write(text);
+  }
+
+  // Normalize
+  totalSamples.axis.x /= (SAMPLES_COUNT * sampleSensitivity.axis.x);
+  totalSamples.axis.y /= (SAMPLES_COUNT * sampleSensitivity.axis.y);
+  totalSamples.axis.z /= (SAMPLES_COUNT * sampleSensitivity.axis.z);
+
+  snprintf(text, CLI_TXT_BUF, "\nMeasurement finished.\nX= %0.3f\nY = %0.3f\nZ = %0.3f\n", totalSamples.axis.x, totalSamples.axis.y,
+           totalSamples.axis.z);
+  CLI_Write(text);
+
+  while (1)
+    ;
+#endif
+}
 
 void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK) {
   SYS_CLOCK = SYS_CLK;
@@ -549,14 +572,21 @@ void IMU_GetRawGyroReadings(FusionVector *dest) {
   dest->axis.z = (int16_t)((gyroZH << 8) | gyroZL);
 }
 
-void IMU_GetMagReadings(FusionVector *dest) {
-  uint8_t ST2 = 0;
-  uint8_t magCoords[6] = {0};
+bool IMU_GetMagReadings(FusionVector *dest) {
+  uint8_t magCoords[9] = {0};
+  IMU_Mag_Read(MAG_ST1, magCoords, 9); // Get the X,Y,Z bytes data and ST2 required for read end
 
-  IMU_Mag_Read(MAG_HXL, magCoords, 6); // Get the X,Y,Z bytes data
-  IMU_Mag_Read(MAG_ST2, &ST2, 1);      // ST2 is required to be read to denote end
+  // magCoords[0] = STATUS_1
 
-  dest->axis.x = (int16_t)((magCoords[1] << 8) | magCoords[0]) * MAG_4912_SENSITIVITY;
-  dest->axis.y = (int16_t)((magCoords[3] << 8) | magCoords[2]) * MAG_4912_SENSITIVITY;
-  dest->axis.z = (int16_t)((magCoords[5] << 8) | magCoords[4]) * MAG_4912_SENSITIVITY;
+  if (magCoords[0] == MAG_DATA_RDY) {
+    dest->axis.x = (int16_t)((magCoords[2] << 8) | magCoords[1]) * MAG_4912_SENSITIVITY;
+    dest->axis.y = (int16_t)((magCoords[4] << 8) | magCoords[3]) * MAG_4912_SENSITIVITY * -1;
+    dest->axis.z = (int16_t)((magCoords[6] << 8) | magCoords[5]) * MAG_4912_SENSITIVITY * -1;
+
+    return true;
+  }
+
+  return false;
+
+  // magCoords[8] = STATUS_2
 }
