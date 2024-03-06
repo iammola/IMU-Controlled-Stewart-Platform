@@ -37,9 +37,10 @@
 void SysTick_Init(void);
 
 // Time delay using busy wait.
-// The delay parameter is in units of the core clock. (units of 20 nsec for 50 MHz clock)
+// The delay parameter is in units of the core clock. (units of 12.5 ns for 80 MHz clock)
 void SysTick_Wait(uint32_t delay);
 
 // Time delay using busy wait.
-// This assumes 50 MHz system clock.
 void SysTick_Wait10ms(uint32_t delay);
+
+void SysTick_WaitCustom(uint32_t inSeconds, int32_t powerOf10);

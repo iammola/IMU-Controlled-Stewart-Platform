@@ -4,10 +4,10 @@
 
 #include "SPI.h"
 
-#define SSI0_CLK_BIT (1 << 0) // (PA2) SSI0CLK
-#define SSI0_FSS_BIT (1 << 1) // (PA3) SSI0FSS (Chip Select)
-#define SSI0_RX_BIT  (1 << 2) // (PA4) SSI0Rx
-#define SSI0_TX_BIT  (1 << 3) // (PA5) SSI0Tx
+#define SSI0_CLK_BIT (1 << 2) // (PA2) SSI0CLK
+#define SSI0_FSS_BIT (1 << 3) // (PA3) SSI0FSS (Chip Select)
+#define SSI0_RX_BIT  (1 << 4) // (PA4) SSI0Rx
+#define SSI0_TX_BIT  (1 << 5) // (PA5) SSI0Tx
 
 #define SSI0_PINS      (unsigned)(SSI0_CLK_BIT | SSI0_FSS_BIT | SSI0_RX_BIT | SSI0_TX_BIT)
 #define SSI0_PCTL      (unsigned)(GPIO_PCTL_PA2_SSI0CLK | GPIO_PCTL_PA3_SSI0FSS | GPIO_PCTL_PA4_SSI0RX | GPIO_PCTL_PA5_SSI0TX)
@@ -31,19 +31,19 @@ void SPI0_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, uint8_t frameConfig, uint8_t 
   uint32_t ssiCPSR = 0;
   uint32_t maxBitRate = SYS_CLK / SSI_CLK;
 
-  SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R3; // Enable Port D clock
-  SYSCTL_RCGCSSI_R |= SYSCTL_RCGCSSI_R3;   // Enable SSI module 3 clock
+  SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R0; // Enable Port A clock
+  SYSCTL_RCGCSSI_R |= SYSCTL_RCGCSSI_R0;   // Enable SSI module 3 clock
 
-  GPIO_PORTD_AFSEL_R |= SSI0_PINS;                                                                // Enable Alternate Functions on all pins
-  GPIO_PORTD_PCTL_R = (GPIO_PORTD_PCTL_R & ~SSI0_PCTL_MASK) | SSI0_PCTL;                          // Enable SSI module 3 peripheral functions
-  GPIO_PORTD_DIR_R = (GPIO_PORTD_DIR_R & ~SSI0_PINS) | SSI0_CLK_BIT | SSI0_TX_BIT | SSI0_FSS_BIT; // Configure CLK, TX, and FSS as outputs
-  GPIO_PORTD_DEN_R |= SSI0_PINS;                                                                  // Enable Digital Mode on pins
-  GPIO_PORTD_AMSEL_R &= ~SSI0_PINS;                                                               // Disable Analog Mode on pins
+  GPIO_PORTA_AFSEL_R |= SSI0_PINS;                                                                // Enable Alternate Functions on all pins
+  GPIO_PORTA_PCTL_R = (GPIO_PORTA_PCTL_R & ~SSI0_PCTL_MASK) | SSI0_PCTL;                          // Enable SSI module 3 peripheral functions
+  GPIO_PORTA_DIR_R = (GPIO_PORTA_DIR_R & ~SSI0_PINS) | SSI0_CLK_BIT | SSI0_TX_BIT | SSI0_FSS_BIT; // Configure CLK, TX, and FSS as outputs
+  GPIO_PORTA_DEN_R |= SSI0_PINS;                                                                  // Enable Digital Mode on pins
+  GPIO_PORTA_AMSEL_R &= ~SSI0_PINS;                                                               // Disable Analog Mode on pins
 
   if (frameConfig & SSI_CR0_SPO)
-    GPIO_PORTD_PUR_R |= SSI0_CLK_BIT; // Enable Pull-Up on Clock pin so is driven high when idle
+    GPIO_PORTA_PUR_R |= SSI0_CLK_BIT; // Enable Pull-Up on Clock pin so is driven high when idle
   else
-    GPIO_PORTD_PDR_R |= SSI0_CLK_BIT; // Enable Pull-Down on Clock pin so is driven low when idle
+    GPIO_PORTA_PDR_R |= SSI0_CLK_BIT; // Enable Pull-Down on Clock pin so is driven low when idle
 
   SSI0_CR1_R &= (unsigned)~SSI_CR1_SSE; // Disable SSI
   SSI0_CR0_R &= (unsigned)~SSI_CR1_MS;  // Enable Master mode
@@ -75,7 +75,7 @@ void SPI0_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, uint8_t frameConfig, uint8_t 
   SSI0_FSS_ADDR = SSI0_FSS_BIT;
 }
 
-void SPI0_Read(uint16_t initData, uint16_t *result, uint8_t length) {
+void SPI0_Read(uint16_t initData, uint16_t *result, uint32_t length) {
   uint32_t __stale = 0;
 
   // Start transmission
@@ -102,7 +102,7 @@ void SPI0_Read(uint16_t initData, uint16_t *result, uint8_t length) {
   }
 }
 
-void SPI0_Write(uint16_t *data, uint8_t length) {
+void SPI0_Write(uint16_t *data, uint32_t length) {
   while (length > 0) {
     WAIT_FOR_TX_SPACE() // Prevent setting data in full TX FIFO
 

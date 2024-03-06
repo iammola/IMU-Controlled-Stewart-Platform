@@ -41,15 +41,17 @@
 #include <string.h>
 
 #include "RA8875.h"
+#include "SysTick.h"
 #include "tm4c123gh6pm.h"
 
 #include "SPI/SPI.h"
 
-#define RST_PIN    (1 << 6) // PA6
+#define RST_PIN    (unsigned)(1 << 6) // PA6
+#define RST_PCTL_M (unsigned)(GPIO_PCTL_PA6_M)
 #define RST_ADDR   (*((volatile uint32_t *)(0x40004000 | (RST_PIN << 2))))
-#define RST_PCTL_M (GPIO_PCTL_PA6_M)
 
-uint32_t spi_speed = 12e6; /*!< 12MHz */
+// Seems to be the closest max
+static const uint32_t spi_speed = 5e6; /*!< 5MHz */
 
 static void RA8875_PLLinit(void);
 static void RA8875_initialize(void);
@@ -67,12 +69,6 @@ static int16_t RA8875_applyRotationX(int16_t x);
 static int16_t RA8875_applyRotationY(int16_t y);
 
 static void swap(int16_t *x, int16_t *y);
-
-static void delay(uint32_t ticks) {
-  while (ticks > 0) {
-    --ticks;
-  }
-}
 
 /**************************************************************************/
 /*!
@@ -107,8 +103,9 @@ bool RA8875_begin(uint32_t SYS_CLOCK, enum RA8875sizes s) {
   }
   _rotation = 0;
 
+  SysTick_Init();
   // Arduino SPI_MODE0 with LOW idle clock and RISING edge Data capture
-  SPI0_Init(SYS_CLOCK, spi_speed, SSI_CR0_FRF_MOTO | SSI_CR0_SPO | SSI_CR0_SPH, SSI_CR0_DSS_16);
+  SPI0_Init(SYS_CLOCK, spi_speed, SSI_CR0_FRF_MOTO & ~(SSI_CR0_SPO | SSI_CR0_SPH), SSI_CR0_DSS_16);
 
   GPIO_PORTA_DEN_R |= RST_PIN;      // Digital enable
   GPIO_PORTA_DIR_R |= RST_PIN;      // Set as output
@@ -116,11 +113,18 @@ bool RA8875_begin(uint32_t SYS_CLOCK, enum RA8875sizes s) {
   GPIO_PORTA_PCTL_R &= ~RST_PCTL_M; // Deselect alternate function on pin
   GPIO_PORTA_AFSEL_R &= ~RST_PIN;   // Not using digital alternate functions
 
-  RST_ADDR = 0;
-  delay(100);
+  /** Reset Device - Start */
   RST_ADDR = RST_PIN;
-  delay(100);
+  SysTick_Wait10ms(10);
 
+  RST_ADDR = 0;
+  SysTick_Wait10ms(10);
+
+  RST_ADDR = RST_PIN;
+  SysTick_Wait10ms(10);
+  /** Reset Device - End */
+
+  /*
   uint8_t x = RA8875_readReg(0);
 
   if (x != 0x75) {
@@ -128,13 +132,19 @@ bool RA8875_begin(uint32_t SYS_CLOCK, enum RA8875sizes s) {
     while (1)
       ;
   }
+  */
 
   RA8875_initialize();
-  RA8875_displayOn(true);
-  RA8875_EnableGPIOX(true);
-  RA8875_PWM1config(true, RA8875_PWM_CLK_DIV1024);
+
+  RA8875_displayOn(true);   // Turn on the display
+  RA8875_EnableGPIOX(true); // Enable TFT - display enable tied to GPIOX
+
   RA8875_PWM1out(255);
+  RA8875_PWM1config(true, RA8875_PWM_CLK_DIV8); // PWM output for backlight
+
   RA8875_fillScreen(RA8875_BLACK);
+
+  SysTick_WaitCustom(500, -3);
 
   return true;
 }
@@ -150,7 +160,7 @@ void RA8875_softReset(void) {
   RA8875_writeCommand(RA8875_PWRR);
   RA8875_writeData(RA8875_PWRR_SOFTRESET);
   RA8875_writeData(RA8875_PWRR_NORMAL);
-  delay(1);
+  SysTick_WaitCustom(1, -3);
 }
 
 /**************************************************************************/
@@ -161,14 +171,14 @@ void RA8875_softReset(void) {
 void RA8875_PLLinit(void) {
   if (_size == RA8875_480x80 || _size == RA8875_480x128 || _size == RA8875_480x272) {
     RA8875_writeReg(RA8875_PLLC1, RA8875_PLLC1_PLLDIV1 + 10);
-    delay(1);
+    SysTick_WaitCustom(1, -3);
     RA8875_writeReg(RA8875_PLLC2, RA8875_PLLC2_DIV4);
-    delay(1);
+    SysTick_WaitCustom(1, -3);
   } else /* (_size == RA8875_800x480) */ {
     RA8875_writeReg(RA8875_PLLC1, RA8875_PLLC1_PLLDIV1 + 11);
-    delay(1);
+    SysTick_WaitCustom(1, -3);
     RA8875_writeReg(RA8875_PLLC2, RA8875_PLLC2_DIV4);
-    delay(1);
+    SysTick_WaitCustom(1, -3);
   }
 }
 
@@ -178,9 +188,6 @@ void RA8875_PLLinit(void) {
 */
 /**************************************************************************/
 void RA8875_initialize(void) {
-  RA8875_PLLinit();
-  RA8875_writeReg(RA8875_SYSR, RA8875_SYSR_16BPP | RA8875_SYSR_MCU8);
-
   /* Timing values */
   uint8_t  pixclk;
   uint8_t  hsync_start;
@@ -190,6 +197,9 @@ void RA8875_initialize(void) {
   uint8_t  vsync_pw;
   uint16_t vsync_nondisp;
   uint16_t vsync_start;
+
+  RA8875_PLLinit();
+  RA8875_writeReg(RA8875_SYSR, RA8875_SYSR_16BPP | RA8875_SYSR_MCU8);
 
   /* Set the correct values for the display being used */
   if (_size == RA8875_480x80) {
@@ -226,7 +236,7 @@ void RA8875_initialize(void) {
   }
 
   RA8875_writeReg(RA8875_PCSR, pixclk);
-  delay(1);
+  SysTick_WaitCustom(1, -3);
 
   /* Horizontal settings registers */
   RA8875_writeReg(RA8875_HDWR, (_width / 8) - 1); // H width: (HDWR + 1) * 8 = 480
@@ -263,7 +273,7 @@ void RA8875_initialize(void) {
 
   /* Clear the entire window */
   RA8875_writeReg(RA8875_MCLR, RA8875_MCLR_START | RA8875_MCLR_FULL);
-  delay(500);
+  SysTick_WaitCustom(500, -3);
 }
 
 /**************************************************************************/
@@ -401,6 +411,8 @@ void RA8875_textColor(uint16_t foreColor, uint16_t bgColor) {
 */
 /**************************************************************************/
 void RA8875_textTransparent(uint16_t foreColor) {
+  uint8_t temp;
+
   /* Set Fore Color */
   RA8875_writeCommand(0x63);
   RA8875_writeData((foreColor & 0xf800) >> 11);
@@ -411,8 +423,7 @@ void RA8875_textTransparent(uint16_t foreColor) {
 
   /* Set transparency flag */
   RA8875_writeCommand(0x22);
-  uint8_t temp = RA8875_readData();
-  temp |= (1 << 6); // Set bit 6
+  temp = RA8875_readData() | (1 << 6); // Set bit 6
   RA8875_writeData(temp);
 }
 
@@ -429,13 +440,14 @@ void RA8875_textTransparent(uint16_t foreColor) {
 */
 /**************************************************************************/
 void RA8875_textEnlarge(uint8_t scale) {
+  uint8_t temp;
+
   if (scale > 3)
     scale = 3; // highest setting is 3
 
   /* Set font size flags */
   RA8875_writeCommand(0x22);
-  uint8_t temp = RA8875_readData();
-  temp &= ~(0xF); // Clears bits 0..3
+  temp = RA8875_readData() & ~0xF; // Clears bits 0..3
   temp |= scale << 2;
   temp |= scale;
 
@@ -457,21 +469,18 @@ void RA8875_textEnlarge(uint8_t scale) {
      @param rate The frame rate to blink
  */
 /**************************************************************************/
-
 void RA8875_cursorBlink(uint8_t rate) {
+  uint8_t temp;
 
   RA8875_writeCommand(RA8875_MWCR0);
-  uint8_t temp = RA8875_readData();
-  temp |= RA8875_MWCR0_CURSOR;
+  temp = RA8875_readData() | RA8875_MWCR0_CURSOR;
   RA8875_writeData(temp);
 
   RA8875_writeCommand(RA8875_MWCR0);
-  temp = RA8875_readData();
-  temp |= RA8875_MWCR0_BLINK;
+  temp = RA8875_readData() | RA8875_MWCR0_BLINK;
   RA8875_writeData(temp);
 
-  if (rate > 255)
-    rate = 255;
+  // if (rate > 255) rate = 255;
   RA8875_writeCommand(RA8875_BTCR);
   RA8875_writeData(rate);
 }
@@ -486,7 +495,7 @@ void RA8875_cursorBlink(uint8_t rate) {
 /**************************************************************************/
 void RA8875_textWrite(const char *buffer, uint16_t len) {
   if (len == 0)
-    len = strlen(buffer);
+    len = (uint16_t)strlen(buffer);
   RA8875_writeCommand(RA8875_MRWC);
   for (uint16_t i = 0; i < len; i++) {
     RA8875_writeData(buffer[i]);
@@ -496,13 +505,13 @@ void RA8875_textWrite(const char *buffer, uint16_t len) {
     // This delay is needed with textEnlarge(1) because
     // Teensy 3.X is much faster than Arduino Uno
     if (_textScale > 0)
-      delay(1);
+      SysTick_WaitCustom(1, -3);
 /// @cond DISABLE
 #else
     /// @endcond
     // For others, delay starting with textEnlarge(2)
     if (_textScale > 1)
-      delay(1);
+      SysTick_WaitCustom(1, -3);
 /// @cond DISABLE
 #endif
     /// @endcond
@@ -517,9 +526,11 @@ void RA8875_textWrite(const char *buffer, uint16_t len) {
 */
 /**************************************************************************/
 void RA8875_graphicsMode(void) {
+  uint8_t temp;
+
   RA8875_writeCommand(RA8875_MWCR0);
-  uint8_t temp = RA8875_readData();
-  temp &= ~RA8875_MWCR0_TXTMODE; // bit #7
+  temp = RA8875_readData() & ~RA8875_MWCR0_TXTMODE; // bit #7
+
   RA8875_writeData(temp);
 }
 
@@ -534,12 +545,15 @@ void RA8875_graphicsMode(void) {
 */
 /**************************************************************************/
 bool RA8875_waitPoll(uint8_t regname, uint8_t waitflag) {
+  uint8_t temp;
+
   /* Wait for the command to finish */
   while (1) {
-    uint8_t temp = RA8875_readReg(regname);
+    temp = RA8875_readReg(regname);
     if (!(temp & waitflag))
       return true;
   }
+
   return false; // MEMEFIX: yeah i know, unreached! - add timeout?
 }
 
@@ -552,10 +566,10 @@ bool RA8875_waitPoll(uint8_t regname, uint8_t waitflag) {
 */
 /**************************************************************************/
 void RA8875_setXY(uint16_t x, uint16_t y) {
-  RA8875_writeReg(RA8875_CURH0, x);
-  RA8875_writeReg(RA8875_CURH1, x >> 8);
-  RA8875_writeReg(RA8875_CURV0, y);
-  RA8875_writeReg(RA8875_CURV1, y >> 8);
+  RA8875_writeReg(RA8875_CURH0, x & 0xFF);
+  RA8875_writeReg(RA8875_CURH1, (x >> 8) & 0xFF);
+  RA8875_writeReg(RA8875_CURV0, y & 0xFF);
+  RA8875_writeReg(RA8875_CURV1, (y >> 8) & 0xFF);
 }
 
 /**************************************************************************/
@@ -633,14 +647,15 @@ int16_t RA8875_applyRotationY(int16_t y) {
 */
 /**************************************************************************/
 void RA8875_drawPixel(int16_t x, int16_t y, uint16_t color) {
-  x = RA8875_applyRotationX(x);
-  y = RA8875_applyRotationY(y);
   uint16_t byte[] = {(RA8875_DATAWRITE << 8) | (color >> 8), (color & 0xFF) << 8};
 
-  RA8875_writeReg(RA8875_CURH0, x);
-  RA8875_writeReg(RA8875_CURH1, x >> 8);
-  RA8875_writeReg(RA8875_CURV0, y);
-  RA8875_writeReg(RA8875_CURV1, y >> 8);
+  x = RA8875_applyRotationX(x);
+  y = RA8875_applyRotationY(y);
+
+  RA8875_writeReg(RA8875_CURH0, x & 0xFF);
+  RA8875_writeReg(RA8875_CURH1, (x >> 8) & 0xFF);
+  RA8875_writeReg(RA8875_CURV0, y & 0xFF);
+  RA8875_writeReg(RA8875_CURV1, (y >> 8) & 0xFF);
   RA8875_writeCommand(RA8875_MRWC);
 
   SPI0_StartTransmission();
@@ -659,17 +674,17 @@ void RA8875_drawPixel(int16_t x, int16_t y, uint16_t color) {
  */
 /**************************************************************************/
 void RA8875_drawPixels(uint16_t *p, uint32_t num, int16_t x, int16_t y) {
-  uint16_t byte = 0;
+  uint8_t  dir = RA8875_MWCR0_LRTD;
+  uint16_t byte = RA8875_DATAWRITE << 8;
 
   x = RA8875_applyRotationX(x);
   y = RA8875_applyRotationY(y);
 
-  RA8875_writeReg(RA8875_CURH0, x);
-  RA8875_writeReg(RA8875_CURH1, x >> 8);
-  RA8875_writeReg(RA8875_CURV0, y);
-  RA8875_writeReg(RA8875_CURV1, y >> 8);
+  RA8875_writeReg(RA8875_CURH0, x & 0xFF);
+  RA8875_writeReg(RA8875_CURH1, (x >> 8) & 0xFF);
+  RA8875_writeReg(RA8875_CURV0, y & 0xFF);
+  RA8875_writeReg(RA8875_CURV1, (y >> 8) & 0xFF);
 
-  uint8_t dir = RA8875_MWCR0_LRTD;
   if (_rotation == 2) {
     dir = RA8875_MWCR0_RLTD;
   }
@@ -679,7 +694,6 @@ void RA8875_drawPixels(uint16_t *p, uint32_t num, int16_t x, int16_t y) {
 
   SPI0_StartTransmission();
 
-  byte = RA8875_DATAWRITE;
   SPI0_Write(&byte, 1);
   SPI0_Write(p, num);
 
@@ -705,27 +719,27 @@ void RA8875_drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t co
 
   /* Set X */
   RA8875_writeCommand(0x91);
-  RA8875_writeData(x0);
+  RA8875_writeData((x0) & 0xFF);
   RA8875_writeCommand(0x92);
-  RA8875_writeData(x0 >> 8);
+  RA8875_writeData((x0 >> 8) & 0xFF);
 
   /* Set Y */
   RA8875_writeCommand(0x93);
-  RA8875_writeData(y0);
+  RA8875_writeData((y0) & 0xFF);
   RA8875_writeCommand(0x94);
-  RA8875_writeData(y0 >> 8);
+  RA8875_writeData((y0 >> 8) & 0xFF);
 
   /* Set X1 */
   RA8875_writeCommand(0x95);
-  RA8875_writeData(x1);
+  RA8875_writeData((x1) & 0xFF);
   RA8875_writeCommand(0x96);
-  RA8875_writeData((x1) >> 8);
+  RA8875_writeData(((x1) >> 8) & 0xFF);
 
   /* Set Y1 */
   RA8875_writeCommand(0x97);
-  RA8875_writeData(y1);
+  RA8875_writeData((y1) & 0xFF);
   RA8875_writeCommand(0x98);
-  RA8875_writeData((y1) >> 8);
+  RA8875_writeData(((y1) >> 8) & 0xFF);
 
   /* Set Color */
   RA8875_writeCommand(0x63);
@@ -987,19 +1001,19 @@ void RA8875_circleHelper(int16_t x, int16_t y, int16_t r, uint16_t color, bool f
 
   /* Set X */
   RA8875_writeCommand(0x99);
-  RA8875_writeData(x);
+  RA8875_writeData((x) & 0xFF);
   RA8875_writeCommand(0x9a);
-  RA8875_writeData(x >> 8);
+  RA8875_writeData((x >> 8) & 0xFF);
 
   /* Set Y */
   RA8875_writeCommand(0x9b);
-  RA8875_writeData(y);
+  RA8875_writeData((y) & 0xFF);
   RA8875_writeCommand(0x9c);
-  RA8875_writeData(y >> 8);
+  RA8875_writeData((y >> 8) & 0xFF);
 
   /* Set Radius */
   RA8875_writeCommand(0x9d);
-  RA8875_writeData(r);
+  RA8875_writeData((r) & 0xFF);
 
   /* Set Color */
   RA8875_writeCommand(0x63);
@@ -1034,27 +1048,27 @@ void RA8875_rectHelper(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t colo
 
   /* Set X */
   RA8875_writeCommand(0x91);
-  RA8875_writeData(x);
+  RA8875_writeData((x) & 0xFF);
   RA8875_writeCommand(0x92);
-  RA8875_writeData(x >> 8);
+  RA8875_writeData((x >> 8) & 0xFF);
 
   /* Set Y */
   RA8875_writeCommand(0x93);
-  RA8875_writeData(y);
+  RA8875_writeData((y) & 0xFF);
   RA8875_writeCommand(0x94);
-  RA8875_writeData(y >> 8);
+  RA8875_writeData((y >> 8) & 0xFF);
 
   /* Set X1 */
   RA8875_writeCommand(0x95);
-  RA8875_writeData(w);
+  RA8875_writeData((w) & 0xFF);
   RA8875_writeCommand(0x96);
-  RA8875_writeData((w) >> 8);
+  RA8875_writeData(((w) >> 8) & 0xFF);
 
   /* Set Y1 */
   RA8875_writeCommand(0x97);
-  RA8875_writeData(h);
+  RA8875_writeData((h) & 0xFF);
   RA8875_writeCommand(0x98);
-  RA8875_writeData((h) >> 8);
+  RA8875_writeData(((h) >> 8) & 0xFF);
 
   /* Set Color */
   RA8875_writeCommand(0x63);
@@ -1091,33 +1105,33 @@ void RA8875_triangleHelper(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16
 
   /* Set Point 0 */
   RA8875_writeCommand(0x91);
-  RA8875_writeData(x0);
+  RA8875_writeData((x0) & 0xFF);
   RA8875_writeCommand(0x92);
-  RA8875_writeData(x0 >> 8);
+  RA8875_writeData((x0 >> 8) & 0xFF);
   RA8875_writeCommand(0x93);
-  RA8875_writeData(y0);
+  RA8875_writeData((y0) & 0xFF);
   RA8875_writeCommand(0x94);
-  RA8875_writeData(y0 >> 8);
+  RA8875_writeData((y0 >> 8) & 0xFF);
 
   /* Set Point 1 */
   RA8875_writeCommand(0x95);
-  RA8875_writeData(x1);
+  RA8875_writeData((x1) & 0xFF);
   RA8875_writeCommand(0x96);
-  RA8875_writeData(x1 >> 8);
+  RA8875_writeData((x1 >> 8) & 0xFF);
   RA8875_writeCommand(0x97);
-  RA8875_writeData(y1);
+  RA8875_writeData((y1) & 0xFF);
   RA8875_writeCommand(0x98);
-  RA8875_writeData(y1 >> 8);
+  RA8875_writeData((y1 >> 8) & 0xFF);
 
   /* Set Point 2 */
   RA8875_writeCommand(0xA9);
-  RA8875_writeData(x2);
+  RA8875_writeData((x2) & 0xFF);
   RA8875_writeCommand(0xAA);
-  RA8875_writeData(x2 >> 8);
+  RA8875_writeData((x2 >> 8) & 0xFF);
   RA8875_writeCommand(0xAB);
-  RA8875_writeData(y2);
+  RA8875_writeData((y2) & 0xFF);
   RA8875_writeCommand(0xAC);
-  RA8875_writeData(y2 >> 8);
+  RA8875_writeData((y2 >> 8) & 0xFF);
 
   /* Set Color */
   RA8875_writeCommand(0x63);
@@ -1150,23 +1164,23 @@ void RA8875_ellipseHelper(int16_t xCenter, int16_t yCenter, int16_t longAxis, in
 
   /* Set Center Point */
   RA8875_writeCommand(0xA5);
-  RA8875_writeData(xCenter);
+  RA8875_writeData((xCenter) & 0xFF);
   RA8875_writeCommand(0xA6);
-  RA8875_writeData(xCenter >> 8);
+  RA8875_writeData((xCenter >> 8) & 0xFF);
   RA8875_writeCommand(0xA7);
-  RA8875_writeData(yCenter);
+  RA8875_writeData((yCenter) & 0xFF);
   RA8875_writeCommand(0xA8);
-  RA8875_writeData(yCenter >> 8);
+  RA8875_writeData((yCenter >> 8) & 0xFF);
 
   /* Set Long and Short Axis */
   RA8875_writeCommand(0xA1);
-  RA8875_writeData(longAxis);
+  RA8875_writeData((longAxis) & 0xFF);
   RA8875_writeCommand(0xA2);
-  RA8875_writeData(longAxis >> 8);
+  RA8875_writeData((longAxis >> 8) & 0xFF);
   RA8875_writeCommand(0xA3);
-  RA8875_writeData(shortAxis);
+  RA8875_writeData((shortAxis) & 0xFF);
   RA8875_writeCommand(0xA4);
-  RA8875_writeData(shortAxis >> 8);
+  RA8875_writeData((shortAxis >> 8) & 0xFF);
 
   /* Set Color */
   RA8875_writeCommand(0x63);
@@ -1200,23 +1214,23 @@ void RA8875_curveHelper(int16_t xCenter, int16_t yCenter, int16_t longAxis, int1
 
   /* Set Center Point */
   RA8875_writeCommand(0xA5);
-  RA8875_writeData(xCenter);
+  RA8875_writeData((xCenter) & 0xFF);
   RA8875_writeCommand(0xA6);
-  RA8875_writeData(xCenter >> 8);
+  RA8875_writeData((xCenter >> 8) & 0xFF);
   RA8875_writeCommand(0xA7);
-  RA8875_writeData(yCenter);
+  RA8875_writeData((yCenter) & 0xFF);
   RA8875_writeCommand(0xA8);
-  RA8875_writeData(yCenter >> 8);
+  RA8875_writeData((yCenter >> 8) & 0xFF);
 
   /* Set Long and Short Axis */
   RA8875_writeCommand(0xA1);
-  RA8875_writeData(longAxis);
+  RA8875_writeData((longAxis) & 0xFF);
   RA8875_writeCommand(0xA2);
-  RA8875_writeData(longAxis >> 8);
+  RA8875_writeData((longAxis >> 8) & 0xFF);
   RA8875_writeCommand(0xA3);
-  RA8875_writeData(shortAxis);
+  RA8875_writeData((shortAxis) & 0xFF);
   RA8875_writeCommand(0xA4);
-  RA8875_writeData(shortAxis >> 8);
+  RA8875_writeData((shortAxis >> 8) & 0xFF);
 
   /* Set Color */
   RA8875_writeCommand(0x63);
@@ -1255,37 +1269,37 @@ void RA8875_roundRectHelper(int16_t x, int16_t y, int16_t w, int16_t h, int16_t 
 
   /* Set X */
   RA8875_writeCommand(0x91);
-  RA8875_writeData(x);
+  RA8875_writeData((x) & 0xFF);
   RA8875_writeCommand(0x92);
-  RA8875_writeData(x >> 8);
+  RA8875_writeData((x >> 8) & 0xFF);
 
   /* Set Y */
   RA8875_writeCommand(0x93);
-  RA8875_writeData(y);
+  RA8875_writeData((y) & 0xFF);
   RA8875_writeCommand(0x94);
-  RA8875_writeData(y >> 8);
+  RA8875_writeData((y >> 8) & 0xFF);
 
   /* Set X1 */
   RA8875_writeCommand(0x95);
-  RA8875_writeData(w);
+  RA8875_writeData((w) & 0xFF);
   RA8875_writeCommand(0x96);
-  RA8875_writeData((w) >> 8);
+  RA8875_writeData((w >> 8) & 0xFF);
 
   /* Set Y1 */
   RA8875_writeCommand(0x97);
-  RA8875_writeData(h);
+  RA8875_writeData((h) & 0xFF);
   RA8875_writeCommand(0x98);
-  RA8875_writeData((h) >> 8);
+  RA8875_writeData((h >> 8) & 0xFF);
 
   RA8875_writeCommand(0xA1);
-  RA8875_writeData(r);
+  RA8875_writeData((r) & 0xFF);
   RA8875_writeCommand(0xA2);
-  RA8875_writeData((r) >> 8);
+  RA8875_writeData((r >> 8) & 0xFF);
 
   RA8875_writeCommand(0xA3);
-  RA8875_writeData(r);
+  RA8875_writeData((r) & 0xFF);
   RA8875_writeCommand(0xA4);
-  RA8875_writeData((r) >> 8);
+  RA8875_writeData((r >> 8) & 0xFF);
 
   /* Set Color */
   RA8875_writeCommand(0x63);
@@ -1321,27 +1335,27 @@ void RA8875_roundRectHelper(int16_t x, int16_t y, int16_t w, int16_t h, int16_t 
 void RA8875_setScrollWindow(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t mode) {
   // Horizontal Start point of Scroll Window
   RA8875_writeCommand(0x38);
-  RA8875_writeData(x);
+  RA8875_writeData(x & 0xFF);
   RA8875_writeCommand(0x39);
-  RA8875_writeData(x >> 8);
+  RA8875_writeData((x >> 8) & 0xFF);
 
   // Vertical Start Point of Scroll Window
   RA8875_writeCommand(0x3a);
-  RA8875_writeData(y);
+  RA8875_writeData(y & 0xFF);
   RA8875_writeCommand(0x3b);
-  RA8875_writeData(y >> 8);
+  RA8875_writeData((y >> 8) & 0xFF);
 
   // Horizontal End Point of Scroll Window
   RA8875_writeCommand(0x3c);
-  RA8875_writeData(x + w);
+  RA8875_writeData((x + w) & 0xFF);
   RA8875_writeCommand(0x3d);
-  RA8875_writeData((x + w) >> 8);
+  RA8875_writeData(((x + w) >> 8) & 0xFF);
 
   // Vertical End Point of Scroll Window
   RA8875_writeCommand(0x3e);
-  RA8875_writeData(y + h);
+  RA8875_writeData((y + h) & 0xFF);
   RA8875_writeCommand(0x3f);
-  RA8875_writeData((y + h) >> 8);
+  RA8875_writeData(((y + h) >> 8) & 0xFF);
 
   // Scroll function setting
   RA8875_writeCommand(0x52);
@@ -1358,9 +1372,9 @@ void RA8875_setScrollWindow(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t 
 /**************************************************************************/
 void RA8875_scrollX(int16_t dist) {
   RA8875_writeCommand(0x24);
-  RA8875_writeData(dist);
+  RA8875_writeData(dist & 0xFF);
   RA8875_writeCommand(0x25);
-  RA8875_writeData(dist >> 8);
+  RA8875_writeData((dist >> 8) & 0xFF);
 }
 
 /**************************************************************************/
@@ -1373,9 +1387,9 @@ void RA8875_scrollX(int16_t dist) {
 /**************************************************************************/
 void RA8875_scrollY(int16_t dist) {
   RA8875_writeCommand(0x26);
-  RA8875_writeData(dist);
+  RA8875_writeData(dist & 0xFF);
   RA8875_writeCommand(0x27);
-  RA8875_writeData(dist >> 8);
+  RA8875_writeData((dist >> 8) & 0xFF);
 }
 
 /************************* Mid Level ***********************************/
@@ -1580,8 +1594,12 @@ void RA8875_writeReg(uint8_t reg, uint8_t val) {
 */
 /**************************************************************************/
 uint8_t RA8875_readReg(uint8_t reg) {
+  uint8_t res = 0;
+
   RA8875_writeCommand(reg);
-  return RA8875_readData();
+  res = RA8875_readData();
+
+  return res;
 }
 
 /**************************************************************************/
