@@ -32,10 +32,10 @@ void SPI0_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, uint8_t frameConfig, uint8_t 
   uint32_t maxBitRate = SYS_CLK / SSI_CLK;
 
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R0; // Enable Port A clock
-  SYSCTL_RCGCSSI_R |= SYSCTL_RCGCSSI_R0;   // Enable SSI module 3 clock
+  SYSCTL_RCGCSSI_R |= SYSCTL_RCGCSSI_R0;   // Enable SSI module 0 clock
 
   GPIO_PORTA_AFSEL_R |= SSI0_PINS;                                                                // Enable Alternate Functions on all pins
-  GPIO_PORTA_PCTL_R = (GPIO_PORTA_PCTL_R & ~SSI0_PCTL_MASK) | SSI0_PCTL;                          // Enable SSI module 3 peripheral functions
+  GPIO_PORTA_PCTL_R = (GPIO_PORTA_PCTL_R & ~SSI0_PCTL_MASK) | SSI0_PCTL;                          // Enable SSI module 0 peripheral functions
   GPIO_PORTA_DIR_R = (GPIO_PORTA_DIR_R & ~SSI0_PINS) | SSI0_CLK_BIT | SSI0_TX_BIT | SSI0_FSS_BIT; // Configure CLK, TX, and FSS as outputs
   GPIO_PORTA_DEN_R |= SSI0_PINS;                                                                  // Enable Digital Mode on pins
   GPIO_PORTA_AMSEL_R &= ~SSI0_PINS;                                                               // Disable Analog Mode on pins
