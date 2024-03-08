@@ -10,11 +10,18 @@
   <project>
     <PathAndName>.\IMU\IMU.uvprojx</PathAndName>
     <NodeIsActive>1</NodeIsActive>
-    <NodeIsExpanded>1</NodeIsExpanded>
   </project>
 
   <project>
     <PathAndName>.\HC-12\HC-12.uvprojx</PathAndName>
+  </project>
+
+  <project>
+    <PathAndName>.\Pixy 2.1\Pixy2_1.uvprojx</PathAndName>
+  </project>
+
+  <project>
+    <PathAndName>.\Display (RA8875)\RA8875.uvprojx</PathAndName>
   </project>
 
 </ProjectWorkspace>

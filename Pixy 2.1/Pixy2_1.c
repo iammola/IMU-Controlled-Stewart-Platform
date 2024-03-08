@@ -1,12 +1,19 @@
 #include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>  // Using snprintf
+#include <string.h> // Using memcpy
 
 #include "SPI/SPI.h"
 #include "tm4c123gh6pm.h"
 
-#define SPI_SPEED 2e6
+#include "Pixy2_1.h"
 
-#define CHECKSUM_BYTE    0xC1AF
-#define NO_CHECKSUM_BYTE ((0xC1 << 0) | (0xAE << 8)) // should be 0xC1AE, but sent as little endian, so LSB first
+#define SPI_SPEED 175e4 // 1.75 MHz
+
+#define RX_BUF_SIZE 100
+
+#define CHECKSUM_SYNC_BYTE    0xAFC1 // should be 0xC1AF
+#define NO_CHECKSUM_SYNC_BYTE 0xAEC1 // should be 0xC1AE, but sent as little endian, so LSB first
 
 typedef enum PACKET_TYPE {
   /*  */
@@ -26,80 +33,107 @@ typedef enum PACKET_TYPE {
   RESOLUTION_RESPONSE = 0x0d,
 } PACKET_TYPE;
 
-static bool Pixy2_1_Transaction(PACKET_TYPE reqType, PACKET_TYPE resType, uint16_t *txBuff, uint16_t *rxBuff, uint32_t rXLength, uint32_t tXLength);
+static bool Pixy2_1_Transaction(PACKET_TYPE reqType, PACKET_TYPE resType, uint16_t *txBuff, uint16_t *rxBuff, uint32_t rxLength, uint32_t txLength);
 static void Pixy2_1_GetVersion(void);
 
 void Pixy2_1_Init(uint32_t SYS_CLOCK) {
-  SPI1_Init(SYS_CLOCK, SPI_SPEED, SSI_CR0_FRF_MOTO | SSI_CR0_SPO | SSI_CR0_SPH, SSI_CR0_DSS_16);
+  // Arduino SPI Mode 1
+  SPI1_Init(SYS_CLOCK, SPI_SPEED, (SSI_CR0_FRF_MOTO | SSI_CR0_SPH) & ~SSI_CR0_SPO, SSI_CR0_DSS_16);
 
   Pixy2_1_GetVersion();
 }
 
-bool Pixy2_1_Checksum(uint16_t *response);
+static bool Pixy2_1_Transaction(PACKET_TYPE reqType, PACKET_TYPE resType, uint16_t *txBuff, uint16_t *rxBuff, uint32_t rxLength, uint32_t txLength) {
+  uint8_t rxChecksumDataIdx = 0;
+  int32_t rxChecksum = 0;
 
-static bool Pixy2_1_Transaction(PACKET_TYPE reqType, PACKET_TYPE resType, uint16_t *txBuff, uint16_t *rxBuff, uint32_t rXLength, uint32_t tXLength) {
-  int32_t checksum = 0;
-  uint8_t checksumIdx = 0;
-  uint8_t metadataIdx = 0;
+  int16_t syncIdx = -1;
+  uint8_t loopIdx = 10;
 
-  uint16_t request[] = {
-      NO_CHECKSUM_BYTE,
-      (reqType << 8) | tXLength,
-  };
+  uint16_t totalRxBuff[RX_BUF_SIZE] = {0};
+
+  uint16_t request[] = {NO_CHECKSUM_SYNC_BYTE, (uint16_t)(((unsigned)reqType << 8) | txLength)};
+
+  SPI1_StartTransmission();
 
   SPI1_Write(request, 2);
-  if (tXLength > 0) {
-    SPI1_Write(txBuff, (tXLength + 1) / 2); // Transmit data with 16 byte length rounded up to 1
+  if (txLength > 0) {
+    SPI1_Write(txBuff, (txLength + 1) / 2); // Transmit data with 16 byte length rounded up to 1
   }
 
-  // Receive response with length reduced to d-word format, + 5/2 for the metadata bytes and +1/2 for rounding errors
-  SPI1_Read(0x00, rxBuff, (rXLength + 5 + 1) / 2);
+  if (rxLength < 1) {
+    SPI1_EndTransmission(); // No data to send, so end transmission early
+    return true;
+  }
 
-  // First d-byte must match checksum d-byte. Next d-byte much match response type and length expected
-  if (rxBuff[metadataIdx++] != CHECKSUM_BYTE || rxBuff[metadataIdx++] != ((resType << 8) | rXLength))
+  // Receive response with length reduced to d-word format, + 6/2 for the metadata bytes and +1/2 for rounding errors
+  SPI1_Read(0x00, totalRxBuff, (rxLength + 6 + 1 + 8) / 2);
+
+  SPI1_EndTransmission();
+
+  // Attempt to handle random unusable bytes before actual data
+  for (loopIdx = 0; loopIdx < RX_BUF_SIZE; loopIdx++) {
+    if (totalRxBuff[loopIdx] == CHECKSUM_SYNC_BYTE) {
+      syncIdx = loopIdx;
+      break;
+    }
+  }
+
+  if (syncIdx < 0 ||                                                    // The idx of the checksum sync byte must exist
+      totalRxBuff[syncIdx + 0] != CHECKSUM_SYNC_BYTE ||                 // First d-byte must match checksum d-byte. (Redundant following prev)
+      totalRxBuff[syncIdx + 1] != (((unsigned)resType << 8) | rxLength) // Next d-byte much match response type and length expected
+  ) {
     return false;
+  }
 
-  checksum = (rxBuff[metadataIdx++] << 0) || (rxBuff[metadataIdx++] << 8); // Get total checksum
+  // Get total checksum
+  rxChecksum = ((totalRxBuff[syncIdx + 2] & 0xFF) << 8) | ((totalRxBuff[syncIdx + 2] & 0xFF00) >> 8);
 
-  for (checksumIdx = 0; checksumIdx < rXLength; checksumIdx++) {
-    checksum -= rxBuff[metadataIdx + checksumIdx]; // Remove byte from total data
+  for (loopIdx = 0; loopIdx < ((rxLength + 1) / 2); loopIdx++) {
+    rxChecksum -= ((totalRxBuff[syncIdx + 3 + loopIdx] >> 8) & 0xFF); // Remove byte from total checksum
+    rxChecksum -= (totalRxBuff[syncIdx + 3 + loopIdx] & 0xFF);        // Remove byte from total checksum
   }
 
   // Checksum check failed
-  if (checksum != 0)
+  if (rxChecksum != 0)
     return false;
+
+  // A char of a string is one byte, so since copying to a 16 bit array, there's 2 taken for each element
+  // The calculation ((len + 1) / 2) * 2) seems redundant, but it's my way to have the least-significant byte right-shifted
+  // by 8 bits for the most-significant-byte
+  // E.g. Len = 18, Size = ((18 + 1)/2) * 2 = (19/2)*2 = 9.5*2 = 9*2 = 18 bytes.
+  // E.g. Len = 19, Size = ((19 + 1)/2) * 2 = (20/2)*2 = 10*2 = 20 bytes.
+  memcpy(rxBuff, totalRxBuff + syncIdx + 4, ((rxLength + 1) / 2) * 2);
 
   return true;
 }
 
 void Pixy2_1_GetVersion(void) {
-  uint16_t request[] = {
-      NO_CHECKSUM_BYTE,
-      (VERSION_REQUEST << 8) | (0 /* No data sent */),
-  };
   uint16_t response[8] = {0};
 
-  bool valid = Pixy2_1_Transaction(VERSION_REQUEST, VERSION_RESPONSE, (void *)0, response, 8, 0); // Expecting 8 double-bytes after metadata
-  if (!valid)
-    return;
+  char versionString[100] = "";
 
-  if (((response[0]) != 0x2200) || // Hardware version
-      ((response[1]) != 0x0003) || // Firmware version number
-      ((response[2]) != 0x000a) || // Firmware build number
-      ((response[3]) != 0x6567) || // Byte 0 & 1 of Firmware type ASCII string
-      ((response[4]) != 0x656e) || // Byte 2 & 3 of Firmware type ASCII string
-      ((response[5]) != 0x6172) || // Byte 4 & 5 of Firmware type ASCII string
-      ((response[6]) != 0x006c) || // Byte 6 & 7 of Firmware type ASCII string
-      ((response[7]) != 0x0000)    // Byte 8 & 9 of Firmware type ASCII string
-  ) {
-    while (1) { // Invalid Response
+  bool valid = Pixy2_1_Transaction(VERSION_REQUEST, VERSION_RESPONSE, 0, response, 16, 0); // Expecting 8 double-bytes after metadata
+  if (!valid) {
+    while (1) {
     }
   }
+
+  snprintf(versionString, 100, "Hardware Version: %d%d", (response[0] & 0xFF00) >> 8, response[0] & 0xFF);  // Hardware version
+  snprintf(versionString, 100, "Firmware Version: %d.%d", (response[1] & 0xFF00) >> 8, response[1] & 0xFF); // Firmware version number
+  snprintf(versionString, 100, "Firmware Build: %d%d", (response[2] & 0xFF00) >> 8, response[2] & 0xFF);    // Firmware build number
+  snprintf(versionString, 100, "Firmware Type: %c%c%c%c%c%c%c%c%c%c",                                       //
+           (response[3] & 0xFF00) >> 8, response[3] & 0xFF, // Byte 0 & 1 of Firmware type ASCII string
+           (response[4] & 0xFF00) >> 8, response[4] & 0xFF, // Byte 2 & 3 of Firmware type ASCII string
+           (response[5] & 0xFF00) >> 8, response[5] & 0xFF, // Byte 4 & 5 of Firmware type ASCII string
+           (response[6] & 0xFF00) >> 8, response[6] & 0xFF, // Byte 6 & 7 of Firmware type ASCII string
+           (response[7] & 0xFF00) >> 8, response[7] & 0xFF  // Byte 8 & 9 of Firmware type ASCII string
+  );
 }
 
 void Pixy2_1_SetLED(uint8_t R, uint8_t G, uint8_t B) {
-  uint16_t colorPayload[] = {(R << 16) | (G << 8), (B << 8)};
-  uint16_t response[4] = {0};
+  uint16_t colorPayload[] = {(uint16_t)((R << 16) | (G << 8)), (uint16_t)(B << 8)};
+  uint16_t response[2] = {0};
 
   bool valid = Pixy2_1_Transaction(LED_REQUEST, RESULT_RESPONSE, colorPayload, response, 4, 3);
   if (!valid)

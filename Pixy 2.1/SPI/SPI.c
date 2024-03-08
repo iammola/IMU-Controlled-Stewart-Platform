@@ -4,10 +4,10 @@
 
 #include "SPI.h"
 
-#define SSI1_CLK_BIT (1 << 2) // (PD0) SSI1CLK
-#define SSI1_FSS_BIT (1 << 3) // (PD1) SSI1FSS (Chip Select)
-#define SSI1_RX_BIT  (1 << 4) // (PD2) SSI1Rx
-#define SSI1_TX_BIT  (1 << 5) // (PD3) SSI1Tx
+#define SSI1_CLK_BIT (1 << 0) // (PD0) SSI1CLK
+#define SSI1_FSS_BIT (1 << 1) // (PD1) SSI1FSS (Chip Select)
+#define SSI1_RX_BIT  (1 << 2) // (PD2) SSI1Rx
+#define SSI1_TX_BIT  (1 << 3) // (PD3) SSI1Tx
 
 #define SSI1_PINS      (unsigned)(SSI1_CLK_BIT | SSI1_FSS_BIT | SSI1_RX_BIT | SSI1_TX_BIT)
 #define SSI1_PCTL      (unsigned)(GPIO_PCTL_PD0_SSI1CLK | GPIO_PCTL_PD1_SSI1FSS | GPIO_PCTL_PD2_SSI1RX | GPIO_PCTL_PD3_SSI1TX)
@@ -78,9 +78,6 @@ void SPI1_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, uint8_t frameConfig, uint8_t 
 void SPI1_Read(uint16_t initData, uint16_t *result, uint32_t length) {
   uint32_t __stale = 0;
 
-  // Start transmission
-  SSI1_FSS_ADDR = 0;
-
   // Clear RX FIFO
   while ((SSI1_SR_R & SSI_SR_RNE) == SSI_SR_RNE) {
     __stale = SSI1_DR_R;
@@ -88,10 +85,10 @@ void SPI1_Read(uint16_t initData, uint16_t *result, uint32_t length) {
 
   WAIT_FOR_TX_SPACE() // Wait for space in TX FIFO
 
-  SSI1_DR_R = initData; // Set data to initiate read
-
   // Get requested amount of data
   while (length > 0) {
+    SSI1_DR_R = initData; // Set data to initiate read
+
     WAIT_FOR_RX_DATA() // Wait for data to be stored in FIFO.
 
     *result = (uint16_t)SSI1_DR_R; // store data

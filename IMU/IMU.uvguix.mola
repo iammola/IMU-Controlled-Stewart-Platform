@@ -28,17 +28,17 @@
     <View>
       <WinId>38003</WinId>
       <ViewName>Registers</ViewName>
-      <TableColWidths>131 329</TableColWidths>
+      <TableColWidths>115 103</TableColWidths>
     </View>
     <View>
       <WinId>346</WinId>
       <ViewName>Code Coverage</ViewName>
-      <TableColWidths>660 516</TableColWidths>
+      <TableColWidths>660 160</TableColWidths>
     </View>
     <View>
       <WinId>204</WinId>
       <ViewName>Performance Analyzer</ViewName>
-      <TableColWidths>830 123 123 100</TableColWidths>
+      <TableColWidths>820</TableColWidths>
     </View>
   </SECTreeCtrl>
 
@@ -114,10 +114,10 @@
         <yPos>-1</yPos>
       </MaxPosition>
       <NormalPosition>
-        <Top>215</Top>
-        <Left>-1366</Left>
-        <Right>-42</Right>
-        <Bottom>718</Bottom>
+        <Top>138</Top>
+        <Left>-1304</Left>
+        <Right>1</Right>
+        <Bottom>913</Bottom>
       </NormalPosition>
     </WindowPosition>
     <MDIClientArea>
@@ -3627,7 +3627,7 @@
         <PaneID>0</PaneID>
       </Doc>
       <Doc>
-        <Name>E:\Mola\Code\IMU\SPI\SPI.h</Name>
+        <Name>&lt;4&gt;SPI\SPI.h</Name>
         <ColumnNumber>0</ColumnNumber>
         <TopLine>1</TopLine>
         <CurrentLine>10</CurrentLine>
