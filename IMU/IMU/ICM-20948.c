@@ -117,6 +117,7 @@ static const float ACCEL_2G_SENSITIVITY = SENSITIVITY(2.0f);
 static const float MAG_4912_SENSITIVITY = SENSITIVITY(4912.0f);
 static const float GYRO_250_SENSITIVITY = SENSITIVITY(250.0f);
 static const float GYRO_1000_SENSITIVITY = SENSITIVITY(1000.0f);
+static const float GYRO_2000_SENSITIVITY = SENSITIVITY(2000.0f);
 
 FusionVector rawGyroscope = {
     .axis = {.x = 0.0f, .y = 0.0f, .z = 0.0f}
@@ -281,8 +282,8 @@ static void IMU_MadgwickFusion_Init(void) {
   const FusionAhrsSettings settings = {
       .convention = FusionConventionEnu,
       .gain = 1.5f,
-      .gyroscopeRange = 1000, // gyroscope range in dps
-      .accelerationRejection = 10.0f,
+      .gyroscopeRange = 2000, // gyroscope range in dps
+      .accelerationRejection = 5.0f,
       .magneticRejection = 5.0f,
       .recoveryTriggerPeriod = 5 * SAMPLE_RATE, /* 5 seconds */
   };
@@ -358,7 +359,7 @@ static void IMU_MagCalibration(void) {
 
 static void IMU_AccelGyroCalibration(void) {
 #if (CALIBRATION_MODE > 0) && (CALIBRATION_MODE < 5)
-  const int32_t SAMPLES_COUNT = 1e4;
+  const int32_t SAMPLES_COUNT = 5e4;
 
   FusionVector sample = {
       .axis = {.x = 0.0f, .y = 0.0f, .z = 0.0f}
@@ -398,21 +399,21 @@ static void IMU_AccelGyroCalibration(void) {
 #endif
     sample = FusionCalibrationInertial(sample, sampleMisalignment, sampleSensitivity, sampleOffset);
 
+    // This will be in the unit from the sensitivity
     totalSamples.axis.x += sample.axis.x;
     totalSamples.axis.y += sample.axis.y;
     totalSamples.axis.z += sample.axis.z;
 
-    snprintf(text, CLI_TXT_BUF, "X= %0.3f, Y=%0.3f, Z=%0.3f\n", sample.axis.x, sample.axis.y, sample.axis.z);
+    snprintf(text, CLI_TXT_BUF, "%0.4f %0.4f %0.4f\n", sample.axis.x, sample.axis.y, sample.axis.z);
     CLI_Write(text);
   }
 
-  // Normalize
+  // Normalize back to LSBs
   totalSamples.axis.x /= (SAMPLES_COUNT * sampleSensitivity.axis.x);
   totalSamples.axis.y /= (SAMPLES_COUNT * sampleSensitivity.axis.y);
   totalSamples.axis.z /= (SAMPLES_COUNT * sampleSensitivity.axis.z);
 
-  snprintf(text, CLI_TXT_BUF, "\nMeasurement finished.\nX= %0.3f\nY = %0.3f\nZ = %0.3f\n", totalSamples.axis.x, totalSamples.axis.y,
-           totalSamples.axis.z);
+  snprintf(text, CLI_TXT_BUF, "Measurement finished.\nX= %0.4f Y = %0.4f Z = %0.4f", totalSamples.axis.x, totalSamples.axis.y, totalSamples.axis.z);
   CLI_Write(text);
 
   while (1)
@@ -484,7 +485,8 @@ static bool IMU_GetMagReadings(FusionVector *dest) {
   // magCoords[7] = STATUS_2
 }
 
-void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, FusionVector *gyroSensitivity, FusionVector *accelSensitivity) {
+void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, FusionVector *gyroSensitivity, FusionVector *gyroOffset, FusionVector *accelSensitivity,
+              FusionVector *accelOffset) {
   uint8_t whoAmI = 0;
   uint8_t MAG_whoAmI = 0;
   uint8_t userCtrl = 0;
@@ -504,11 +506,19 @@ void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, FusionVector *gyroSensitivity,
   IMU_Write(PWR_MGMT_2_ADDR, (uint8_t) ~(ACCEL_DISABLE | GYRO_DISABLE)); // Enable the Accelerometer and Gyroscope
   IMU_Delay(40, -3);                                                     // Wait atleast 35ms after enabling accel and gyro
 
-  IMU_Write(GYRO_CONFIG_1_ADDR, GYRO_FS_SEL_1000 | GYRO_DLPF_ENABLE); // Configure gyro scale to 1000dps and enable Low-pass filter
-  gyroSensitivity->axis.x = gyroSensitivity->axis.y = gyroSensitivity->axis.z = GYRO_1000_SENSITIVITY;
+  IMU_Write(GYRO_CONFIG_1_ADDR, GYRO_FS_SEL_2000 | GYRO_DLPF_ENABLE); // Configure gyro scale to 2000dps and enable Low-pass filter
+  gyroSensitivity->axis.x = gyroSensitivity->axis.y = gyroSensitivity->axis.z = GYRO_2000_SENSITIVITY;
+  // Change offset scale from min 250 dps to chosen gyro scale
+  gyroOffset->axis.x /= 2000 / 250;
+  gyroOffset->axis.y /= 2000 / 250;
+  gyroOffset->axis.z /= 2000 / 250;
 
   IMU_Write(ACCEL_CONFIG_ADDR, ACCEL_FS_SEL_8G | ACCEL_DLPF_ENABLE); // Configure accelerometer scale to 8G
   accelSensitivity->axis.x = accelSensitivity->axis.y = accelSensitivity->axis.z = ACCEL_8G_SENSITIVITY;
+  // Change offset scale from min 2G to chosen accel scale
+  accelOffset->axis.x /= 8 / 2;
+  accelOffset->axis.y /= 8 / 2;
+  accelOffset->axis.z /= 8 / 2;
 
   IMU_Write(ODR_ALIGN_EN_ADDR, ODR_ALIGN_ENABLE); // Align output data rate
   IMU_Write(GYRO_SMPLRT_DIV_ADDR, 0);             // Configure for sample rate of 50 Hz (1.1kHz / (1 + 21))

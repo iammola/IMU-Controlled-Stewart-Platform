@@ -55,6 +55,7 @@ typedef struct REG_ADDRESS_STRUCT {
 #define GYRO_DLPF_ENABLE 0x01
 #define GYRO_FS_SEL_250  (0 << 1)
 #define GYRO_FS_SEL_1000 (2 << 1)
+#define GYRO_FS_SEL_2000 (3 << 1)
 #define GYRO_DLPF_12HZ   (5 << 3)
 
 // ACCEL_CONFIG

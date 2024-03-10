@@ -22,4 +22,5 @@ extern FusionVector rawMagnetometer;
 
 extern volatile bool HasNewIMUAngles;
 
-void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, FusionVector *gyroSensitivity, FusionVector *accelSensitivity);
+void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, FusionVector *gyroSensitivity, FusionVector *gyroOffset, FusionVector *accelSensitivity,
+              FusionVector *accelOffset);
