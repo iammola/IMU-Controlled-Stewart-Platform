@@ -12,12 +12,14 @@
 #define SYS_CLOCK 80e6
 
 int main(void) {
+  FusionEuler      euler = {0};
+  FusionQuaternion quaternion = {0};
+
   FusionVector gyroscope = {
       .axis = {.x = 0.0f, .y = 0.0f, .z = 0.0f}
   };
   FusionVector gyroscopeOffset = {
-  // .axis = {.x = -1600.611f, .y = 669.281f, .z = 72.119f} // Original (250 dps)
-      .axis = {.x = -400.15275f, .y = 167.32025f, .z = 18.02975f}  // (Calculated in LSB 1000dps)
+      .axis = {.x = 1583.717f, .y = -665.774f, .z = 69.118f}
   };
   FusionVector gyroscopeSensitivity = {
       .axis = {.x = 1.0f, .y = 1.0f, .z = 1.0f}
@@ -30,8 +32,7 @@ int main(void) {
       .axis = {.x = 0.0f, .y = 0.0f, .z = 0.0f}
   };
   FusionVector accelerometerOffset = {
-  // .axis = {.x = 947.852f, .y = -413.173f,   .z = 15919.728f}  // Original (2G)
-      .axis = {.x = 236.963f, .y = -103.29325f, .z = 3979.932f}  // Original (8G)
+      .axis = {.x = -1344.858f, .y = 276.737f, .z = -17029.416f}
   };
   FusionVector accelerometerSensitivity = {
       .axis = {.x = 1.0f, .y = 1.0f, .z = 1.0f}
@@ -73,18 +74,22 @@ int main(void) {
     gyroscope = FusionOffsetUpdate(&offset, gyroscope);                         // Update gyroscope offset correction algorithm
     FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, deltaTime); // Update gyroscope AHRS algorithm
 
-    euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs)); // Calculate euler angles
+    quaternion = FusionAhrsGetQuaternion(&ahrs); // Get Quaternions
+    euler = FusionQuaternionToEuler(quaternion); // Calculate euler angles
 
     // AdaFruit_3D_Model_Viewer
-    snprintf(text, CLI_TXT_BUF, "Orientation: %0.1f,%0.1f,%0.1f", euler.angle.roll, euler.angle.pitch, euler.angle.yaw); //
+    // snprintf(text, CLI_TXT_BUF, "Orientation: %0.4f,%0.4f,%0.4f", euler.angle.roll, euler.angle.pitch, euler.angle.yaw);
+    snprintf(text, CLI_TXT_BUF, "Quaternion: %0.4f,%0.4f,%0.4f,%0.4f", quaternion.element.w, quaternion.element.x, quaternion.element.y,
+             quaternion.element.z);
 
-    // snprintf(text, CLI_TXT_BUF, "%0.4f,%0.4f,%0.4f,", gyroscope.axis.x, gyroscope.axis.y, gyroscope.axis.z);
+    // Serial Plot
+    // snprintf(text, CLI_TXT_BUF, "%0.4f %0.4f %0.4f ", gyroscope.axis.x, gyroscope.axis.y, gyroscope.axis.z);
     // CLI_Write(text);
-    // snprintf(text, CLI_TXT_BUF, "%0.4f,%0.4f,%0.4f,", accelerometer.axis.x, accelerometer.axis.y, accelerometer.axis.z);
+    // snprintf(text, CLI_TXT_BUF, "%0.4f %0.4f %0.4f ", accelerometer.axis.x, accelerometer.axis.y, accelerometer.axis.z);
     // CLI_Write(text);
-    // snprintf(text, CLI_TXT_BUF, "%0.4f,%0.4f,%0.4f,", magnetometer.axis.x, magnetometer.axis.y, magnetometer.axis.z);
+    // snprintf(text, CLI_TXT_BUF, "%0.4f %0.4f %0.4f ", magnetometer.axis.x, magnetometer.axis.y, magnetometer.axis.z);
     // CLI_Write(text);
-    // snprintf(text, CLI_TXT_BUF, "%0.4f,%0.4f,%0.4f,", euler.angle.roll, euler.angle.pitch, euler.angle.yaw);
+    // snprintf(text, CLI_TXT_BUF, "%0.4f %0.4f %0.4f ", euler.angle.roll, euler.angle.pitch, euler.angle.yaw);
 
     CLI_Write(text);
     CLI_Write("\n");

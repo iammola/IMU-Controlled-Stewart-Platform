@@ -13,7 +13,6 @@ extern char text[CLI_TXT_BUF];
 extern volatile float deltaTime;
 
 extern FusionAhrs   ahrs;
-extern FusionEuler  euler;
 extern FusionOffset offset;
 
 extern FusionVector rawGyroscope;

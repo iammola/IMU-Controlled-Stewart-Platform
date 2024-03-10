@@ -103,7 +103,6 @@ static const REG_ADDRESS I2C_SLV_DO_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS =
 
 FusionAhrs   ahrs = {0};
 FusionOffset offset = {0};
-FusionEuler  euler = {0};
 
 volatile bool HasNewIMUAngles = false;
 
@@ -268,7 +267,7 @@ static void IMU_Mag_Write(uint8_t MAG_ADDRESS, uint8_t data) {
 
 static void IMU_MadgwickFusion_Init(void) {
   const FusionAhrsSettings settings = {
-      .convention = FusionConventionEnu,
+      .convention = FusionConventionNwu,
       .gain = 1.5f,
       .gyroscopeRange = 2000, // gyroscope range in dps
       .accelerationRejection = 5.0f,
@@ -423,8 +422,8 @@ static void IMU_GetRawAccelReadings(FusionVector *dest) {
   IMU_Read(ACCEL_ZOUT_H_ADDR, &accelZH);
   IMU_Read(ACCEL_ZOUT_L_ADDR, &accelZL);
 
-  dest->axis.x = (int16_t)((accelXH << 8) | accelXL);
-  dest->axis.y = (int16_t)((accelYH << 8) | accelYL);
+  dest->axis.x = (int16_t)((accelXH << 8) | accelXL) * -1;
+  dest->axis.y = (int16_t)((accelYH << 8) | accelYL) * -1;
   dest->axis.z = (int16_t)((accelZH << 8) | accelZL);
 }
 
@@ -443,8 +442,8 @@ static void IMU_GetRawGyroReadings(FusionVector *dest) {
   IMU_Read(GYRO_ZOUT_H_ADDR, &gyroZH);
   IMU_Read(GYRO_ZOUT_L_ADDR, &gyroZL);
 
-  dest->axis.x = (int16_t)((gyroXH << 8) | gyroXL);
-  dest->axis.y = (int16_t)((gyroYH << 8) | gyroYL);
+  dest->axis.x = (int16_t)((gyroXH << 8) | gyroXL) * -1;
+  dest->axis.y = (int16_t)((gyroYH << 8) | gyroYL) * -1;
   dest->axis.z = (int16_t)((gyroZH << 8) | gyroZL);
 }
 
@@ -458,8 +457,8 @@ static bool IMU_GetMagReadings(FusionVector *dest) {
     SysTick_WaitCustom(10, -6);
     IMU_Mag_Read(MAG_HXL, magCoords, 8); // Get the X,Y,Z bytes data and ST2 required for read end
 
-    dest->axis.x = (int16_t)((magCoords[1] << 8) | magCoords[0]) * MAG_4912_SENSITIVITY;
-    dest->axis.y = (int16_t)((magCoords[3] << 8) | magCoords[2]) * MAG_4912_SENSITIVITY * -1;
+    dest->axis.x = (int16_t)((magCoords[1] << 8) | magCoords[0]) * MAG_4912_SENSITIVITY * -1;
+    dest->axis.y = (int16_t)((magCoords[3] << 8) | magCoords[2]) * MAG_4912_SENSITIVITY;
     dest->axis.z = (int16_t)((magCoords[5] << 8) | magCoords[4]) * MAG_4912_SENSITIVITY * -1;
 
     return true;
@@ -533,6 +532,6 @@ void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, FusionVector *gyroSensitivity,
   IMU_Write(INT_PIN_CFG_ADDR, INT_READ_CLEAR & ~(INT_ACTIVE_LOW | INT_OPEN_DRAIN | INT_LATCH_MANUAL_CLEAR));
   IMU_Write(INT_ENABLE_1_ADDR, RAW_DATA_INT_ENABLE); // Enable Raw Data interrupt
 
-  IMU_MadgwickFusion_Init();
-  IMU_Interrupt_Init(); // Configure the Interrupt pin
+  IMU_MadgwickFusion_Init(); // Initialize Fusion Algorithm
+  IMU_Interrupt_Init();      // Configure the Interrupt pin
 }
