@@ -100,7 +100,7 @@ static const REG_ADDRESS I2C_SLV_CTRL_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS
 static const REG_ADDRESS I2C_SLV_DO_ADDR = {.USER_BANK = USER_BANK_3, .ADDRESS = 0x06};
 
 // Initialise algorithms
-#define SAMPLE_RATE 1100 // Gyro Sample Rate of 50 Hz
+#define SAMPLE_RATE 100 // Gyro Sample Rate of 100 Hz
 
 FusionAhrs   ahrs = {0};
 FusionOffset offset = {0};
@@ -521,9 +521,9 @@ void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, FusionVector *gyroSensitivity,
   accelOffset->axis.z /= 8 / 2;
 
   IMU_Write(ODR_ALIGN_EN_ADDR, ODR_ALIGN_ENABLE); // Align output data rate
-  IMU_Write(GYRO_SMPLRT_DIV_ADDR, 0);             // Configure for sample rate of 50 Hz (1.1kHz / (1 + 21))
-  IMU_Write(ACCEL_SMPLRT_DIV_1_ADDR, 0x00);       // Configure for max sample rate of 50 Hz (1.1kHz / (1 + 21))
-  IMU_Write(ACCEL_SMPLRT_DIV_2_ADDR, 0);          // Configure for max sample rate of 50 Hz (1.1kHz / (1 + 21))
+  IMU_Write(GYRO_SMPLRT_DIV_ADDR, 0x0A);          // Configure for sample rate of 100 Hz (1.1kHz / (1 + 10))
+  IMU_Write(ACCEL_SMPLRT_DIV_1_ADDR, 0x00);       // Configure for max sample rate of 100 Hz (1.1kHz / (1 + 10))
+  IMU_Write(ACCEL_SMPLRT_DIV_2_ADDR, 0x0A);       // Configure for max sample rate of 100 Hz (1.1kHz / (1 + 10))
 
   IMU_Read(USER_CTRL_ADDR, &userCtrl);
   IMU_Write(USER_CTRL_ADDR, (userCtrl | SPI_ENABLE) & ~(DMP_ENABLE | FIFO_ENABLE)); // Enable SPI
