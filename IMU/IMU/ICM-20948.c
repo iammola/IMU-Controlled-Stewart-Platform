@@ -46,7 +46,6 @@ void GPIOD_Handler(void);
 static void IMU_ChangeUserBank(REG_ADDRESS REGISTER);
 static void IMU_Read(REG_ADDRESS REGISTER, uint8_t *dest);
 static void IMU_Write(REG_ADDRESS REGISTER, uint8_t data);
-static void IMU_Delay(uint32_t inSeconds, int32_t powerOf10);
 
 static void IMU_MagCalibration(void);
 static void IMU_AccelGyroCalibration(void);
@@ -221,7 +220,7 @@ static void IMU_Mag_Init(void) {
   IMU_Read(USER_CTRL_ADDR, &userCtrl); // Get current user ctrl settings
 
   IMU_Write(USER_CTRL_ADDR, userCtrl | I2C_MST_RST); // Reset I2C master
-  IMU_Delay(100, -3);                                // wait for 100ms after I2C master reset
+  SysTick_WaitCustom(100, -3);                       // wait for 100ms after I2C master reset
 
   IMU_Write(USER_CTRL_ADDR, userCtrl | I2C_MST_ENABLE); // enable I2C master
   IMU_Write(I2C_MST_CTRL_ADDR, I2C_MST_CLK_400K);       // Use Mast CLK = 345.60kHz, Duty Cycle = 46.67%
@@ -229,11 +228,11 @@ static void IMU_Mag_Init(void) {
   IMU_Write(I2C_MST_ODR_CONFIG_ADDR, I2C_MST_ODR_137);  // Use 137Hz rate on magnetometer
 
   IMU_Mag_Write(MAG_CNTL3, MAG_RESET); // reset mag
-  IMU_Delay(105, -6);                  // Wait at least 100us
+  SysTick_WaitCustom(105, -6);         // Wait at least 100us
 
   do {                                         // Poll until in Continuous Mode 4
     IMU_Mag_Write(MAG_CNTL2, MAG_CONT_MODE_4); // Use 100 Hz sample rate
-    IMU_Delay(105, -6);                        // Wait at least 100us
+    SysTick_WaitCustom(105, -6);               // Wait at least 100us
 
     IMU_Mag_Read(MAG_CNTL2, &tmp, 1);
   } while (tmp != MAG_CONT_MODE_4);
@@ -251,7 +250,7 @@ static void IMU_Mag_Read(uint8_t MAG_ADDRESS, uint8_t *dest, uint8_t length) {
   IMU_Write(I2C_SLV_REG_ADDR, MAG_ADDRESS);             // Set Magnetometer to start read from desired register
   IMU_Write(I2C_SLV_CTRL_ADDR, 0x80 | length);          // Allow transmission for x bytes of data
 
-  IMU_Delay(10, -6); // Wait 10 us
+  SysTick_WaitCustom(10, -6); // Wait 10 us
 
   for (dataIdx = 0; dataIdx < length; dataIdx++) {
     IMU_Read(EXT_REG, dest); // Read data
@@ -265,17 +264,6 @@ static void IMU_Mag_Write(uint8_t MAG_ADDRESS, uint8_t data) {
   IMU_Write(I2C_SLV_REG_ADDR, MAG_ADDRESS);             // Set Magnetometer Address to read
   IMU_Write(I2C_SLV_DO_ADDR, data);                     // Set data to write
   IMU_Write(I2C_SLV_CTRL_ADDR, 0x80 | 0x01);            // Enable 1-byte data write
-}
-
-static void IMU_Delay(uint32_t inSeconds, int32_t powerOf10) {
-  uint32_t CLOCK = (uint32_t)SYS_CLOCK;
-
-  while (powerOf10 < 0) {
-    CLOCK /= 10;
-    ++powerOf10;
-  }
-
-  SysTick_Wait(inSeconds * CLOCK);
 }
 
 static void IMU_MadgwickFusion_Init(void) {
@@ -297,7 +285,6 @@ static void IMU_MadgwickFusion_Init(void) {
 static void IMU_MagCalibration(void) {
 // MotionCal uses 115200 Baud
 #if (CALIBRATION_MODE == 5) || (CALIBRATION_MODE == 6)
-  uint8_t      magStatus = 0;
   FusionVector magSample = {0};
   FusionMatrix sampleSoftIronMatrix = {
       .array = {{1.f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}}
@@ -468,7 +455,7 @@ static bool IMU_GetMagReadings(FusionVector *dest) {
   IMU_Mag_Read(MAG_ST1, &ST1, 1); // Get the status
 
   if (ST1 & MAG_DATA_RDY) {
-    IMU_Delay(10, -6);
+    SysTick_WaitCustom(10, -6);
     IMU_Mag_Read(MAG_HXL, magCoords, 8); // Get the X,Y,Z bytes data and ST2 required for read end
 
     dest->axis.x = (int16_t)((magCoords[1] << 8) | magCoords[0]) * MAG_4912_SENSITIVITY;
@@ -498,13 +485,13 @@ void IMU_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, FusionVector *gyroSensitivity,
   SPI3_Init(SYS_CLOCK, SSI_CLK, SSI_CR0_FRF_MOTO | SSI_CR0_SPO | SSI_CR0_SPH, SSI_CR0_DSS_16); // Initialize the SPI pins
 
   IMU_Write(PWR_MGMT_1_ADDR, DEVICE_RESET | SLEEP_ENABLE); // Reset the device
-  IMU_Delay(101, -3);                                      // Wait atleast 100ms after device reset
+  SysTick_WaitCustom(101, -3);                             // Wait atleast 100ms after device reset
 
   IMU_Write(PWR_MGMT_1_ADDR, CLKSEL_AUTO | TEMP_ENABLE); // Disables Sleep, Low-Power Mode and Temp Sensor. Auto selects clk
-  IMU_Delay(40, -3);                                     // Wait atleast 35ms after waking from sleep
+  SysTick_WaitCustom(40, -3);                            // Wait atleast 35ms after waking from sleep
 
   IMU_Write(PWR_MGMT_2_ADDR, (uint8_t) ~(ACCEL_DISABLE | GYRO_DISABLE)); // Enable the Accelerometer and Gyroscope
-  IMU_Delay(40, -3);                                                     // Wait atleast 35ms after enabling accel and gyro
+  SysTick_WaitCustom(40, -3);                                            // Wait atleast 35ms after enabling accel and gyro
 
   IMU_Write(GYRO_CONFIG_1_ADDR, GYRO_FS_SEL_2000 | GYRO_DLPF_ENABLE); // Configure gyro scale to 2000dps and enable Low-pass filter
   gyroSensitivity->axis.x = gyroSensitivity->axis.y = gyroSensitivity->axis.z = GYRO_2000_SENSITIVITY;
