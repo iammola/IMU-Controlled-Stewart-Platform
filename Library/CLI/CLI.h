@@ -1,6 +1,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define CLI_TXT_BUF 1000
+
 #define WORD_8_BIT 3
 #define WORD_7_BIT 2
 #define WORD_6_BIT 1

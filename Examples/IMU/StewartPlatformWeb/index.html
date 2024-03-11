@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stewart Platform Simulator</title>
+    <style>
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="notSupported" class="notSupported">
+      Sorry, <b>Web Serial</b> is not supported on this device, make sure you're
+      running Chrome 78 or later and have enabled the
+      <code>#enable-experimental-web-platform-features</code> flag in
+      <code>chrome://flags</code>
+    </div>
+    <div id="webGLnotSupported" class="notSupported">
+      Sorry, <b>WebGL</b> is not supported on this device.
+    </div>
+    <div id="canvas" style="text-align: center"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.9.1/lib/p5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/quaternion@1.5.1/quaternion.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stewart@1.0.2/stewart.min.js"></script>
+    <script src="js/script.js" defer></script>
+  </body>
+</html>

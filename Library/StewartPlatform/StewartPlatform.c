@@ -20,23 +20,16 @@
 #define M_PI 3.14159265358979323846f
 #endif
 
-typedef struct Legs {
-  float  servoAngle;
-  float  sinBeta;       // Sin of Pan angle of motors in base plate
-  float  cosBeta;       // Cos of Pan angle of motors in base plate
-  Coords baseJoint;     // base joints in base frame
-  Coords platformJoint; // platform joints in platform frame
-} Legs;
+Legs legs[LEGS_COUNT] = {0};
 
 static float rodLength = 0;
 static float hornLength = 0;
 
 static Coords T0 = {0};
-static Legs   legs[] = {0};
 
 static Coords l[] = {0}; // vector from Base anchor to Platform anchor
 
-static void StewartPlatform_RotateVector(Coords * dest, Quaternion orientation, Coords vector);
+static void StewartPlatform_RotateVector(Coords *dest, Quaternion orientation, Coords vector);
 static void StewartPlatform_GetLegs(uint8_t hornDirection, // If horns are pointed outwards 0, otherwise 1
                                     float   shaftDistance, // Distance between servo pair on base
                                     float   anchorDistance // Distance between anchor points on platform
@@ -73,7 +66,7 @@ static void getHexPlate(Coords ret[], float r_i, float r_o, float rot) {
 }
 
 static void StewartPlatform_GetLegs(uint8_t hornDirection, float shaftDistance, float anchorDistance) {
-  uint8_t armIdx = 0;
+  uint8_t legIdx = 0;
 
   Coords baseInts[] = {0};
   Coords platformInts[] = {0};
@@ -89,8 +82,8 @@ static void StewartPlatform_GetLegs(uint8_t hornDirection, float shaftDistance, 
   getHexPlate(baseInts, BASE_OUTER_RADIUS, BASE_INNER_RADIUS, 0);
   getHexPlate(platformInts, PLATFORM_OUTER_RADIUS, PLATFORM_INNER_RADIUS, 0);
 
-  for (armIdx = 0; armIdx < 6; armIdx++) {
-    uint8_t midK = armIdx | 1;
+  for (legIdx = 0; legIdx < 6; legIdx++) {
+    uint8_t midK = legIdx | 1;
 
     baseCx = baseInts[midK].x;
     baseCy = baseInts[midK].y;
@@ -106,7 +99,7 @@ static void StewartPlatform_GetLegs(uint8_t hornDirection, float shaftDistance, 
     baseDY = baseNY - baseCy;
     lenBaseSide = hypotf(baseDX, baseDY);
 
-    pm = powf(-1, armIdx);
+    pm = powf(-1, legIdx);
 
     baseMidX = (baseCx + baseNx) / 2;
     baseMidY = (baseCy + baseNY) / 2;
@@ -117,18 +110,18 @@ static void StewartPlatform_GetLegs(uint8_t hornDirection, float shaftDistance, 
     baseDX /= lenBaseSide;
     baseDY /= lenBaseSide;
 
-    motorRotation = atan2f(baseDY, baseDX) + ((armIdx + hornDirection) % 2) * M_PI;
+    motorRotation = atan2f(baseDY, baseDX) + ((legIdx + hornDirection) % 2) * M_PI;
 
-    legs[armIdx].baseJoint.x = baseMidX + baseDX * shaftDistance * pm;
-    legs[armIdx].baseJoint.y = baseMidY + baseDY * shaftDistance * pm;
-    legs[armIdx].baseJoint.z = 0;
+    legs[legIdx].baseJoint.x = baseMidX + baseDX * shaftDistance * pm;
+    legs[legIdx].baseJoint.y = baseMidY + baseDY * shaftDistance * pm;
+    legs[legIdx].baseJoint.z = 0;
 
-    legs[armIdx].platformJoint.x = platMidX + baseDX * anchorDistance * pm;
-    legs[armIdx].platformJoint.y = platMidY + baseDY * anchorDistance * pm;
-    legs[armIdx].platformJoint.z = 0;
+    legs[legIdx].platformJoint.x = platMidX + baseDX * anchorDistance * pm;
+    legs[legIdx].platformJoint.y = platMidY + baseDY * anchorDistance * pm;
+    legs[legIdx].platformJoint.z = 0;
 
-    legs[armIdx].sinBeta = sinf(motorRotation);
-    legs[armIdx].cosBeta = cosf(motorRotation);
+    legs[legIdx].sinBeta = sinf(motorRotation);
+    legs[legIdx].cosBeta = cosf(motorRotation);
   }
 }
 
@@ -155,7 +148,7 @@ void StewartPlatform_Update(Coords translation, Quaternion orientation) {
   }
 }
 
-static void StewartPlatform_RotateVector(Coords * dest, Quaternion orientation, Coords vector) {
+static void StewartPlatform_RotateVector(Coords *dest, Quaternion orientation, Coords vector) {
   float qw = orientation.w;
   float qx = orientation.x;
   float qy = orientation.y;
