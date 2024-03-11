@@ -8,6 +8,8 @@
 
 #include "HC-12/HC-12.h"
 
+#define SYS_CLOCK 80e6
+
 #define SW2_BIT        (unsigned)0x01
 #define SW1_BIT        (unsigned)0x10
 #define LED_BITS       (unsigned)0x0E
@@ -61,7 +63,8 @@ int main(void) {
   PLL_Init();     // Initialize PLL
   PortF_Init();   // Initialize Port F
 
-  HC12_Init(80e6, 9600 /* 115200 */, 0); // Initialize HC12 with 115200 bps
+  HC12_Init();
+  HC12_Config(SYS_CLOCK, BAUD_115200, TX_20dBm); // Use 115200 bps, 20 dBm
 
   while (1) {
     // Wait for new data to be confirmed

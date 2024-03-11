@@ -1,3 +1,13 @@
+/**
+ * @file HC-12.c
+ * @author Ademola Adedeji (a.mola.dev@gmail.com)
+ * @brief Simple library to communicate with the HC-12 433 MHz wireless module
+ * @version 0.1
+ * @date 2024-03-11
+ *
+ * @copyright Copyright (c) 2024
+ *
+ */
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -8,24 +18,29 @@
 
 #include "HC-12.h"
 
-#define CMD_MODE_BIT    (unsigned)(1 << 2) // PB2
-#define CMD_MODE_PCTL_M (unsigned)(GPIO_PCTL_PB2_M)
-#define CMD_MODE_ADDR   (*((volatile uint32_t *)(0x40005000 | (CMD_MODE_BIT << 2))))
+#define SET_BIT    (unsigned)(1 << 2) // PB2
+#define SET_PCTL_M (unsigned)(GPIO_PCTL_PB2_M)
+#define SET_ADDR   (*((volatile uint32_t *)(0x40005000 | (SET_BIT << 2))))
 
 #define VCC_BIT    (unsigned)(1 << 3) // PB3
 #define VCC_PCTL_M (unsigned)(GPIO_PCTL_PB3_M)
 #define VCC_ADDR   (*((volatile uint32_t *)(0x40005000 | (VCC_BIT << 2))))
 
-static void HC12_SetMode(bool ToTransmissionMode);
-static void HC12_Config(uint32_t SYS_CLOCK, uint32_t BAUD);
+typedef enum { TRANSMISSION_MODE = 0x4B, COMMAND_MODE = 0xEA } MODE;
+
+static void HC12_SetMode(MODE NewMode);
 static bool HC12_SendCommand(char *FORMAT, char *RESPONSE_FORMAT, ...);
 
-static uint8_t MODE = 0xFF;
-bool           HasNewData = false;
-uint8_t        RX_Data_Buffer[MAX_MESSAGE_SIZE] = {0};
+static MODE CURRENT_MODE = 0xFF;
+bool        HasNewData = false;
+uint8_t     RX_Data_Buffer[MAX_MESSAGE_SIZE] = {0};
 
 void UART1_Handler(void);
 
+/**
+ * @brief UART1 Interrupt Handler
+ * @param
+ */
 void UART1_Handler(void) {
   uint8_t SYN = 0;
   uint8_t dataLength = 0;
@@ -51,6 +66,14 @@ void UART1_Handler(void) {
   HasNewData = true; // Toggle to alert for new data
 }
 
+/**
+ * @brief Variadic utility function to construct the command string for sending
+ * commands to the HC-12 module.
+ * @param FORMAT Command string with placeholders for values
+ * @param RESPONSE_FORMAT Expected response string with placeholders for values
+ * @param ... Values to be used as placeholders
+ * @return `true` if the expected response was read. `false` otherwise
+ */
 static bool HC12_SendCommand(char *FORMAT, char *RESPONSE_FORMAT, ...) {
   char cmd[25];
   char response[25];
@@ -65,69 +88,104 @@ static bool HC12_SendCommand(char *FORMAT, char *RESPONSE_FORMAT, ...) {
   vsnprintf(response, 25, RESPONSE_FORMAT, argptrRES); // Format expected response
   va_end(argptrRES);
 
+  if (CURRENT_MODE != COMMAND_MODE) // Confirm in Command Mode
+    HC12_SetMode(COMMAND_MODE);
+
   UART_Transmit((uint8_t *)cmd, strlen((const char *)cmd));
   UART_Receive((uint8_t *)CMDResponse, strlen((const char *)response));
 
   return strcmp(CMDResponse, response) == 0; // Verify they are equal
 }
 
-static void HC12_Config(uint32_t SYS_CLOCK, uint32_t BAUD) {
-  UART_Init(SYS_CLOCK, 9600, WORD_8_BIT, NO_PARITY, ONE_STOP_BIT); // Starts at Default config 9600 bps, 8-N-1 control
+/**
+ * @brief Used to toggle the SET pin of the device, to transition between Command
+ * and Transmission mode
+ * @param NewMode `true` to drive the pin High for Transmission Mode, `false`
+ * for Command Mode
+ */
+static void HC12_SetMode(MODE NewMode) {
+  if (CURRENT_MODE == NewMode)
+    return; // Ignore repeated disables of the device
 
-  HC12_SetMode(false); // Enter Command Mode
+  VCC_ADDR = VCC_BIT; // Drive VCC pin HIGH to turn off device
+
+  SET_ADDR = (NewMode == TRANSMISSION_MODE) ? SET_BIT : 0x00; // Drive SET pin HIGH for mode
+  SysTick_Wait10ms(35);                                       // Wait for 200ms to enter Transmission Mode or 40ms to enter AT command mode
+
+  VCC_ADDR = 0; // Drive VCC pin LOW to turn device on with mode
+  CURRENT_MODE = NewMode;
+}
+
+/**
+ * @brief Initializes the HC-12 VCC and SET pins. Required to call `HC12_Config` to setup
+ * the UART pins at the desired Baud Rate
+ * @param
+ */
+void HC12_Init(void) {
+  SysTick_Init();
+
+  SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R1; // Enable Port B
+
+  GPIO_PORTB_DIR_R |= (SET_BIT | VCC_BIT);         // Use as Output pin
+  GPIO_PORTB_DEN_R |= (SET_BIT | VCC_BIT);         // Enable Digital Mode
+  GPIO_PORTB_AMSEL_R &= ~(SET_BIT | VCC_BIT);      // Disable Analog Mode
+  GPIO_PORTB_AFSEL_R &= ~(SET_BIT | VCC_BIT);      // Disable Alternate functions
+  GPIO_PORTB_PCTL_R &= ~(SET_PCTL_M | VCC_PCTL_M); // Clear Peripheral functions
+  GPIO_PORTB_DR8R_R |= VCC_BIT;                    // Use 8mA drive for VCC pin
+
+  UART_TimeoutInterrupt();
+  UART_FIFOInterrupt(RX_FIFO_6_8); // Use 3/4 full for 12 bytes out of 16
+
+  HC12_SetMode(TRANSMISSION_MODE);
+}
+
+/**
+ * @brief Configures the HC-12 module to use the desired Baud Rate and TX Power Level.
+ * Verifies the Firmware version matches the expectation, using Channel 1 (433 MHz) and
+ * FU3 transmission mode
+ * @param SYS_CLOCK System clock speed
+ * @param baud Desired baud rate for communication, changes the Over-the-Air baud rate
+ * @param powerLevel Desired power level for transmission
+ */
+void HC12_Config(uint32_t SYS_CLOCK, BAUD_RATE baud, TX_POWER powerLevel) {
+  UART_Disable();
+
+  HC12_SetMode(COMMAND_MODE); // Enter Command Mode
+
+  UART_Init(SYS_CLOCK, 9600, WORD_8_BIT, NO_PARITY, ONE_STOP_BIT); // Starts at Default config 9600 bps, 8-N-1 control
 
   while (!HC12_SendCommand("AT", "OK")) { // Poll until Command is accepted
   }
 
   HC12_SendCommand("AT+V", "www.hc01.com HC-12 v2.6"); // Verify Firmware version matches
-  HC12_SendCommand("AT+B%d", "OK+B%d", BAUD);          // Set Baud-Rate to desired bps
-  HC12_SendCommand("AT+P%d", "OK+P%d", 8);             // Set transmitting power to 20dBm
+  HC12_SendCommand("AT+B%d", "OK+B%d", baud);          // Set Baud-Rate to desired bps
+  HC12_SendCommand("AT+P%d", "OK+P%d", powerLevel);    // Set transmitting power to 20dBm
+  HC12_SendCommand("AT+C%03d", "OK+C%03d", 1);         // Use channel 1
+  HC12_SendCommand("AT+FU%d", "OK+FU%d", 3);           // Set Transmission Mode to FU3
 
   UART_Disable();
+
+  HC12_SetMode(TRANSMISSION_MODE);                                 // Exit Command Mode
+  UART_Init(SYS_CLOCK, baud, WORD_8_BIT, NO_PARITY, ONE_STOP_BIT); // Use new Baud-Rate
 }
 
-void HC12_Init(uint32_t SYS_CLOCK, uint32_t BAUD, RX_Data_Handler OnRX) {
-  SysTick_Init();
-
-  SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R1; // Enable Port B
-
-  GPIO_PORTB_DIR_R |= (CMD_MODE_BIT | VCC_BIT);         // Use as Output pin
-  GPIO_PORTB_DEN_R |= (CMD_MODE_BIT | VCC_BIT);         // Enable Digital Mode
-  GPIO_PORTB_AMSEL_R &= ~(CMD_MODE_BIT | VCC_BIT);      // Disable Analog Mode
-  GPIO_PORTB_AFSEL_R &= ~(CMD_MODE_BIT | VCC_BIT);      // Disable Alternate functions
-  GPIO_PORTB_PCTL_R &= ~(CMD_MODE_PCTL_M | VCC_PCTL_M); // Clear Peripheral functions
-  GPIO_PORTB_DR8R_R |= VCC_BIT;                         // Use 8mA drive for VCC pin
-
-  HC12_Config(SYS_CLOCK, BAUD);
-
-  UART_Init(SYS_CLOCK, BAUD, WORD_8_BIT, NO_PARITY, ONE_STOP_BIT); // Use new Baud-Rate
-  UART_TimeoutInterrupt();
-  UART_FIFOInterrupt(RX_FIFO_6_8); // Use 3/4 full for 12 bytes out of 16
-
-  HC12_SetMode(true);
-}
-
+/**
+ * @brief Used to send data at the configured baud rate through the air
+ * @param data
+ * @param length
+ * @return
+ */
 bool HC12_SendData(uint8_t *data, uint8_t length) {
   uint8_t TX_Metadata[METADATA_SIZE] = {SYNC_WORD, length};
 
   if (length > MAX_MESSAGE_SIZE)
     return false;
 
+  if (CURRENT_MODE != TRANSMISSION_MODE) // Confirm in transmission mode
+    HC12_SetMode(TRANSMISSION_MODE);
+
   UART_Transmit(TX_Metadata, METADATA_SIZE);
   UART_Transmit(data, length);
 
   return true;
-}
-
-static void HC12_SetMode(bool ToTransmissionMode) {
-  if (MODE == ToTransmissionMode)
-    return; // Ignore repeated disables of the device
-
-  VCC_ADDR = VCC_BIT; // Drive VCC pin HIGH to turn off device
-
-  CMD_MODE_ADDR = ToTransmissionMode ? CMD_MODE_BIT : 0x00; // Drive SET pin HIGH for mode
-  SysTick_Wait10ms(35);                                     // Wait for 200ms to enter Transmission Mode or 40ms to enter AT command mode
-
-  VCC_ADDR = 0; // Drive VCC pin LOW to turn device on with mode
-  MODE = ToTransmissionMode;
 }
