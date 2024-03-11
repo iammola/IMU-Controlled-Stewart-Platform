@@ -36,7 +36,7 @@ static Legs   legs[] = {0};
 
 static Coords l[] = {0}; // vector from Base anchor to Platform anchor
 
-static void StewartPlatform_RotateVector(Coords dest, Quaternion orientation, Coords vector);
+static void StewartPlatform_RotateVector(Coords * dest, Quaternion orientation, Coords vector);
 static void StewartPlatform_GetLegs(uint8_t hornDirection, // If horns are pointed outwards 0, otherwise 1
                                     float   shaftDistance, // Distance between servo pair on base
                                     float   anchorDistance // Distance between anchor points on platform
@@ -140,7 +140,7 @@ void StewartPlatform_Update(Coords translation, Quaternion orientation) {
   float gk, ek, fk;
 
   for (legIdx = 0; legIdx < LEGS_COUNT; legIdx++) {
-    StewartPlatform_RotateVector(o, orientation, legs[legIdx].platformJoint);
+    StewartPlatform_RotateVector(&o, orientation, legs[legIdx].platformJoint);
 
     l[legIdx].x = translation.x + o.x - legs[legIdx].baseJoint.x;
     l[legIdx].y = translation.y + o.y - legs[legIdx].baseJoint.y;
@@ -155,7 +155,7 @@ void StewartPlatform_Update(Coords translation, Quaternion orientation) {
   }
 }
 
-static void StewartPlatform_RotateVector(Coords dest, Quaternion orientation, Coords vector) {
+static void StewartPlatform_RotateVector(Coords * dest, Quaternion orientation, Coords vector) {
   float qw = orientation.w;
   float qx = orientation.x;
   float qy = orientation.y;
@@ -171,7 +171,7 @@ static void StewartPlatform_RotateVector(Coords dest, Quaternion orientation, Co
   float tz = 2 * (qx * vy - qy * vx);
 
   // v + w t + q x t
-  dest.x = vx + qw * tx + qy * tz - qz * ty;
-  dest.y = vy + qw * ty + qz * tx - qx * tz;
-  dest.z = vz + qw * tz + qx * ty - qy * tx;
+  dest->x = vx + qw * tx + qy * tz - qz * ty;
+  dest->y = vy + qw * ty + qz * tx - qx * tz;
+  dest->z = vz + qw * tz + qx * ty - qy * tx;
 }

@@ -25,7 +25,7 @@
   while ((SSI3_SR_R & SSI_SR_BSY) == SSI_SR_BSY)                                                                                                     \
     ;
 
-void SPI3_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, uint8_t frameConfig, uint8_t dataSize) {
+void SPI3_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, SPI_MODE frameConfig, DATA_SIZE dataSize) {
   uint32_t ssiSCR = 0;
   uint32_t ssiCPSR = 0;
   uint32_t maxBitRate = SYS_CLK / SSI_CLK;
