@@ -43,7 +43,7 @@
 #include <string.h>
 
 #include "RA8875.h"
-#include "SPI/SPI.h"
+#include "SSI/SSI0.h"
 #include "SysTick/SysTick.h"
 
 #include "tm4c123gh6pm.h"
@@ -53,7 +53,7 @@
 #define RST_ADDR   (*((volatile uint32_t *)(0x40004000 | (RST_PIN << 2))))
 
 // Seems to be the closest max
-#define SPI_SPEED 5e6 /*!< 5MHz */
+#define SSI_SPEED 5e6 /*!< 5MHz */
 
 static void RA8875_PLLinit(void);
 static void RA8875_initialize(void);
@@ -106,8 +106,8 @@ bool RA8875_begin(uint32_t SYS_CLOCK, enum RA8875sizes s) {
   _rotation = 0;
 
   SysTick_Init();
-  // Arduino SPI_MODE0 with LOW idle clock and RISING edge Data capture
-  SPI_Init(SYS_CLOCK, SPI_SPEED, SPI_MODE0, SPI_DATA_16);
+  // Arduino SSI0_MODE0 with LOW idle clock and RISING edge Data capture
+  SSI0_Init(SYS_CLOCK, SSI_SPEED, SSI_MODE0, SSI_DATA_16);
 
   GPIO_PORTA_DEN_R |= RST_PIN;      // Digital enable
   GPIO_PORTA_DIR_R |= RST_PIN;      // Set as output
@@ -584,14 +584,14 @@ void RA8875_setXY(uint16_t x, uint16_t y) {
 /**************************************************************************/
 void RA8875_pushPixels(uint32_t num, uint16_t p) {
   uint16_t byte = RA8875_DATAWRITE;
-  SPI_StartTransmission();
+  SSI0_StartTransmission();
 
-  SPI_Write(&byte, 1);
+  SSI0_Write(&byte, 1);
   while (num--) {
-    SPI_Write(&p, 1);
+    SSI0_Write(&p, 1);
   }
 
-  SPI_EndTransmission();
+  SSI0_EndTransmission();
 }
 
 /**************************************************************************/
@@ -660,9 +660,9 @@ void RA8875_drawPixel(int16_t x, int16_t y, uint16_t color) {
   RA8875_writeReg(RA8875_CURV1, (y >> 8) & 0xFF);
   RA8875_writeCommand(RA8875_MRWC);
 
-  SPI_StartTransmission();
-  SPI_Write(byte, 2);
-  SPI_EndTransmission();
+  SSI0_StartTransmission();
+  SSI0_Write(byte, 2);
+  SSI0_EndTransmission();
 }
 
 /**************************************************************************/
@@ -694,12 +694,12 @@ void RA8875_drawPixels(uint16_t *p, uint32_t num, int16_t x, int16_t y) {
 
   RA8875_writeCommand(RA8875_MRWC);
 
-  SPI_StartTransmission();
+  SSI0_StartTransmission();
 
-  SPI_Write(&byte, 1);
-  SPI_Write(p, num);
+  SSI0_Write(&byte, 1);
+  SSI0_Write(p, num);
 
-  SPI_EndTransmission();
+  SSI0_EndTransmission();
 }
 
 /**************************************************************************/
@@ -1614,9 +1614,9 @@ uint8_t RA8875_readReg(uint8_t reg) {
 void RA8875_writeData(uint8_t d) {
   uint16_t byte = (RA8875_DATAWRITE << 8) | d;
 
-  SPI_StartTransmission();
-  SPI_Write(&byte, 1);
-  SPI_EndTransmission();
+  SSI0_StartTransmission();
+  SSI0_Write(&byte, 1);
+  SSI0_EndTransmission();
 }
 
 /**************************************************************************/
@@ -1629,9 +1629,9 @@ void RA8875_writeData(uint8_t d) {
 uint8_t RA8875_readData(void) {
   uint16_t result = 0x00;
 
-  SPI_StartTransmission();
-  SPI_Read(RA8875_DATAREAD << 8, &result, 1);
-  SPI_EndTransmission();
+  SSI0_StartTransmission();
+  SSI0_Read(RA8875_DATAREAD << 8, &result, 1);
+  SSI0_EndTransmission();
 
   return result & 0xFF;
 }
@@ -1646,9 +1646,9 @@ uint8_t RA8875_readData(void) {
 void RA8875_writeCommand(uint8_t d) {
   uint16_t byte = (RA8875_CMDWRITE << 8) | d;
 
-  SPI_StartTransmission();
-  SPI_Write(&byte, 1);
-  SPI_EndTransmission();
+  SSI0_StartTransmission();
+  SSI0_Write(&byte, 1);
+  SSI0_EndTransmission();
 }
 
 /**************************************************************************/
@@ -1661,9 +1661,9 @@ void RA8875_writeCommand(uint8_t d) {
 uint8_t RA8875_readStatus(void) {
   uint16_t result = 0x00;
 
-  SPI_StartTransmission();
-  SPI_Read(RA8875_CMDREAD << 8, &result, 1);
-  SPI_EndTransmission();
+  SSI0_StartTransmission();
+  SSI0_Read(RA8875_CMDREAD << 8, &result, 1);
+  SSI0_EndTransmission();
 
   return result & 0xFF;
 }

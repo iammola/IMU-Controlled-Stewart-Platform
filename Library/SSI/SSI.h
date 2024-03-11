@@ -1,0 +1,15 @@
+#include <stdint.h>
+
+#include "tm4c123gh6pm.h"
+
+typedef enum {
+  SSI_MODE0 = (SSI_CR0_FRF_MOTO & ~(SSI_CR0_SPO | SSI_CR0_SPH)),
+  SSI_MODE1 = ((SSI_CR0_FRF_MOTO | SSI_CR0_SPH) & ~SSI_CR0_SPO),
+  SSI_MODE2 = ((SSI_CR0_FRF_MOTO | SSI_CR0_SPO) & ~SSI_CR0_SPH),
+  SSI_MODE3 = (SSI_CR0_FRF_MOTO | SSI_CR0_SPO | SSI_CR0_SPH),
+} SSI_MODE;
+
+typedef enum {
+  SSI_DATA_16 = SSI_CR0_DSS_16,
+  SSI_DATA_8 = SSI_CR0_DSS_8,
+} DATA_SIZE;

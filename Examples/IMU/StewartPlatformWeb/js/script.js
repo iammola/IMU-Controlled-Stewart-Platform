@@ -43,12 +43,6 @@ addEventListener("DOMContentLoaded", () => {
       case "DATA_READ":
         quaternion = new Quaternion(body.value);
         break;
-      case "CONNECTED":
-        toggleUIConnected(true);
-        break;
-      case "DISCONNECTED":
-        toggleUIConnected(false);
-        break;
       default:
         break;
     }
@@ -107,7 +101,7 @@ addEventListener("DOMContentLoaded", () => {
 
   setTimeout(async () => {
     await navigator.serial.requestPort();
-    worker.postMessage({ type: "CONNECT", baudRate: baudRate.value });
+    worker.postMessage({ type: "CONNECT", baudRate: 115200 });
   }, 5e3);
 });
 

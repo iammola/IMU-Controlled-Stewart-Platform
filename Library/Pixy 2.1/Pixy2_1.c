@@ -5,12 +5,12 @@
 #include <stdio.h>  // Using snprintf
 #include <string.h> // Using memcpy
 
-#include "SPI/SPI.h"
+#include "SSI/SSI3.h"
 #include "tm4c123gh6pm.h"
 
 #include "Pixy2_1.h"
 
-#define SPI_SPEED 175e4 // 1.75 MHz
+#define SSI_SPEED 175e4 // 1.75 MHz
 
 #define RX_BUF_SIZE 100
 
@@ -40,7 +40,7 @@ static void Pixy2_1_GetVersion(void);
 
 void Pixy2_1_Init(uint32_t SYS_CLOCK) {
   // Arduino SPI Mode 1
-  SPI_Init(SYS_CLOCK, SPI_SPEED, SPI_MODE1, SPI_DATA_16);
+  SSI3_Init(SYS_CLOCK, SSI_SPEED, SSI_MODE1, SSI_DATA_16);
 
   Pixy2_1_GetVersion();
 }
@@ -56,22 +56,22 @@ static bool Pixy2_1_Transaction(PACKET_TYPE reqType, PACKET_TYPE resType, uint16
 
   uint16_t request[] = {NO_CHECKSUM_SYNC_BYTE, (uint16_t)(((unsigned)reqType << 8) | txLength)};
 
-  SPI_StartTransmission();
+  SSI3_StartTransmission();
 
-  SPI_Write(request, 2);
+  SSI3_Write(request, 2);
   if (txLength > 0) {
-    SPI_Write(txBuff, (txLength + 1) / 2); // Transmit data with 16 byte length rounded up to 1
+    SSI3_Write(txBuff, (txLength + 1) / 2); // Transmit data with 16 byte length rounded up to 1
   }
 
   if (rxLength < 1) {
-    SPI_EndTransmission(); // No data to send, so end transmission early
+    SSI3_EndTransmission(); // No data to send, so end transmission early
     return true;
   }
 
   // Receive response with length reduced to d-word format, + 6/2 for the metadata bytes and +1/2 for rounding errors
-  SPI_Read(0x00, totalRxBuff, (rxLength + 6 + 1 + 8) / 2);
+  SSI3_Read(0x00, totalRxBuff, (rxLength + 6 + 1 + 8) / 2);
 
-  SPI_EndTransmission();
+  SSI3_EndTransmission();
 
   // Attempt to handle random unusable bytes before actual data
   for (loopIdx = 0; loopIdx < RX_BUF_SIZE; loopIdx++) {

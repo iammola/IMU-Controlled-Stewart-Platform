@@ -39,7 +39,7 @@
 #include <string.h>
 
 #include "CLI/CLI.h"
-#include "SPI/SPI.h"
+#include "SSI/SSI2.h"
 #include "SysTick/SysTick.h"
 
 #include "Fusion/Fusion.h"
@@ -62,15 +62,15 @@ static void ICM20948_GetRawAccelReadings(FusionVector *dest);
 
 // Initialise algorithms
 #define SAMPLE_RATE 100 // Gyro Sample Rate of 100 Hz
-#define SPI_SPEED   1e6
+#define SSI_SPEED   1e6
 
-FusionAhrs   ahrs = {0};
-FusionOffset offset = {0};
+static FusionAhrs   ahrs = {0};
+static FusionOffset offset = {0};
 
 volatile bool HasNewIMUAngles = false;
 
 static uint32_t          SYS_CLOCK;
-volatile float           deltaTime = 0.0f;
+static volatile float    deltaTime = 0.0f;
 static volatile uint32_t lastTimestamp = 0;
 
 static FusionVector gyroscope = FUSION_VECTOR_ZERO;
@@ -107,7 +107,7 @@ void GPIOD_Handler(void) {
   uint8_t           intStatus = 0;
   volatile uint32_t timestamp = ST_CURRENT_R;
 
-  GPIO_PORTD_ICR_R |= INT_BIT; // Clear Interrupt
+  GPIO_PORTB_ICR_R |= INT_BIT; // Clear Interrupt
 
   ICM20948_Read(INT_STATUS_1_ADDR, &intStatus);
   if (!intStatus)
@@ -151,9 +151,9 @@ static void ICM20948_ChangeUserBank(REG_ADDRESS REGISTER) {
   if (REGISTER.ADDRESS == USER_BANK_ADDR.ADDRESS)
     return;
 
-  SPI_StartTransmission();
-  SPI_Write(&byte, 1);
-  SPI_EndTransmission();
+  SSI2_StartTransmission();
+  SSI2_Write(&byte, 1);
+  SSI2_EndTransmission();
 
   LastUserBank = REGISTER.USER_BANK;
 }
@@ -246,7 +246,7 @@ void ICM20948_Init(uint32_t SYS_CLK) {
 
   SysTick_Init(); // Initialize SysTick
 
-  SPI_Init(SYS_CLOCK, SPI_SPEED, SPI_MODE3, SPI_DATA_16); // Initialize the SPI pins
+  SSI2_Init(SYS_CLOCK, SSI_SPEED, SSI_MODE3, SSI_DATA_16); // Initialize the SPI pins
 
   ICM20948_Write(PWR_MGMT_1_ADDR, DEVICE_RESET | SLEEP_ENABLE); // Reset the device
   SysTick_WaitCustom(101, -3);                                  // Wait atleast 100ms after device reset
@@ -266,20 +266,20 @@ void ICM20948_Init(uint32_t SYS_CLK) {
 void ICM20948_Interrupt_Init(void) {
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R3; // Enable Port D clock
 
-  GPIO_PORTD_AFSEL_R &= ~INT_BIT;   // Disable Alternate Functions on CS pin
-  GPIO_PORTD_PCTL_R &= ~INT_PCTL_M; // Disable Peripheral functions on PD6
-  GPIO_PORTD_DIR_R &= ~INT_BIT;     // Configure INT bit as input
-  GPIO_PORTD_DEN_R |= INT_BIT;      // Enable Digital Mode on pins
-  GPIO_PORTD_AMSEL_R &= ~INT_BIT;   // Disable Analog Mode on pins
-  GPIO_PORTD_IM_R &= ~INT_BIT;      // Disable the INT pin interrupt
-  GPIO_PORTD_IS_R &= ~INT_BIT;      // Configure for Edge-Detect interrupts
-  GPIO_PORTD_IBE_R &= ~INT_BIT;     // Only listen on one edge event
-  GPIO_PORTD_IEV_R |= INT_BIT;      // Trigger interrupt on rising edge
+  GPIO_PORTB_AFSEL_R &= ~INT_BIT;   // Disable Alternate Functions on CS pin
+  GPIO_PORTB_PCTL_R &= ~INT_PCTL_M; // Disable Peripheral functions on PD6
+  GPIO_PORTB_DIR_R &= ~INT_BIT;     // Configure INT bit as input
+  GPIO_PORTB_DEN_R |= INT_BIT;      // Enable Digital Mode on pins
+  GPIO_PORTB_AMSEL_R &= ~INT_BIT;   // Disable Analog Mode on pins
+  GPIO_PORTB_IM_R &= ~INT_BIT;      // Disable the INT pin interrupt
+  GPIO_PORTB_IS_R &= ~INT_BIT;      // Configure for Edge-Detect interrupts
+  GPIO_PORTB_IBE_R &= ~INT_BIT;     // Only listen on one edge event
+  GPIO_PORTB_IEV_R |= INT_BIT;      // Trigger interrupt on rising edge
 
   NVIC_EN0_R |= NVIC_EN0_INT3;                                                          // Enable Port D's Interrupt Handler
   NVIC_PRI0_R = (NVIC_PRI0_R & ~NVIC_PRI0_INT3_M) | (INT_PRIORITY << NVIC_PRI0_INT3_S); // Configure Port D's priority
-  GPIO_PORTD_ICR_R |= INT_BIT;                                                          // Clear the INT pin's interrupt
-  GPIO_PORTD_IM_R |= INT_BIT;                                                           // Allow the INT pin interrupt to be detected
+  GPIO_PORTB_ICR_R |= INT_BIT;                                                          // Clear the INT pin's interrupt
+  GPIO_PORTB_IM_R |= INT_BIT;                                                           // Allow the INT pin interrupt to be detected
 }
 
 /**
@@ -294,9 +294,9 @@ void ICM20948_Read(REG_ADDRESS REGISTER, uint8_t *dest) {
   if (LastUserBank != REGISTER.USER_BANK)
     ICM20948_ChangeUserBank(REGISTER);
 
-  SPI_StartTransmission();
-  SPI_Read(READ(REGISTER.ADDRESS), &response, 1);
-  SPI_EndTransmission();
+  SSI2_StartTransmission();
+  SSI2_Read(READ(REGISTER.ADDRESS), &response, 1);
+  SSI2_EndTransmission();
 
   *dest = response & 0xFF;
 }
@@ -313,9 +313,9 @@ void ICM20948_Write(REG_ADDRESS REGISTER, uint8_t data) {
   if (LastUserBank != REGISTER.USER_BANK)
     ICM20948_ChangeUserBank(REGISTER);
 
-  SPI_StartTransmission();
-  SPI_Write(&byte, 1);
-  SPI_EndTransmission();
+  SSI2_StartTransmission();
+  SSI2_Write(&byte, 1);
+  SSI2_EndTransmission();
 }
 
 /**
@@ -414,7 +414,7 @@ void ICM20948_MadgwickFusion_Init(void) {
  */
 void ICM20948_MagCalibration(void) {
 #if (CALIBRATION_MODE == 5) || (CALIBRATION_MODE == 6)
-  char text[CLI_TXT_BUF] = "";
+  static char text[CLI_TXT_BUF] = "";
 
   FusionVector magSample = FUSION_VECTOR_ZERO;
   FusionVector sampleHardIronOffset = FUSION_VECTOR_ZERO;
@@ -480,7 +480,7 @@ void ICM20948_MagCalibration(void) {
  */
 void ICM20948_AccelGyroCalibration(void) {
 #if (CALIBRATION_MODE > 0) && (CALIBRATION_MODE < 5)
-  char text[CLI_TXT_BUF] = "";
+  static char text[CLI_TXT_BUF] = "";
 
   uint32_t      SAMPLES_LEFT = 0;
   const int32_t SAMPLES_COUNT = 5e4;

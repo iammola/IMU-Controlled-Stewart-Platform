@@ -1,5 +1,7 @@
 #include "IMU.h"
 
+volatile FusionQuaternion quaternion;
+
 void IMU_Init(uint32_t SYS_CLK) {
   uint8_t whoAmI = 0;
   uint8_t MAG_whoAmI = 0;

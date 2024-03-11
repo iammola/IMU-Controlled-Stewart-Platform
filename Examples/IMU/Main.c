@@ -9,9 +9,9 @@
 
 #define SYS_CLOCK 80e6
 
-int main(void) {
-  char text[CLI_TXT_BUF] = "";
+static char text[CLI_TXT_BUF] = "";
 
+int main(void) {
   FPULazyStackingEnable(); // Enable Floating Point for use especially in Interrupts
 
   PLL_Init(); // Initialize the PLL
