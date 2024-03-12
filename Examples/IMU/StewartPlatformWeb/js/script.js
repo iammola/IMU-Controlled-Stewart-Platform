@@ -25,6 +25,15 @@ addEventListener("DOMContentLoaded", () => {
   addEventListener("mousemove", moveViewAngleChange);
   canvas.addEventListener("mousedown", startViewAngleChange);
 
+  addEventListener(
+    "dblclick",
+    async () => {
+      await navigator.serial.requestPort();
+      worker.postMessage({ type: "CONNECT", baudRate: 115200 });
+    },
+    { once: true }
+  );
+
   if ("serial" in navigator) {
     const notSupported = document.getElementById("notSupported");
     notSupported.classList.add("hidden");
@@ -41,7 +50,11 @@ addEventListener("DOMContentLoaded", () => {
 
     switch (type) {
       case "DATA_READ":
-        quaternion = new Quaternion(body.value);
+        try {
+          quaternion = new Quaternion(body.value);
+        } catch (err) {
+          console.log(body.value);
+        }
         break;
       default:
         break;
@@ -67,18 +80,18 @@ addEventListener("DOMContentLoaded", () => {
       platform = new Stewart();
 
       platform.initHexagonal({
-        baseRadius: 80,
-        baseRadiusOuter: 110,
-        platformRadius: 50,
-        platformRadiusOuter: 80,
+        baseRadius: 60,
+        baseRadiusOuter: 83.2665,
+        platformRadius: 45,
+        platformRadiusOuter: 70.946,
         platformTurn: true,
-        rodLength: 130,
-        hornLength: 50,
+        rodLength: 75,
+        hornLength: 38.1,
         hornDirection: 0,
-        shaftDistance: 20,
-        anchorDistance: 20,
-        servoRange: [-Math.PI / 2, Math.PI / 2],
-        servoRangeVisible: false,
+        shaftDistance: 14.825,
+        anchorDistance: 22.5,
+        servoRange: [0, Math.PI],
+        servoRangeVisible: true,
       });
     };
     p.draw = function () {
@@ -98,11 +111,6 @@ addEventListener("DOMContentLoaded", () => {
   };
 
   new p5(sketch, "canvas");
-
-  setTimeout(async () => {
-    await navigator.serial.requestPort();
-    worker.postMessage({ type: "CONNECT", baudRate: 115200 });
-  }, 5e3);
 });
 
 let isWebGLAvailable = function () {
