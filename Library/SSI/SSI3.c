@@ -2,7 +2,7 @@
 
 #include "tm4c123gh6pm.h"
 
-#include "SSI.h"
+#include "SSI3.h"
 
 #define SSI3_CLK_BIT (1 << 0) // (PD0) SSI3CLK
 #define SSI3_FSS_BIT (1 << 1) // (PD1) SSI3FSS (Chip Select)

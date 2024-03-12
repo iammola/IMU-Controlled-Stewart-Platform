@@ -2,7 +2,7 @@
 
 #include "tm4c123gh6pm.h"
 
-#include "SSI.h"
+#include "SSI2.h"
 
 #define SSI2_CLK_BIT (1 << 4) // (PB4) SSI2CLK
 #define SSI2_FSS_BIT (1 << 5) // (PB5) SSI2FSS (Chip Select)
@@ -31,8 +31,8 @@ void SSI2_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, SSI_MODE frameConfig, DATA_SI
   uint32_t ssiCPSR = 0;
   uint32_t maxBitRate = SYS_CLK / SSI_CLK;
 
-  SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R0; // Enable GPIO Port clock
-  SYSCTL_RCGCSSI_R |= SYSCTL_RCGCSSI_R0;   // Enable SSI module clock
+  SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R1; // Enable GPIO Port clock
+  SYSCTL_RCGCSSI_R |= SYSCTL_RCGCSSI_R2;   // Enable SSI module clock
 
   GPIO_PORTB_AFSEL_R |= SSI2_PINS;                                                                // Enable Alternate Functions on all pins
   GPIO_PORTB_PCTL_R = (GPIO_PORTB_PCTL_R & ~SSI2_PCTL_MASK) | SSI2_PCTL;                          // Enable SSI module peripheral functions

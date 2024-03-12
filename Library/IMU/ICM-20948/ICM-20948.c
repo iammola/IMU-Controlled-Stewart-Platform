@@ -52,7 +52,7 @@
 
 static USER_BANK LastUserBank = 0xFF;
 
-void GPIOD_Handler(void);
+void GPIOB_Handler(void);
 
 static void ICM20948_ChangeUserBank(REG_ADDRESS REGISTER);
 
@@ -103,7 +103,7 @@ FusionVector accelerometerOffset = {
  * @brief ICM-20948 Interrupt Handler
  * @param
  */
-void GPIOD_Handler(void) {
+void GPIOB_Handler(void) {
   uint8_t           intStatus = 0;
   volatile uint32_t timestamp = ST_CURRENT_R;
 
@@ -276,10 +276,10 @@ void ICM20948_Interrupt_Init(void) {
   GPIO_PORTB_IBE_R &= ~INT_BIT;     // Only listen on one edge event
   GPIO_PORTB_IEV_R |= INT_BIT;      // Trigger interrupt on rising edge
 
-  NVIC_EN0_R |= NVIC_EN0_INT3;                                                          // Enable Port D's Interrupt Handler
-  NVIC_PRI0_R = (NVIC_PRI0_R & ~NVIC_PRI0_INT3_M) | (INT_PRIORITY << NVIC_PRI0_INT3_S); // Configure Port D's priority
-  GPIO_PORTB_ICR_R |= INT_BIT;                                                          // Clear the INT pin's interrupt
-  GPIO_PORTB_IM_R |= INT_BIT;                                                           // Allow the INT pin interrupt to be detected
+  NVIC_EN0_R |= NVIC_EN0_INT1;                                                                    // Enable Port B's Interrupt Handler
+  NVIC_PRI0_R = (NVIC_PRI0_R & (unsigned)~NVIC_PRI0_INT1_M) | (INT_PRIORITY << NVIC_PRI0_INT1_S); // Configure Port B's priority
+  GPIO_PORTB_ICR_R |= INT_BIT;                                                                    // Clear the INT pin's interrupt
+  GPIO_PORTB_IM_R |= INT_BIT;                                                                     // Allow the INT pin interrupt to be detected
 }
 
 /**
