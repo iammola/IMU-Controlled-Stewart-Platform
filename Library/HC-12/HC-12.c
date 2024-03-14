@@ -14,7 +14,7 @@
 
 #include "SysTick/SysTick.h"
 #include "tm4c123gh6pm.h"
-#include "UART/UART.h"
+#include "UART/UART5.h"
 
 #include "HC-12.h"
 
@@ -35,31 +35,33 @@ static MODE CURRENT_MODE = 0xFF;
 bool        HasNewData = false;
 uint8_t     RX_Data_Buffer[MAX_MESSAGE_SIZE] = {0};
 
-void UART1_Handler(void);
+const uint8_t INTERRUPT_PRIORITY = 5;
+
+void UART5_Handler(void);
 
 /**
- * @brief UART1 Interrupt Handler
+ * @brief UART5 Interrupt Handler
  * @param
  */
-void UART1_Handler(void) {
+void UART5_Handler(void) {
   uint8_t SYN = 0;
   uint8_t dataLength = 0;
   bool    success = false;
 
-  UART1_ICR_R |= UART_ICR_RXIC | UART_ICR_RTIC;
+  UART5_ICR_R |= UART_ICR_RXIC | UART_ICR_RTIC;
 
-  success = UART_Receive(&SYN, 1);
+  success = UART5_Receive(&SYN, 1);
   if (!success || SYN != SYNC_WORD) // Ensure sync word matches to assume valid data
     return;
 
-  success = UART_Receive(&dataLength, 1); // Get amount of bytes sent
+  success = UART5_Receive(&dataLength, 1); // Get amount of bytes sent
   if (!success)
     return;
 
   if (dataLength > MAX_MESSAGE_SIZE) // Ensure it's within expected range
     dataLength = MAX_MESSAGE_SIZE;
 
-  success = UART_Receive(RX_Data_Buffer, 1); // Read data
+  success = UART5_Receive(RX_Data_Buffer, 1); // Read data
   if (!success)
     return;
 
@@ -91,8 +93,8 @@ static bool HC12_SendCommand(char *FORMAT, char *RESPONSE_FORMAT, ...) {
   if (CURRENT_MODE != COMMAND_MODE) // Confirm in Command Mode
     HC12_SetMode(COMMAND_MODE);
 
-  UART_Transmit((uint8_t *)cmd, strlen((const char *)cmd));
-  UART_Receive((uint8_t *)CMDResponse, strlen((const char *)response));
+  UART5_Transmit((uint8_t *)cmd, strlen((const char *)cmd));
+  UART5_Receive((uint8_t *)CMDResponse, strlen((const char *)response));
 
   return strcmp(CMDResponse, response) == 0; // Verify they are equal
 }
@@ -133,8 +135,8 @@ void HC12_Init(void) {
   GPIO_PORTB_PCTL_R &= ~(SET_PCTL_M | VCC_PCTL_M); // Clear Peripheral functions
   GPIO_PORTB_DR8R_R |= VCC_BIT;                    // Use 8mA drive for VCC pin
 
-  UART_TimeoutInterrupt();
-  UART_FIFOInterrupt(RX_FIFO_6_8); // Use 3/4 full for 12 bytes out of 16
+  UART5_TimeoutInterrupt(INTERRUPT_PRIORITY);
+  UART5_FIFOInterrupt(RX_FIFO_6_8, INTERRUPT_PRIORITY); // Use 3/4 full for 12 bytes out of 16
 
   HC12_SetMode(TRANSMISSION_MODE);
 }
@@ -148,11 +150,11 @@ void HC12_Init(void) {
  * @param powerLevel Desired power level for transmission
  */
 void HC12_Config(uint32_t SYS_CLOCK, BAUD_RATE baud, TX_POWER powerLevel) {
-  UART_Disable();
+  UART5_Disable();
 
   HC12_SetMode(COMMAND_MODE); // Enter Command Mode
 
-  UART_Init(SYS_CLOCK, 9600, WORD_8_BIT, NO_PARITY, ONE_STOP_BIT); // Starts at Default config 9600 bps, 8-N-1 control
+  UART5_Init(SYS_CLOCK, 9600, WORD_8_BIT, NO_PARITY, ONE_STOP_BIT); // Starts at Default config 9600 bps, 8-N-1 control
 
   while (!HC12_SendCommand("AT", "OK")) { // Poll until Command is accepted
   }
@@ -163,10 +165,10 @@ void HC12_Config(uint32_t SYS_CLOCK, BAUD_RATE baud, TX_POWER powerLevel) {
   HC12_SendCommand("AT+C%03d", "OK+C%03d", 1);         // Use channel 1
   HC12_SendCommand("AT+FU%d", "OK+FU%d", 3);           // Set Transmission Mode to FU3
 
-  UART_Disable();
+  UART5_Disable();
 
-  HC12_SetMode(TRANSMISSION_MODE);                                 // Exit Command Mode
-  UART_Init(SYS_CLOCK, baud, WORD_8_BIT, NO_PARITY, ONE_STOP_BIT); // Use new Baud-Rate
+  HC12_SetMode(TRANSMISSION_MODE);                                  // Exit Command Mode
+  UART5_Init(SYS_CLOCK, baud, WORD_8_BIT, NO_PARITY, ONE_STOP_BIT); // Use new Baud-Rate
 }
 
 /**
@@ -184,8 +186,8 @@ bool HC12_SendData(uint8_t *data, uint8_t length) {
   if (CURRENT_MODE != TRANSMISSION_MODE) // Confirm in transmission mode
     HC12_SetMode(TRANSMISSION_MODE);
 
-  UART_Transmit(TX_Metadata, METADATA_SIZE);
-  UART_Transmit(data, length);
+  UART5_Transmit(TX_Metadata, METADATA_SIZE);
+  UART5_Transmit(data, length);
 
   return true;
 }
