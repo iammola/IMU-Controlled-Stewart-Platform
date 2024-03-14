@@ -18,12 +18,12 @@
 
 #include "HC-12.h"
 
-#define SET_BIT    (unsigned)(1 << 2) // PB2
-#define SET_PCTL_M (unsigned)(GPIO_PCTL_PB2_M)
+#define SET_BIT    (unsigned)(1 << 1) // PE1
+#define SET_PCTL_M (unsigned)(GPIO_PCTL_PE1_M)
 #define SET_ADDR   (*((volatile uint32_t *)(0x40005000 | (SET_BIT << 2))))
 
-#define VCC_BIT    (unsigned)(1 << 3) // PB3
-#define VCC_PCTL_M (unsigned)(GPIO_PCTL_PB3_M)
+#define VCC_BIT    (unsigned)(1 << 3) // PE3
+#define VCC_PCTL_M (unsigned)(GPIO_PCTL_PE3_M)
 #define VCC_ADDR   (*((volatile uint32_t *)(0x40005000 | (VCC_BIT << 2))))
 
 typedef enum { TRANSMISSION_MODE = 0x4B, COMMAND_MODE = 0xEA } MODE;
@@ -126,14 +126,16 @@ static void HC12_SetMode(MODE NewMode) {
 void HC12_Init(void) {
   SysTick_Init();
 
-  SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R1; // Enable Port B
+  SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R4;                 // Enable Port E
+  while ((SYSCTL_PRGPIO_R & SYSCTL_RCGCGPIO_R4) == 0x00) { // Wait for Port ready
+  }
 
-  GPIO_PORTB_DIR_R |= (SET_BIT | VCC_BIT);         // Use as Output pin
-  GPIO_PORTB_DEN_R |= (SET_BIT | VCC_BIT);         // Enable Digital Mode
-  GPIO_PORTB_AMSEL_R &= ~(SET_BIT | VCC_BIT);      // Disable Analog Mode
-  GPIO_PORTB_AFSEL_R &= ~(SET_BIT | VCC_BIT);      // Disable Alternate functions
-  GPIO_PORTB_PCTL_R &= ~(SET_PCTL_M | VCC_PCTL_M); // Clear Peripheral functions
-  GPIO_PORTB_DR8R_R |= VCC_BIT;                    // Use 8mA drive for VCC pin
+  GPIO_PORTE_DIR_R |= (SET_BIT | VCC_BIT);         // Use as Output pin
+  GPIO_PORTE_DEN_R |= (SET_BIT | VCC_BIT);         // Enable Digital Mode
+  GPIO_PORTE_AMSEL_R &= ~(SET_BIT | VCC_BIT);      // Disable Analog Mode
+  GPIO_PORTE_AFSEL_R &= ~(SET_BIT | VCC_BIT);      // Disable Alternate functions
+  GPIO_PORTE_PCTL_R &= ~(SET_PCTL_M | VCC_PCTL_M); // Clear Peripheral functions
+  GPIO_PORTE_DR8R_R |= VCC_BIT;                    // Use 8mA drive for VCC pin
 
   UART5_TimeoutInterrupt(INTERRUPT_PRIORITY);
   UART5_FIFOInterrupt(RX_FIFO_6_8, INTERRUPT_PRIORITY); // Use 3/4 full for 12 bytes out of 16
