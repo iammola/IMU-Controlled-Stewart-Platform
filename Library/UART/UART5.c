@@ -1,12 +1,12 @@
 /**
  * @file UART5.c
  * @author Ademola Adedeji (a.mola.dev@gmail.com)
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2024-03-14
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 #include <stdbool.h>
 #include <stdint.h>
@@ -112,13 +112,12 @@ void UART5_Disable(void) {
 }
 
 void UART5_TimeoutInterrupt(uint8_t interruptPriority) {
-  // Allow Receive FIFO and Timeout interrupts on to be handled by controller
-  UART5_IM_R = UART_IM_RXIM;
+  UART5_IM_R |= UART_IM_RTIM; // Receive Timeout IRQ
   UART5_NVIC_Enable(interruptPriority);
 }
 
 void UART5_FIFOInterrupt(uint8_t RXFIFOLevel, uint8_t interruptPriority) {
-  UART5_IM_R |= UART_IM_RTIM;
+  UART5_IM_R |= UART_IM_RXIM; // Receive FIFO Level IRQ
 
   // Set RX Interrupt Levels
   switch (RXFIFOLevel) {
