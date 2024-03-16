@@ -22,9 +22,6 @@
 #define UART5_PCTL_MASK (unsigned)(GPIO_PCTL_PE4_M | GPIO_PCTL_PE5_M)
 #define UART5_PCTL      (unsigned)(GPIO_PCTL_PE4_U5RX | GPIO_PCTL_PE5_U5TX)
 
-#define FRACTIONAL_BRD_MULTIPLIER 6 // 2^6 = 64 or LSH 6 times
-#define FRACTIONAL_BRD_MASK       (1 << FRACTIONAL_BRD_MULTIPLIER) - 1
-
 static void UART5_NVIC_Enable(uint8_t interruptPriority);
 static void UART5_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate);
 static void UART5_LCRHConfigure(uint8_t wordLength, uint8_t parity, bool useTwoStopBits);

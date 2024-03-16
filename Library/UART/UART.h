@@ -29,3 +29,6 @@
 #define RX_FIFO_4_8 2
 #define RX_FIFO_2_8 1
 #define RX_FIFO_1_8 0
+
+#define FRACTIONAL_BRD_MULTIPLIER 6 // 2^6 = 64 or LSH 6 times
+#define FRACTIONAL_BRD_MASK       (1 << FRACTIONAL_BRD_MULTIPLIER) - 1
