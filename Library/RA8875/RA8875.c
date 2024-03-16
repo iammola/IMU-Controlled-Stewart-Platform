@@ -46,11 +46,12 @@
 #include "SSI/SSI0.h"
 #include "SysTick/SysTick.h"
 
+#include "PORT_BASE.h"
 #include "tm4c123gh6pm.h"
 
 #define RST_PIN    (unsigned)(1 << 6) // PA6
 #define RST_PCTL_M (unsigned)(GPIO_PCTL_PA6_M)
-#define RST_ADDR   (*((volatile uint32_t *)(0x40004000 | (RST_PIN << 2))))
+#define RST_ADDR   (*((volatile uint32_t *)(PORTA_BASE | (RST_PIN << 2))))
 
 // Seems to be the closest max
 #define SSI_SPEED 5e6 /*!< 5MHz */

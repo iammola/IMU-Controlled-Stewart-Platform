@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "PORT_BASE.h"
 #include "SysTick/SysTick.h"
 #include "tm4c123gh6pm.h"
 #include "UART/UART5.h"
@@ -20,11 +21,11 @@
 
 #define SET_BIT    (unsigned)(1 << 1) // PE1
 #define SET_PCTL_M (unsigned)(GPIO_PCTL_PE1_M)
-#define SET_ADDR   (*((volatile uint32_t *)(0x40005000 | (SET_BIT << 2))))
+#define SET_ADDR   (*((volatile uint32_t *)(PORTE_BASE | (SET_BIT << 2))))
 
 #define VCC_BIT    (unsigned)(1 << 3) // PE3
 #define VCC_PCTL_M (unsigned)(GPIO_PCTL_PE3_M)
-#define VCC_ADDR   (*((volatile uint32_t *)(0x40005000 | (VCC_BIT << 2))))
+#define VCC_ADDR   (*((volatile uint32_t *)(PORTE_BASE | (VCC_BIT << 2))))
 
 typedef enum { TRANSMISSION_MODE = 0x4B, COMMAND_MODE = 0xEA } MODE;
 

@@ -1,5 +1,6 @@
 #include <stdint.h>
 
+#include "PORT_BASE.h"
 #include "tm4c123gh6pm.h"
 
 #include "SSI3.h"
@@ -13,8 +14,7 @@
 #define SSI3_PCTL      (unsigned)(GPIO_PCTL_PD0_SSI3CLK | GPIO_PCTL_PD1_SSI3FSS | GPIO_PCTL_PD2_SSI3RX | GPIO_PCTL_PD3_SSI3TX)
 #define SSI3_PCTL_MASK (uint32_t)(GPIO_PCTL_PD0_M | GPIO_PCTL_PD1_M | GPIO_PCTL_PD2_M | GPIO_PCTL_PD3_M)
 
-// Base of GPIO Port A Data Register
-#define SSI3_FSS_ADDR (*((volatile uint32_t *)(0x40004000 | (SSI3_FSS_BIT << 2))))
+#define SSI3_FSS_ADDR (*((volatile uint32_t *)(PORTD_BASE | (SSI3_FSS_BIT << 2))))
 
 #define WAIT_FOR_TX_SPACE()                                                                                                                          \
   while ((SSI3_SR_R & SSI_SR_TNF) != SSI_SR_TNF)                                                                                                     \
