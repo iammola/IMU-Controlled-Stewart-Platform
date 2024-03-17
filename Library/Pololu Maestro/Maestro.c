@@ -23,6 +23,9 @@
 
 void Maestro_Init(uint32_t SYS_CLOCK) {
   UART1_Init(SYS_CLOCK, Maestro_BAUD, WORD_8_BIT, NO_PARITY, ONE_STOP_BIT);
+
+  GPIO_PORTB_ODR_R |= UART1_TX_BIT;  // Enable Open-Drain for Pull-Up to 5V
+  GPIO_PORTB_DR4R_R |= UART1_TX_BIT; // Use 4mA drive, for intended 5V
 }
 
 void Maestro_SetAngles(float angles[Maestro_Channels]) {
