@@ -13,6 +13,9 @@
 
 #include "UART.h"
 
+#define UART1_RX_BIT (unsigned)(1 << 0) // PB0 - U1RX
+#define UART1_TX_BIT (unsigned)(1 << 1) // PB1 - U1TX
+
 void UART1_Enable(void);
 
 void UART1_Disable(void);

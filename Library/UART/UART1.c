@@ -15,9 +15,6 @@
 
 #include "tm4c123gh6pm.h"
 
-#define UART1_RX_BIT (unsigned)(1 << 4) // PB0 - U1RX
-#define UART1_TX_BIT (unsigned)(1 << 5) // PB1 - U1TX
-
 #define UART1_PINS      (unsigned)(UART1_RX_BIT | UART1_TX_BIT)
 #define UART1_PCTL_MASK (unsigned)(GPIO_PCTL_PB0_M | GPIO_PCTL_PB1_M)
 #define UART1_PCTL      (unsigned)(GPIO_PCTL_PB0_U1RX | GPIO_PCTL_PB1_U1TX)

@@ -13,6 +13,9 @@
 
 #include "UART.h"
 
+#define UART5_RX_BIT (unsigned)(1 << 4) // PE4 - U5RX
+#define UART5_TX_BIT (unsigned)(1 << 5) // PE5 - U5TX
+
 void UART5_Enable(void);
 
 void UART5_Disable(void);

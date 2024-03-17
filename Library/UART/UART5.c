@@ -15,9 +15,6 @@
 
 #include "tm4c123gh6pm.h"
 
-#define UART5_RX_BIT (unsigned)(1 << 4) // PE4 - U5RX
-#define UART5_TX_BIT (unsigned)(1 << 5) // PE5 - U5TX
-
 #define UART5_PINS      (unsigned)(UART5_RX_BIT | UART5_TX_BIT)
 #define UART5_PCTL_MASK (unsigned)(GPIO_PCTL_PE4_M | GPIO_PCTL_PE5_M)
 #define UART5_PCTL      (unsigned)(GPIO_PCTL_PE4_U5RX | GPIO_PCTL_PE5_U5TX)
