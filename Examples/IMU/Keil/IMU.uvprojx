@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define></Define>
               <Undefine></Undefine>
-              <IncludePath>..\..\..\Library;..\..\..\..\Code</IncludePath>
+              <IncludePath>..\..\..\Library;..\..\..\..\Development</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>

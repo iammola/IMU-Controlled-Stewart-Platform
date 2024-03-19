@@ -91,10 +91,10 @@ FusionVector gyroscopeSensitivity = FUSION_VECTOR_ONES;
 FusionVector accelerometerSensitivity = FUSION_VECTOR_ONES;
 
 FusionVector gyroscopeOffset = {
-    .axis = {.x = 1583.717f, .y = -665.774f, .z = 69.118f}
+    .axis = {.x = 1583.04468f, .y = -668.109802f, .z = 71.4820862f}
 };
 FusionVector accelerometerOffset = {
-    .axis = {.x = -1344.858f, .y = 276.737f, .z = -17029.416f}
+    .axis = {.x = -6168.63965f, .y = -4822.40723f, .z = 13846.6348f}
 };
 
 /**
@@ -432,6 +432,10 @@ void ICM20948_MagCalibration(void) {
 #if CALIBRATION_MODE == 6
     magSample = FusionCalibrationMagnetic(magSample, sampleSoftIronMatrix, sampleHardIronOffset);
 #endif
+
+    magSample.axis.x *= -1.0f;
+    magSample.axis.y *= -1.0f;
+    magSample.axis.z *= -1.0f;
 
     // Suggested to multiply by 10 for "Good Integer Value"
     snprintf(text, CLI_TXT_BUF, "Raw:0,0,0,0,0,0,%d,%d,%d\n\r", (int)(magSample.axis.x * 10), (int)(magSample.axis.y * 10),

@@ -19,9 +19,15 @@
 #define WAIT_FOR_TX_SPACE()                                                                                                                          \
   while ((SSI2_SR_R & SSI_SR_TNF) != SSI_SR_TNF)                                                                                                     \
     ;
+
 #define WAIT_FOR_RX_DATA()                                                                                                                           \
-  while ((SSI2_SR_R & SSI_SR_RNE) != SSI_SR_RNE)                                                                                                     \
-    ;
+  /* Wait for RX Data as long as the Module is BUSY */                                                                                               \
+  while (((SSI2_SR_R & SSI_SR_RNE) != SSI_SR_RNE) && ((SSI2_SR_R & SSI_SR_BSY) == SSI_SR_BSY))                                                       \
+    ;                                                                                                                                                \
+  /* Continue immediately if the Module is not BUSY and the RX FIFO is still empty */                                                                \
+  if (((SSI2_SR_R & SSI_SR_BSY) != SSI_SR_BSY) && ((SSI2_SR_R & SSI_SR_RNE) == SSI_SR_RNE))                                                          \
+    continue;
+
 #define WAIT_FOR_IDLE()                                                                                                                              \
   while ((SSI2_SR_R & SSI_SR_BSY) == SSI_SR_BSY)                                                                                                     \
     ;
