@@ -32,8 +32,6 @@
 
 //-------- <<< end of configuration section >>> ------------------------------
 
-#define SSI_MODULE 1
-
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -482,8 +480,9 @@ void ICM20948_AccelGyroCalibration(void) {
 #if (CALIBRATION_MODE > 0) && (CALIBRATION_MODE < 5)
   static char text[CLI_TXT_BUF] = "";
 
+  uint8_t       rawDataInt = 0;
   uint32_t      SAMPLES_LEFT = 0;
-  const int32_t SAMPLES_COUNT = 5e4;
+  const int32_t SAMPLES_COUNT = 1e4;
 
   FusionVector sample = FUSION_VECTOR_ZERO;
   FusionVector totalSamples = FUSION_VECTOR_ZERO;
@@ -519,6 +518,15 @@ void ICM20948_AccelGyroCalibration(void) {
 
     snprintf(text, CLI_TXT_BUF, "%0.4f %0.4f %0.4f\n", sample.axis.x, sample.axis.y, sample.axis.z);
     CLI_Write(text);
+
+    while (1) {
+      ICM20948_Read(INT_STATUS_1_ADDR, &rawDataInt); // Read int status reg
+
+      if (rawDataInt & RAW_DATA_RDY) { // Wait for new data
+        rawDataInt &= ~RAW_DATA_RDY;
+        break;
+      }
+    }
   }
 
   // Normalize back to LSBs
@@ -526,7 +534,7 @@ void ICM20948_AccelGyroCalibration(void) {
   totalSamples.axis.y /= (SAMPLES_COUNT * sampleSensitivity.axis.y);
   totalSamples.axis.z /= (SAMPLES_COUNT * sampleSensitivity.axis.z);
 
-  snprintf(text, CLI_TXT_BUF, "Measurement finished.\nX= %0.4f Y = %0.4f Z = %0.4f", totalSamples.axis.x, totalSamples.axis.y, totalSamples.axis.z);
+  snprintf(text, CLI_TXT_BUF, "Measurement finished. X= %0.4f Y = %0.4f Z = %0.4f", totalSamples.axis.x, totalSamples.axis.y, totalSamples.axis.z);
   CLI_Write(text);
 
   while (1)

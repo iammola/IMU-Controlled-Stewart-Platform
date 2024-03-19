@@ -85,6 +85,9 @@ typedef struct REG_ADDRESS_STRUCT {
 // INT_ENABLE_1
 #define RAW_DATA_INT_ENABLE 0x01
 
+// INT_STATUS_1
+#define RAW_DATA_RDY 0x01
+
 // INT_PIN_CFG
 #define INT_ACTIVE_LOW         0x80
 #define INT_OPEN_DRAIN         0x40
