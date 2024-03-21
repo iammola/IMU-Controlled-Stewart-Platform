@@ -39,15 +39,15 @@ void ADC0SS1_Handler(void) {
  * @param SAMPLING_FREQ
  */
 void Joystick_Init(uint32_t SYS_CLOCK, uint16_t SAMPLING_FREQ) {
-  SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R4;                 // Enable Port E
-  while ((SYSCTL_PRGPIO_R & SYSCTL_RCGCGPIO_R4) == 0x00) { // Wait for Port ready
+  SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R3;                 // Enable Port D
+  while ((SYSCTL_PRGPIO_R & SYSCTL_RCGCGPIO_R3) == 0x00) { // Wait for Port ready
   }
 
-  GPIO_PORTE_DIR_R &= ~PINS;                                             // Configure as inputs
-  GPIO_PORTE_DEN_R = (GPIO_PORTE_DEN_R & ~PINS) | SW_PIN;                // Set SW pin as digital pin
-  GPIO_PORTE_AMSEL_R = (GPIO_PORTE_AMSEL_R & ~PINS) | VRx_PIN | VRy_PIN; // Set VRx, VRy as analog pins
-  GPIO_PORTE_AFSEL_R = (GPIO_PORTE_AFSEL_R & ~PINS) | AFSEL;             // select alternate functions on desired pins
-  GPIO_PORTE_PCTL_R = (GPIO_PORTE_PCTL_R & ~PCTL_M) | PCTL;              // choose peripheral functions
+  GPIO_PORTD_DIR_R &= ~PINS;                                // Configure as inputs
+  GPIO_PORTD_DEN_R &= ~PINS;                                // Set SW pin as digital pin
+  GPIO_PORTD_AMSEL_R |= PINS;                               // Set VRx, VRy as analog pins
+  GPIO_PORTD_AFSEL_R |= PINS;                               // select alternate functions on desired pins
+  GPIO_PORTD_PCTL_R = (GPIO_PORTD_PCTL_R & ~PCTL_M) | PCTL; // choose peripheral functions
 
   Joystick_ADC_Init(SYS_CLOCK, SAMPLING_FREQ);
 }

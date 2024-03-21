@@ -14,27 +14,25 @@
 
 #include "tm4c123gh6pm.h"
 
-#define VRx_PIN (1 << 0) // PE0 (AIN3)
-#define VRx_AIN 3        // AIN3
-#define VRy_PIN (1 << 1) // PE1 (AIN2)
-#define VRy_AIN 2        // AIN2
-#define SW_PIN  (1 << 2) // PE2
+#define VRx_PIN (1 << 1) // PD1 (AIN6)
+#define VRx_AIN 6        // AIN6
+#define VRy_PIN (1 << 2) // PD2 (AIN5)
+#define VRy_AIN 5        // AIN5
 
-#define PINS   (unsigned)(VRx_PIN | VRy_PIN | SW_PIN)
-#define AFSEL  (unsigned)(VRx_PIN | VRy_PIN)
-#define PCTL   (unsigned)(GPIO_PCTL_PE0_AIN3 | GPIO_PCTL_PE1_AIN2)
-#define PCTL_M (unsigned)(GPIO_PCTL_PE0_M | GPIO_PCTL_PE1_M | GPIO_PCTL_PE2_M)
+#define PINS   (unsigned)(VRx_PIN | VRy_PIN)
+#define PCTL   (unsigned)(GPIO_PCTL_PD1_AIN6 | GPIO_PCTL_PD2_AIN5)
+#define PCTL_M (unsigned)(GPIO_PCTL_PD1_M | GPIO_PCTL_PD2_M)
 
 #define JOYSTICK_INT_PRIORITY 2
 
 typedef struct {
-    float x;
-    float y;
-    float angle;
+  float x;
+  float y;
+  float angle;
 } JoystickCoords;
 
 extern volatile JoystickCoords coords;
-extern volatile bool HasNewJoystickCoords;
+extern volatile bool           HasNewJoystickCoords;
 
 /**
  * @brief
