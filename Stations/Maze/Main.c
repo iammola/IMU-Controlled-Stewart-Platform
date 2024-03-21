@@ -24,10 +24,10 @@ void WaitForInterrupt(void);
 void EnableInterrupts(void);
 void DisableInterrupts(void);
 
-static const StewartCoords translation = {0.0f};
+static const StewartCoords translation = {0};
 
 static float      angle = 0.0f;
-static Quaternion stewartQuaternion = {0.0f};
+static Quaternion stewartQuaternion = {0};
 
 int main(void) {
   uint8_t legIdx = 0;
@@ -38,8 +38,8 @@ int main(void) {
   HC12_Init();
   HC12_Config(SYS_CLOCK, BAUD_115200, TX_20dBm); // Use 115200 bps, 20 dBm
 
-  Maestro_Init(SYS_CLOCK);                      // Initialize Maestro Controller
-  StewartPlatform_Init(0.0f, 0.0f, 0.0f, 0.0f); // Initialize stewart platform
+  Maestro_Init(SYS_CLOCK); // Initialize Maestro Controller
+  StewartPlatform_Init();  // Initialize stewart platform
 
   while (1) {
     WaitForInterrupt();

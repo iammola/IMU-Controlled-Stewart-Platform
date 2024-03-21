@@ -29,6 +29,6 @@ typedef struct Legs {
 
 extern Legs legs[LEGS_COUNT];
 
-void StewartPlatform_Init(float _rodLength, float _hornLength, float shaftDistance, float anchorDistance);
+void StewartPlatform_Init(void);
 
 void StewartPlatform_Update(StewartCoords translation, Quaternion orientation);
