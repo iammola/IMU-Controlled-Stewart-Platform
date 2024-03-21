@@ -23,8 +23,8 @@
 #define SET_PCTL_M (unsigned)(GPIO_PCTL_PE1_M)
 #define SET_ADDR   (*((volatile uint32_t *)(PORTE_BASE | (SET_BIT << 2))))
 
-#define VCC_BIT    (unsigned)(1 << 3) // PE3
-#define VCC_PCTL_M (unsigned)(GPIO_PCTL_PE3_M)
+#define VCC_BIT    (unsigned)(1 << 2) // PE2
+#define VCC_PCTL_M (unsigned)(GPIO_PCTL_PE2_M)
 #define VCC_ADDR   (*((volatile uint32_t *)(PORTE_BASE | (VCC_BIT << 2))))
 
 typedef enum { TRANSMISSION_MODE = 0x4B, COMMAND_MODE = 0xEA } MODE;
@@ -33,7 +33,7 @@ static void HC12_SetMode(MODE NewMode);
 static bool HC12_SendCommand(char *FORMAT, char *RESPONSE_FORMAT, ...);
 
 static MODE CURRENT_MODE = 0xFF;
-bool        HasNewData = false;
+volatile bool        HasNewData = false;
 uint8_t     RX_Data_Buffer[MAX_MESSAGE_SIZE] = {0};
 
 const uint8_t INTERRUPT_PRIORITY = 5;
@@ -139,7 +139,7 @@ void HC12_Init(void) {
   GPIO_PORTE_DR8R_R |= VCC_BIT;                    // Use 8mA drive for VCC pin
 
   UART5_TimeoutInterrupt(INTERRUPT_PRIORITY);
-  UART5_FIFOInterrupt(RX_FIFO_6_8, INTERRUPT_PRIORITY); // Use 3/4 full for 12 bytes out of 16
+  UART5_FIFOInterrupt(RX_FIFO_1_8, INTERRUPT_PRIORITY); // Use 1/8 full for 2 bytes (metadata) out of 16
 
   HC12_SetMode(TRANSMISSION_MODE);
 }

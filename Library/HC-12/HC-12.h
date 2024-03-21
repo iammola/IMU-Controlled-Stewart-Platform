@@ -3,12 +3,12 @@
 
 // TRIGGER ON 12/16 bytes full
 #define METADATA_SIZE    2
-#define MAX_MESSAGE_SIZE 10
+#define MAX_MESSAGE_SIZE 32
 
 #define SYNC_WORD 0xEA
 
-extern bool    HasNewData;
-extern uint8_t RX_Data_Buffer[MAX_MESSAGE_SIZE];
+extern volatile bool HasNewData;
+extern uint8_t       RX_Data_Buffer[MAX_MESSAGE_SIZE];
 
 typedef enum {
   TX_20dBm = 8,
