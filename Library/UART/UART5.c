@@ -142,12 +142,12 @@ void UART5_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R4; // Enable Port E's clock
   SYSCTL_RCGCUART_R |= SYSCTL_RCGCUART_R5; // Enable UART module 5's clock
 
-  GPIO_PORTE_AFSEL_R |= UART5_PINS; // Enable Alternate functions in PINS 4 and 5.
+  GPIO_PORTE_AFSEL_R |= UART5_PINS; // Enable Alternate functions in PINS.
   GPIO_PORTE_PCTL_R = (GPIO_PORTE_PCTL_R & ~UART5_PCTL_MASK) |
                       UART5_PCTL; // Enable UART Tx and Rx functions by masking the pin peripherals byte and setting the UART value
-  GPIO_PORTE_DIR_R = (GPIO_PORTE_DIR_R & ~UART5_RX_BIT) | UART5_TX_BIT; // Configure Pin 4 (UART1Rx) as an input and Pin 5 (UART1Tx) as an output
-  GPIO_PORTE_DEN_R |= UART5_PINS;                                       // Enable Digital on PINS 4 and 5.
-  GPIO_PORTE_AMSEL_R &= ~UART5_PINS;                                    // Disable Analog on PINS 4 and 5.
+  GPIO_PORTE_DIR_R = (GPIO_PORTE_DIR_R & ~UART5_RX_BIT) | UART5_TX_BIT; // Configure Rx as an input and Tx as an output
+  GPIO_PORTE_DEN_R |= UART5_PINS;                                       // Enable Digital on PINS.
+  GPIO_PORTE_AMSEL_R &= ~UART5_PINS;                                    // Disable Analog on PINS.
 
   UART5_Disable(); // Disable UART
 

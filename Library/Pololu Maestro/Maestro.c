@@ -12,7 +12,7 @@
 #include "tm4c123gh6pm.h"
 
 #include "Maestro.h"
-#include "UART/UART1.h"
+#include "UART/UART4.h"
 
 #define Maestro_BAUD 225e3
 
@@ -32,10 +32,10 @@
  * @param SYS_CLOCK 
  */
 void Maestro_Init(uint32_t SYS_CLOCK) {
-  UART1_Init(SYS_CLOCK, Maestro_BAUD, WORD_8_BIT, NO_PARITY, ONE_STOP_BIT);
+  UART4_Init(SYS_CLOCK, Maestro_BAUD, WORD_8_BIT, NO_PARITY, ONE_STOP_BIT);
 
-  GPIO_PORTB_ODR_R |= UART1_TX_BIT;  // Enable Open-Drain for Pull-Up to 5V
-  GPIO_PORTB_DR4R_R |= UART1_TX_BIT; // Use 4mA drive, for intended 5V
+  GPIO_PORTB_ODR_R |= UART4_TX_BIT;  // Enable Open-Drain for Pull-Up to 5V
+  GPIO_PORTB_DR4R_R |= UART4_TX_BIT; // Use 4mA drive, for intended 5V
 }
 
 /**
@@ -60,7 +60,7 @@ void Maestro_SetAngle(uint8_t channel, float angle) {
   cmd[2] = pulseWidth & 0xFF;          // lower byte of quarter-us
   cmd[3] = (pulseWidth & 0xFF00) >> 8; // upper byte of quarter-us
 
-  UART1_Transmit(cmd, 4); // send data
+  UART4_Transmit(cmd, 4); // send data
 }
 
 /**
@@ -89,8 +89,8 @@ void Maestro_WaitForIdle(void) {
   uint8_t isMoving = MOVING_STATE_CMD;
 
   while (isMovingState == SERVO_IS_MOVING) {
-    UART1_Transmit(&isMoving, 1);
-    UART1_Receive(&isMovingState, 1);
+    UART4_Transmit(&isMoving, 1);
+    UART4_Receive(&isMovingState, 1);
   }
 }
 
@@ -109,9 +109,9 @@ void Maestro_GetPositions(void) {
 
   for (channel = 0; channel < Maestro_Channels; channel++) {
     cmd[1] = channel;       // Set channel
-    UART1_Transmit(cmd, 2); // send data
+    UART4_Transmit(cmd, 2); // send data
 
-    UART1_Receive(response, 2); // read response
+    UART4_Receive(response, 2); // read response
 
     // Get pulse width in quarter-us, convert back to us
     pulseWidth = (uint32_t)((response[1] << 8) | response[0]) / 4;
@@ -127,5 +127,5 @@ void Maestro_GetPositions(void) {
  */
 void Maestro_GoHome(void) {
   uint8_t cmd = GO_HOME_CMD;
-  UART1_Transmit(&cmd, 1);
+  UART4_Transmit(&cmd, 1);
 }
