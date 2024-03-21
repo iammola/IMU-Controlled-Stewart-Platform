@@ -32,11 +32,11 @@ typedef enum { TRANSMISSION_MODE = 0x4B, COMMAND_MODE = 0xEA } MODE;
 static void HC12_SetMode(MODE NewMode);
 static bool HC12_SendCommand(char *FORMAT, char *RESPONSE_FORMAT, ...);
 
-static MODE CURRENT_MODE = 0xFF;
-volatile bool        HasNewData = false;
-uint8_t     RX_Data_Buffer[MAX_MESSAGE_SIZE] = {0};
+static MODE   CURRENT_MODE = 0xFF;
+volatile bool HasNewData = false;
+uint8_t       RX_Data_Buffer[MAX_MESSAGE_SIZE] = {0};
 
-const uint8_t INTERRUPT_PRIORITY = 5;
+static const uint8_t INTERRUPT_PRIORITY = 5;
 
 void UART5_Handler(void);
 
@@ -62,7 +62,7 @@ void UART5_Handler(void) {
   if (dataLength > MAX_MESSAGE_SIZE) // Ensure it's within expected range
     dataLength = MAX_MESSAGE_SIZE;
 
-  success = UART5_Receive(RX_Data_Buffer, 1); // Read data
+  success = UART5_Receive(RX_Data_Buffer, dataLength); // Read data
   if (!success)
     return;
 
@@ -165,7 +165,7 @@ void HC12_Config(uint32_t SYS_CLOCK, BAUD_RATE baud, TX_POWER powerLevel) {
 
   UART5_Disable();
 
-  HC12_SetMode(TRANSMISSION_MODE);                                  // Exit Command Mode
+  HC12_SetMode(TRANSMISSION_MODE); // Exit Command Mode
 
   UART5_Init(SYS_CLOCK, baud, WORD_8_BIT, NO_PARITY, ONE_STOP_BIT); // Use new Baud-Rate
   UART5_TimeoutInterrupt(INTERRUPT_PRIORITY);
