@@ -138,9 +138,6 @@ void HC12_Init(void) {
   GPIO_PORTE_PCTL_R &= ~(SET_PCTL_M | VCC_PCTL_M); // Clear Peripheral functions
   GPIO_PORTE_DR8R_R |= VCC_BIT;                    // Use 8mA drive for VCC pin
 
-  UART5_TimeoutInterrupt(INTERRUPT_PRIORITY);
-  UART5_FIFOInterrupt(RX_FIFO_1_8, INTERRUPT_PRIORITY); // Use 1/8 full for 2 bytes (metadata) out of 16
-
   HC12_SetMode(TRANSMISSION_MODE);
 }
 
@@ -153,8 +150,6 @@ void HC12_Init(void) {
  * @param powerLevel Desired power level for transmission
  */
 void HC12_Config(uint32_t SYS_CLOCK, BAUD_RATE baud, TX_POWER powerLevel) {
-  UART5_Disable();
-
   HC12_SetMode(COMMAND_MODE); // Enter Command Mode
 
   UART5_Init(SYS_CLOCK, 9600, WORD_8_BIT, NO_PARITY, ONE_STOP_BIT); // Starts at Default config 9600 bps, 8-N-1 control
@@ -171,7 +166,10 @@ void HC12_Config(uint32_t SYS_CLOCK, BAUD_RATE baud, TX_POWER powerLevel) {
   UART5_Disable();
 
   HC12_SetMode(TRANSMISSION_MODE);                                  // Exit Command Mode
+
   UART5_Init(SYS_CLOCK, baud, WORD_8_BIT, NO_PARITY, ONE_STOP_BIT); // Use new Baud-Rate
+  UART5_TimeoutInterrupt(INTERRUPT_PRIORITY);
+  UART5_FIFOInterrupt(RX_FIFO_1_8, INTERRUPT_PRIORITY); // Use 1/8 full for 2 bytes (metadata) out of 16
 }
 
 /**

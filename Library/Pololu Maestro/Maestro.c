@@ -34,8 +34,8 @@
 void Maestro_Init(uint32_t SYS_CLOCK) {
   UART4_Init(SYS_CLOCK, Maestro_BAUD, WORD_8_BIT, NO_PARITY, ONE_STOP_BIT);
 
-  GPIO_PORTB_ODR_R |= UART4_TX_BIT;  // Enable Open-Drain for Pull-Up to 5V
-  GPIO_PORTB_DR4R_R |= UART4_TX_BIT; // Use 4mA drive, for intended 5V
+  GPIO_PORTC_ODR_R |= UART4_TX_BIT;  // Enable Open-Drain for Pull-Up to 5V
+  GPIO_PORTC_DR4R_R |= UART4_TX_BIT; // Use 4mA drive, for intended 5V
 }
 
 /**
@@ -68,11 +68,7 @@ void Maestro_SetAngle(uint8_t channel, float angle) {
  * @param angles 
  */
 void Maestro_SetAngles(float angles[Maestro_Channels]) {
-  float angle = 0.0f;
-
   uint8_t  channel = 0;
-  uint32_t pulseWidth = 0;
-  uint8_t  cmd[4] = {SET_TARGET_CMD, 0, 0, 0};
 
   for (channel = 0; channel < Maestro_Channels; channel++) {
     Maestro_SetAngle(channel, angles[channel]);
