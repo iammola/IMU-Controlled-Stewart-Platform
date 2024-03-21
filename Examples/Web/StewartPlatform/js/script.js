@@ -88,8 +88,8 @@ addEventListener("DOMContentLoaded", () => {
         rodLength: 150,
         hornLength: 38.1,
         hornDirection: 0,
-        shaftDistance: 14.825,
-        anchorDistance: 22.5,
+        shaftDistance: 19.05,
+        anchorDistance: 22.225,
         servoRange: [-Math.PI / 2, Math.PI / 2],
         servoRangeVisible: true,
       });
