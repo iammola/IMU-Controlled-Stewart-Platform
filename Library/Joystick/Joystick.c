@@ -21,6 +21,7 @@ static void Joystick_ADC_Init(uint32_t SYS_CLOCK, uint16_t SAMPLING_FREQ);
 static void Joystick_Timer_Init(uint32_t LOAD);
 
 volatile JoystickCoords coords = {0};
+volatile bool           HasNewJoystickCoords = false;
 
 void ADC0SS1_Handler(void) {
   // Clear SS1 Interrupt
@@ -31,6 +32,8 @@ void ADC0SS1_Handler(void) {
   coords.y = (ADC0_SSFIFO1_R / 2048.0f) - 1.0f; // 2nd Sample
 
   coords.angle = atan2f(-coords.y, -coords.x);
+
+  HasNewJoystickCoords = true;
 }
 
 /**
@@ -85,7 +88,6 @@ static void Joystick_ADC_Init(uint32_t SYS_CLOCK, uint16_t SAMPLING_FREQ) {
   ADC0_ACTSS_R &= (unsigned)~ADC_ACTSS_ASEN1; // Disable Sample Sequencer 1
 
   ADC0_EMUX_R = (ADC0_EMUX_R & (unsigned)~ADC_EMUX_EM1_M) | ADC_EMUX_EM1_TIMER; // Select Timer for Sample Sequencer 1
-  ADC0_TSSEL_R = (ADC0_TSSEL_R & (unsigned)~ADC_TSSEL_PS0_M) | ADC_TSSEL_PS0_1; // Select Module 1 for PWM Generator Source
 
   ADC0_SSMUX1_R = (ADC0_SSMUX1_R & (unsigned)~(ADC_SSMUX1_MUX1_M | ADC_SSMUX1_MUX0_M)) | (VRy_AIN << ADC_SSMUX1_MUX1_S) | // Sample VRy in 2nd sample
                   (VRx_AIN << ADC_SSMUX1_MUX0_S);                                                                         // Sample VRx in 1st sample
