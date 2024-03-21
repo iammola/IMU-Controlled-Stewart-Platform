@@ -17,6 +17,10 @@ void Maestro_Init(uint32_t SYS_CLOCK);
 
 void Maestro_SetAngles(float angles[Maestro_Channels]);
 
+void Maestro_SetAngle(uint8_t channel, float angle);
+
 void Maestro_GoHome(void);
 
 void Maestro_GetPositions(void);
+
+void Maestro_WaitForIdle(void);

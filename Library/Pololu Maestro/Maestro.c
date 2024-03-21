@@ -27,8 +27,10 @@
 #define ZERO_PULSE_POS   1500.0f
 #define FULL_PULSE_WIDTH (2400.0f - ZERO_PULSE_POS)
 
-static void Maestro_WaitForIdle(void);
-
+/**
+ * @brief 
+ * @param SYS_CLOCK 
+ */
 void Maestro_Init(uint32_t SYS_CLOCK) {
   UART1_Init(SYS_CLOCK, Maestro_BAUD, WORD_8_BIT, NO_PARITY, ONE_STOP_BIT);
 
@@ -36,6 +38,35 @@ void Maestro_Init(uint32_t SYS_CLOCK) {
   GPIO_PORTB_DR4R_R |= UART1_TX_BIT; // Use 4mA drive, for intended 5V
 }
 
+/**
+ * @brief 
+ * @param channel 
+ * @param angle 
+ */
+void Maestro_SetAngle(uint8_t channel, float angle) {
+  uint32_t pulseWidth = 0;
+  uint8_t  cmd[4] = {SET_TARGET_CMD, 0, 0, 0};
+
+  // Keep in bounds
+  if (angle > FULL_ROTATION)
+    angle = FULL_ROTATION;
+  else if (angle < -FULL_ROTATION)
+    angle = -FULL_ROTATION;
+
+  // Get pulse width from zero position, in us converted to quarter-us
+  pulseWidth = (uint32_t)((ZERO_PULSE_POS + ((angle * FULL_PULSE_WIDTH) / FULL_ROTATION)) * 4);
+
+  cmd[1] = channel;                    // Set channel
+  cmd[2] = pulseWidth & 0xFF;          // lower byte of quarter-us
+  cmd[3] = (pulseWidth & 0xFF00) >> 8; // upper byte of quarter-us
+
+  UART1_Transmit(cmd, 4); // send data
+}
+
+/**
+ * @brief 
+ * @param angles 
+ */
 void Maestro_SetAngles(float angles[Maestro_Channels]) {
   float angle = 0.0f;
 
@@ -44,29 +75,16 @@ void Maestro_SetAngles(float angles[Maestro_Channels]) {
   uint8_t  cmd[4] = {SET_TARGET_CMD, 0, 0, 0};
 
   for (channel = 0; channel < Maestro_Channels; channel++) {
-    angle = angles[channel];
-
-    // Keep in bounds
-    if (angle > FULL_ROTATION)
-      angle = FULL_ROTATION;
-    else if (angle < -FULL_ROTATION)
-      angle = -FULL_ROTATION;
-
-    // Get pulse width from zero position, in us converted to quarter-us
-    pulseWidth = (uint32_t)((ZERO_PULSE_POS + ((angle * FULL_PULSE_WIDTH) / FULL_ROTATION)) * 4);
-
-    cmd[1] = channel;                    // Set channel
-    cmd[2] = pulseWidth & 0xFF;          // lower byte of quarter-us
-    cmd[3] = (pulseWidth & 0xFF00) >> 8; // upper byte of quarter-us
-
-    UART1_Transmit(cmd, 4); // send data
-
-    if (channel > 0)
-      Maestro_WaitForIdle(); // Wait for servo to finish moving
+    Maestro_SetAngle(channel, angles[channel]);
+    Maestro_WaitForIdle(); // Wait for servo to finish moving
   }
 }
 
-static void Maestro_WaitForIdle(void) {
+/**
+ * @brief 
+ * @param  
+ */
+void Maestro_WaitForIdle(void) {
   uint8_t isMovingState = SERVO_IS_MOVING;
   uint8_t isMoving = MOVING_STATE_CMD;
 
@@ -76,6 +94,10 @@ static void Maestro_WaitForIdle(void) {
   }
 }
 
+/**
+ * @brief 
+ * @param  
+ */
 void Maestro_GetPositions(void) {
   float angles[Maestro_Channels] = {0.0f};
 
@@ -99,6 +121,10 @@ void Maestro_GetPositions(void) {
   }
 }
 
+/**
+ * @brief 
+ * @param  
+ */
 void Maestro_GoHome(void) {
   uint8_t cmd = GO_HOME_CMD;
   UART1_Transmit(&cmd, 1);
