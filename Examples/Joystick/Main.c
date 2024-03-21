@@ -31,7 +31,8 @@ int main(void) {
   Quaternion quat = {0};
 
   PLL_Init();
-  FPULazyStackingEnable();                                                       // Enable Floating Point for use especially in Interrupts
+  FPULazyStackingEnable(); // Enable Floating Point
+
   CLI_Init(SYS_CLOCK, 115200, WORD_8_BIT, RX_FIFO_OFF, NO_PARITY, ONE_STOP_BIT); // Init UART COM
 
   Joystick_Init(SYS_CLOCK, SAMPLE_RATE);

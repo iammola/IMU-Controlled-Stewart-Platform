@@ -12,7 +12,7 @@
 static char text[CLI_TXT_BUF] = "";
 
 int main(void) {
-  FPULazyStackingEnable(); // Enable Floating Point for use especially in Interrupts
+  FPULazyStackingEnable(); // Enable Floating Point
 
   PLL_Init(); // Initialize the PLL
 

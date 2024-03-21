@@ -28,7 +28,7 @@
 #include <stdio.h>
 
 #include "FPU/fpu.h"
-#include "PLL.h"
+#include "PLL/PLL.h"
 
 #include "CLI/CLI.h"
 
@@ -50,9 +50,9 @@ void DisableInterrupts(void);
 int main(void) {
   uint8_t    legIdx = 0;
   Quaternion stewartQuaternion = {0.0f};
-  FPULazyStackingEnable(); // Enable Floating Point for use especially in Interrupts
 
   PLL_Init(); // Initialize the PLL
+  FPULazyStackingEnable(); // Enable Floating Point
 
   CLI_Init(SYS_CLOCK, 115200, WORD_8_BIT, RX_FIFO_OFF, NO_PARITY, ONE_STOP_BIT); // Init UART COM
 
