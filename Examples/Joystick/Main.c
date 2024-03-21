@@ -16,30 +16,19 @@
 #include "PLL/PLL.h"
 
 #include "Joystick/Joystick.h"
+#include "Quaternion/Quaternion.h"
 
 #define SYS_CLOCK   80e6
-#define SAMPLE_RATE 10
+#define SAMPLE_RATE 250
 
-#define DIFF 1023.0f
-
-static volatile uint16_t VRx_SAMPLE;
-static volatile uint16_t VRy_SAMPLE;
-
-void ADC0SS1_Handler(void);
-void ADC0SS1_Handler(void) {
-  // Clear SS1 Interrupt
-  ADC0_ISC_R |= ADC_ISC_IN1;
-
-  VRx_SAMPLE = (uint16_t)ADC0_SSFIFO1_R; // 1st Sample
-  VRy_SAMPLE = (uint16_t)ADC0_SSFIFO1_R; // 2nd Sample
-}
+void WaitForInterrupt(void);
+void DisableInterrupts(void);
+void EnableInterrupts(void);
 
 static char text[CLI_TXT_BUF] = "";
 
 int main(void) {
-  float VRx = 0.0f;
-  float VRy = 0.0f;
-  float angle = 0.0f;
+  Quaternion quat = {0};
 
   PLL_Init();
   FPULazyStackingEnable();                                                       // Enable Floating Point for use especially in Interrupts
@@ -48,15 +37,16 @@ int main(void) {
   Joystick_Init(SYS_CLOCK, SAMPLE_RATE);
 
   while (1) {
-    // Calculate co-ordinates, from -X, -Y (-1) to X, Y (1)
-    VRx = (VRx_SAMPLE / 2048.0f) - 1.0f;
-    VRy = (VRy_SAMPLE / 2048.0f) - 1.0f;
+    WaitForInterrupt();
 
-    angle = atan2f(VRx, VRy);
+    quat = normalizeQuaternion(-13.0f, /* 1.0f - */ -cosf(coords.angle), /* 1.0f - */ sinf(coords.angle), 0.0f);
 
-    snprintf(text, CLI_TXT_BUF, "-13,%0.4f,%0.4f,0", -cosf(angle), sinf(angle));
+    // snprintf(text, CLI_TXT_BUF, "%0.6f %0.6f %0.6f %0.6f", -cosf(coords.angle), VRx, sinf(coords.angle), VRy);
+    snprintf(text, CLI_TXT_BUF, "%0.6f %0.6f %0.6f %0.6f", quat.w, quat.x, quat.y, quat.z);
 
+    DisableInterrupts();
     CLI_Write(text);
     CLI_Write("\n");
+    EnableInterrupts();
   }
 }

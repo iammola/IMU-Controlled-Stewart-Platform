@@ -9,6 +9,7 @@
  *
  */
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "tm4c123gh6pm.h"
@@ -25,6 +26,15 @@
 #define PCTL_M (unsigned)(GPIO_PCTL_PE0_M | GPIO_PCTL_PE1_M | GPIO_PCTL_PE2_M)
 
 #define JOYSTICK_INT_PRIORITY 2
+
+typedef struct {
+    float x;
+    float y;
+    float angle;
+} JoystickCoords;
+
+extern volatile JoystickCoords coords;
+extern volatile bool HasNewJoystickCoords;
 
 /**
  * @brief

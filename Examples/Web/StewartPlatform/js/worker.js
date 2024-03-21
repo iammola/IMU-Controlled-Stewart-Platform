@@ -75,7 +75,7 @@ async function readLoop() {
     if (value) {
       self.postMessage({
         type: "DATA_READ",
-        value: value.split(",").map(parseFloat),
+        value: value.split(" ").map(parseFloat),
       });
     }
 

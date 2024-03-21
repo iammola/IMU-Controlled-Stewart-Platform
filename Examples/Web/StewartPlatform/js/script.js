@@ -84,13 +84,13 @@ addEventListener("DOMContentLoaded", () => {
         baseRadiusOuter: 83.2665,
         platformRadius: 45,
         platformRadiusOuter: 70.946,
-        platformTurn: true,
-        rodLength: 75,
+        platformTurn: false,
+        rodLength: 150,
         hornLength: 38.1,
         hornDirection: 0,
         shaftDistance: 14.825,
         anchorDistance: 22.5,
-        servoRange: [0, Math.PI],
+        servoRange: [-Math.PI / 2, Math.PI / 2],
         servoRangeVisible: true,
       });
     };

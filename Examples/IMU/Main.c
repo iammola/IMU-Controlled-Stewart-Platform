@@ -36,7 +36,7 @@ int main(void) {
     // snprintf(text, CLI_TXT_BUF, "%0.4f %0.4f %0.4f ", magnetometer.axis.x, magnetometer.axis.y, magnetometer.axis.z);
 
     // Stewart Platform
-    snprintf(text, CLI_TXT_BUF, "%0.4f,%0.4f,%0.4f,%0.4f", quaternion.element.w, quaternion.element.x, quaternion.element.y, quaternion.element.z);
+    snprintf(text, CLI_TXT_BUF, "%0.4f %0.4f %0.4f %0.4f", quaternion.element.w, quaternion.element.x, quaternion.element.y, quaternion.element.z);
 
     CLI_Write(text);
     CLI_Write("\n");

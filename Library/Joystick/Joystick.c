@@ -9,12 +9,29 @@
  *
  */
 
+#include <math.h>
+
 #include "tm4c123gh6pm.h"
 
 #include "Joystick.h"
 
+void ADC0SS1_Handler(void);
+
 static void Joystick_ADC_Init(uint32_t SYS_CLOCK, uint16_t SAMPLING_FREQ);
 static void Joystick_Timer_Init(uint32_t LOAD);
+
+volatile JoystickCoords coords = {0};
+
+void ADC0SS1_Handler(void) {
+  // Clear SS1 Interrupt
+  ADC0_ISC_R |= ADC_ISC_IN1;
+
+  // Calculate co-ordinates, from -X, -Y (-1) to X, Y (1)
+  coords.x = (ADC0_SSFIFO1_R / 2048.0f) - 1.0f; // 1st Sample
+  coords.y = (ADC0_SSFIFO1_R / 2048.0f) - 1.0f; // 2nd Sample
+
+  coords.angle = atan2f(-coords.y, -coords.x);
+}
 
 /**
  * @brief
