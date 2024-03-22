@@ -2,6 +2,10 @@
 
 volatile FusionQuaternion quaternion;
 
+/**
+ * @brief 
+ * @param SYS_CLK 
+ */
 void IMU_Init(uint32_t SYS_CLK) {
   uint8_t whoAmI = 0;
   uint8_t MAG_whoAmI = 0;
@@ -43,12 +47,27 @@ void IMU_Init(uint32_t SYS_CLK) {
 
   ICM20948_MagCalibration();       // Run Calibrations
   ICM20948_AccelGyroCalibration(); // Will be empty functions if undesired
+}
 
+/**
+ * @brief 
+ * @param  
+ */
+void IMU_Enable(void) {
   // Specify the Interrupt pin is push-pull and is an active high pin (falling edge interrupt)
   // also forces the Interrupt to be cleared for the level to be reset and any Read operation to clear the INT_STATUS
   ICM20948_Write(INT_PIN_CFG_ADDR, INT_READ_CLEAR & ~(INT_ACTIVE_LOW | INT_OPEN_DRAIN | INT_LATCH_MANUAL_CLEAR));
   ICM20948_Write(INT_ENABLE_1_ADDR, RAW_DATA_INT_ENABLE); // Enable Raw Data interrupt
 
   ICM20948_MadgwickFusion_Init(); // Initialize Fusion Algorithm
-  ICM20948_Interrupt_Init();      // Configure the Interrupt pin
+  ICM20948_Interrupt_Pin_Init();  // Configure the Interrupt pin
+}
+
+/**
+ * @brief 
+ * @param  
+ */
+void IMU_Disable(void) {
+  ICM20948_Write(INT_ENABLE_1_ADDR, ~RAW_DATA_INT_ENABLE); // Disable Raw Data interrupt
+  ICM20948_Interrupt_Pin_Disable();                        // Disable the Interrupt pin
 }

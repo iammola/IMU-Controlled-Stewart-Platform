@@ -40,3 +40,15 @@ extern volatile bool           HasNewJoystickCoords;
  * @param SAMPLING_FREQ
  */
 void Joystick_Init(uint32_t SYS_CLOCK, uint16_t SAMPLING_FREQ);
+
+/**
+ * @brief 
+ * @param  
+ */
+void Joystick_Enable(void);
+
+/**
+ * @brief 
+ * @param  
+ */
+void Joystick_Disable(void);

@@ -15,6 +15,11 @@
 
 #include "Joystick.h"
 
+#define TIMER_ENABLE()  TIMER0_CTL_R |= TIMER_CTL_TAEN | TIMER_CTL_TAOTE; // Enable Timer A and trigger ADC
+#define TIMER_DISABLE() TIMER0_CTL_R |= (unsigned)~TIMER_CTL_TAEN;        // Disable Timer A
+#define ADC_ENABLE()    ADC0_ACTSS_R |= ADC_ACTSS_ASEN1;                  // Enable Sample Sequencer 1
+#define ADC_DISABLE()   ADC0_ACTSS_R |= (unsigned)~ADC_ACTSS_ASEN1;       // Disable Sample Sequencer 1
+
 void ADC0SS1_Handler(void);
 
 static void Joystick_ADC_Init(uint32_t SYS_CLOCK, uint16_t SAMPLING_FREQ);
@@ -56,6 +61,24 @@ void Joystick_Init(uint32_t SYS_CLOCK, uint16_t SAMPLING_FREQ) {
 }
 
 /**
+ * @brief 
+ * @param  
+ */
+void Joystick_Enable(void) {
+  TIMER_ENABLE()
+  ADC_ENABLE()
+}
+
+/**
+ * @brief 
+ * @param  
+ */
+void Joystick_Disable(void) {
+  TIMER_DISABLE()
+  ADC_DISABLE()
+}
+
+/**
  * @brief
  * @param LOAD
  */
@@ -63,14 +86,13 @@ static void Joystick_Timer_Init(uint32_t LOAD) {
   SYSCTL_RCGCTIMER_R |= SYSCTL_RCGCTIMER_R0;                   // Enable Timer Module 0
   while ((SYSCTL_RCGCTIMER_R & SYSCTL_RCGCTIMER_R0) == 0x00) { // Wait for Port ready
   }
-  TIMER0_CTL_R &= (unsigned)~TIMER_CTL_TAEN; // Disable Timer A
+
+  TIMER_DISABLE()
 
   TIMER0_CFG_R = TIMER_CFG_32_BIT_TIMER;
   TIMER0_TAMR_R = TIMER_TAMR_TAMR_PERIOD; // Periodic timer
   TIMER0_IMR_R |= TIMER_IMR_TATOIM;       // Trigger interrupt when reaches limit
   TIMER0_TAILR_R = LOAD;                  // Set Load value
-
-  TIMER0_CTL_R |= TIMER_CTL_TAEN | TIMER_CTL_TAOTE; // Enable Timer A and trigger ADC
 }
 
 /**
@@ -85,7 +107,7 @@ static void Joystick_ADC_Init(uint32_t SYS_CLOCK, uint16_t SAMPLING_FREQ) {
 
   Joystick_Timer_Init(SYS_CLOCK / SAMPLING_FREQ);
 
-  ADC0_ACTSS_R &= (unsigned)~ADC_ACTSS_ASEN1; // Disable Sample Sequencer 1
+  ADC_DISABLE()
 
   ADC0_EMUX_R = (ADC0_EMUX_R & (unsigned)~ADC_EMUX_EM1_M) | ADC_EMUX_EM1_TIMER; // Select Timer for Sample Sequencer 1
 
@@ -97,6 +119,4 @@ static void Joystick_ADC_Init(uint32_t SYS_CLOCK, uint16_t SAMPLING_FREQ) {
   ADC0_IM_R |= ADC_IM_MASK1;    // Unmask Sample Sequencer 1 interrupts
   NVIC_EN0_R |= NVIC_EN0_INT15; // Enable ADC module 0, sequence 1's Interrupt Handler
   NVIC_PRI3_R = (NVIC_PRI3_R & (unsigned)~NVIC_PRI3_INT15_M) | (JOYSTICK_INT_PRIORITY << NVIC_PRI3_INT15_S); // Set Interrupt priority
-
-  ADC0_ACTSS_R |= ADC_ACTSS_ASEN1; // Enable Sample Sequencer 1
 }

@@ -261,7 +261,7 @@ void ICM20948_Init(uint32_t SYS_CLK) {
  * triggering on the Rising Edge event.
  * @param
  */
-void ICM20948_Interrupt_Init(void) {
+void ICM20948_Interrupt_Pin_Init(void) {
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R3; // Enable Port D clock
 
   GPIO_PORTB_AFSEL_R &= ~INT_BIT;   // Disable Alternate Functions on CS pin
@@ -278,6 +278,14 @@ void ICM20948_Interrupt_Init(void) {
   NVIC_PRI0_R = (NVIC_PRI0_R & (unsigned)~NVIC_PRI0_INT1_M) | (INT_PRIORITY << NVIC_PRI0_INT1_S); // Configure Port B's priority
   GPIO_PORTB_ICR_R |= INT_BIT;                                                                    // Clear the INT pin's interrupt
   GPIO_PORTB_IM_R |= INT_BIT;                                                                     // Allow the INT pin interrupt to be detected
+}
+
+/**
+ * @brief Disables the Pin connected to the INT pin of the ICM-20948 from triggering an interrupt
+ * @param  
+ */
+void ICM20948_Interrupt_Pin_Disable(void) {
+  GPIO_PORTB_IM_R &= ~INT_BIT; // Disable the INT pin interrupt
 }
 
 /**

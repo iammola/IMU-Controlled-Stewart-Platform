@@ -58,8 +58,10 @@ int main(void) {
 
 #if CONTROL_METHOD == 0
   IMU_Init(SYS_CLOCK); // Initialize IMU
+  IMU_Enable();
 #elif CONTROL_METHOD == 1
   Joystick_Init(SYS_CLOCK, 100); // Initialize Joystick
+  Joystick_Enable();
 #endif
   Maestro_Init(SYS_CLOCK);                      // Initialize Maestro Controller
   StewartPlatform_Init(); // Initialize stewart platform

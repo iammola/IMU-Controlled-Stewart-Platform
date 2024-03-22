@@ -137,7 +137,13 @@ void ICM20948_Init(uint32_t SYS_CLK);
  * triggering on the Rising Edge event.
  * @param
  */
-void ICM20948_Interrupt_Init(void);
+void ICM20948_Interrupt_Pin_Init(void);
+
+/**
+ * @brief Disables the Pin connected to the INT pin of the ICM-20948 from triggering an interrupt
+ * @param  
+ */
+void ICM20948_Interrupt_Pin_Disable(void);
 
 /**
  * @brief Reads data from the specified register while selecting the required User Bank

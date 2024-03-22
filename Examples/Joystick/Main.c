@@ -36,6 +36,7 @@ int main(void) {
   CLI_Init(SYS_CLOCK, 115200, WORD_8_BIT, RX_FIFO_OFF, NO_PARITY, ONE_STOP_BIT); // Init UART COM
 
   Joystick_Init(SYS_CLOCK, SAMPLE_RATE);
+  Joystick_Enable();
 
   while (1) {
     WaitForInterrupt();

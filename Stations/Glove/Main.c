@@ -15,9 +15,11 @@
 #include "PLL/PLL.h"
 
 #include "HC-12/HC-12.h"
+#include "IMU/IMU.h"
 #include "Joystick/Joystick.h"
 
-#define SYS_CLOCK 80e6
+#define SYS_CLOCK              80e6
+#define JOYSTICK_SAMPLING_RATE 100
 
 #define FLOATS_COUNT 1 // Just for the angle
 #define DATA_SIZE    (FLOATS_COUNT * 4)
@@ -35,7 +37,10 @@ int main(void) {
   HC12_Init();
   HC12_Config(SYS_CLOCK, BAUD_115200, TX_20dBm); // Use 115200 bps, 20 dBm
 
-  Joystick_Init(SYS_CLOCK, 100);
+  Joystick_Init(SYS_CLOCK, JOYSTICK_SAMPLING_RATE);
+  IMU_Init(SYS_CLOCK);
+
+  /* TODO: Add button trigger to enable one of the two input methods. */
 
   while (1) {
     WaitForInterrupt();
