@@ -159,7 +159,7 @@ void HC12_Config(uint32_t SYS_CLOCK, BAUD_RATE baud, TX_POWER powerLevel) {
 
   HC12_SendCommand("AT+V", "www.hc01.com HC-12 v2.6"); // Verify Firmware version matches
   HC12_SendCommand("AT+B%d", "OK+B%d", baud);          // Set Baud-Rate to desired bps
-  HC12_SendCommand("AT+P%d", "OK+P%d", powerLevel);    // Set transmitting power to 20dBm
+  HC12_SendCommand("AT+P%d", "OK+P%d", powerLevel);    // Set transmitting power desired level
   HC12_SendCommand("AT+C%03d", "OK+C%03d", 1);         // Use channel 1
   HC12_SendCommand("AT+FU%d", "OK+FU%d", 3);           // Set Transmission Mode to FU3
 

@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define></Define>
               <Undefine></Undefine>
-              <IncludePath>..\..\Library;D:\Code</IncludePath>
+              <IncludePath>..\..\Library;..\..\..\Development</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -390,11 +390,6 @@
               <FilePath>.\Main.c</FilePath>
             </File>
             <File>
-              <FileName>UART1.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\Library\UART\UART1.c</FilePath>
-            </File>
-            <File>
               <FileName>Maestro.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\Library\Pololu Maestro\Maestro.c</FilePath>
@@ -413,6 +408,11 @@
               <FileName>fpu.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\Library\FPU\fpu.c</FilePath>
+            </File>
+            <File>
+              <FileName>UART4.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\Library\UART\UART4.c</FilePath>
             </File>
           </Files>
         </Group>

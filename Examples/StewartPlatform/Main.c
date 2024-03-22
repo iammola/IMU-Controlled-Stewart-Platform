@@ -62,7 +62,7 @@ int main(void) {
   Joystick_Init(SYS_CLOCK, 100); // Initialize Joystick
 #endif
   Maestro_Init(SYS_CLOCK);                      // Initialize Maestro Controller
-  StewartPlatform_Init(0.0f, 0.0f, 0.0f, 0.0f); // Initialize stewart platform
+  StewartPlatform_Init(); // Initialize stewart platform
 
   while (1) {
     WaitForInterrupt();
