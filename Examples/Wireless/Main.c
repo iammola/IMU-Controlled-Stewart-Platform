@@ -6,7 +6,7 @@
 
 #include "tm4c123gh6pm.h"
 
-#include "HC-12/HC-12.h"
+#include "Wireless/Wireless.h"
 
 #define SYS_CLOCK 80e6
 
@@ -63,19 +63,22 @@ int main(void) {
   PLL_Init();     // Initialize PLL
   PortF_Init();   // Initialize Port F
 
-  HC12_Init();
-  HC12_Config(SYS_CLOCK, BAUD_115200, TX_20dBm); // Use 115200 bps, 20 dBm
+  Wireless_Init(SYS_CLOCK);
 
   while (1) {
     // Wait for new data to be confirmed
     if (HasNewData) {
-      GPIO_PORTF_DATA_R = LED_BITS & (1 << RX_Data_Buffer[0]); // Turn RED on, then BLUE, then GREEN, then OFF.
-      HasNewData = false;                                      // Clear data flag
+      // Require the length bit to be 1. Just for which color to turn on
+      if (RX_Data_Buffer[0] == 0x01) {
+        GPIO_PORTF_DATA_R = LED_BITS & (1 << RX_Data_Buffer[1]); // Turn RED on, then BLUE, then GREEN, then OFF.
+      }
+
+      HasNewData = false; // Clear data flag
     }
 
     if (SendData) {
       peerLEDIdx = (peerLEDIdx + 1) & 3; // Update and keep index in bounds
-      HC12_SendData(&peerLEDIdx, 1);     // Transmit index
+      Wireless_Transmit(&peerLEDIdx, 1);     // Transmit index
 
       SysTick_Wait10ms(200); // Wait 2s
     }

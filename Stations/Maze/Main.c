@@ -9,14 +9,17 @@
  *
  */
 #include <math.h>
+#include <stdbool.h>
 #include <string.h>
 
 #include "FPU/fpu.h"
 #include "PLL/PLL.h"
 
-#include "HC-12/HC-12.h"
 #include "Pololu Maestro/Maestro.h"
 #include "StewartPlatform/StewartPlatform.h"
+#include "Wireless/Wireless.h"
+
+#include "Maze.h"
 
 #define SYS_CLOCK 80e6
 
@@ -24,19 +27,27 @@ void WaitForInterrupt(void);
 void EnableInterrupts(void);
 void DisableInterrupts(void);
 
-static const StewartCoords translation = {0};
+MAZE_CONTROL_METHOD CTL_METHOD = DEFAULT_CTL_METHOD;
 
-static float      angle = 0.0f;
-static Quaternion stewartQuaternion = {0};
+/**
+ * @brief
+ * @param
+ */
+void Maze_ChangeControlMethod(uint8_t *RX_Data_Buffer) {
+  // Update Screen
+  CTL_METHOD = RX_Data_Buffer[2];
+  // Reset Game and Servo Positions
+}
 
 int main(void) {
-  uint8_t legIdx = 0;
+  uint8_t       legIdx = 0;
+  float         angle = 0.0f;
+  StewartCoords translation = {0};
 
   PLL_Init();
   FPULazyStackingEnable(); // Enable Floating Point
 
-  HC12_Init();
-  HC12_Config(SYS_CLOCK, BAUD_115200, TX_20dBm); // Use 115200 bps, 20 dBm
+  Wireless_Init(SYS_CLOCK);
 
   Maestro_Init(SYS_CLOCK); // Initialize Maestro Controller
   StewartPlatform_Init();  // Initialize stewart platform
@@ -50,6 +61,18 @@ int main(void) {
 
     DisableInterrupts();
 
+    switch (RX_Data_Buffer[1]) {
+      case CHANGE_CONTROL_METHOD:
+        /* code */
+        break;
+      case NEW_QUATERNION:
+        break;
+      default:
+        continue;
+    }
+
+    EnableInterrupts();
+
     memcpy(&angle, RX_Data_Buffer, 4); // Read only 4 bytes for angle float
 
     stewartQuaternion = normalizeQuaternion(-13.0f, -cosf(angle), sinf(angle), 0.0f);
@@ -61,6 +84,5 @@ int main(void) {
     }
 
     HasNewData = false; // Clear data flag
-    EnableInterrupts();
   }
 }

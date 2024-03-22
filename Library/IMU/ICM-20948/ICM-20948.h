@@ -14,7 +14,7 @@
 #include <stdint.h>
 
 #include "Fusion/Fusion.h"
-#include "IMU/IMU.h"
+#include "Quaternion/Quaternion.h"
 
 #define INT_BIT      (unsigned)(1 << 3) // (PB3) Interrupt Pin
 #define INT_PCTL_M   (unsigned)GPIO_PCTL_PB3_M
@@ -129,8 +129,10 @@ typedef struct REG_ADDRESS_STRUCT {
  * turns off Low-Power Mode and the Temp sensor, while auto-selecting the best clock and enabling
  * the gyroscope and accelerometer sensors
  * @param SYS_CLK
+ * @param quatDest Pointer to Location to store Quaternion data after Fusion update
+ * @param hasNewData Pointer to State to track new Quaternion after Fusion update
  */
-void ICM20948_Init(uint32_t SYS_CLK);
+void ICM20948_Init(uint32_t SYS_CLK, volatile Quaternion *quatDest, volatile bool *hasNewData);
 
 /**
  * @brief Configures the Pin connected to the INT pin of the ICM-20948 as a Digital GPIO Input,
@@ -141,7 +143,7 @@ void ICM20948_Interrupt_Pin_Init(void);
 
 /**
  * @brief Disables the Pin connected to the INT pin of the ICM-20948 from triggering an interrupt
- * @param  
+ * @param
  */
 void ICM20948_Interrupt_Pin_Disable(void);
 

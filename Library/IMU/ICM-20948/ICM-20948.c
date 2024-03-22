@@ -65,8 +65,6 @@ static void ICM20948_GetRawAccelReadings(FusionVector *dest);
 static FusionAhrs   ahrs = {0};
 static FusionOffset offset = {0};
 
-volatile bool HasNewIMUAngles = false;
-
 static uint32_t          SYS_CLOCK;
 static volatile float    deltaTime = 0.0f;
 static volatile uint32_t lastTimestamp = 0;
@@ -96,6 +94,9 @@ FusionVector gyroscopeOffset = {
 FusionVector accelerometerOffset = {
     .axis = {.x = -6168.63965f, .y = -4822.40723f, .z = 13846.6348f}
 };
+
+static volatile Quaternion *__quatDest;
+static volatile bool       *__hasNewData;
 
 /**
  * @brief ICM-20948 Interrupt Handler
@@ -134,9 +135,11 @@ void GPIOB_Handler(void) {
   gyroscope = FusionOffsetUpdate(&offset, gyroscope);                         // Update gyroscope offset correction algorithm
   FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, deltaTime); // Update gyroscope AHRS algorithm
 
-  quaternion = FusionAhrsGetQuaternion(&ahrs);
-
-  HasNewIMUAngles = true;
+  __quatDest->w = ahrs.quaternion.element.w;
+  __quatDest->x = ahrs.quaternion.element.x;
+  __quatDest->y = ahrs.quaternion.element.y;
+  __quatDest->z = ahrs.quaternion.element.z;
+  *__hasNewData = true;
 }
 
 /**
@@ -238,8 +241,13 @@ static bool ICM20948_GetMagReadings(FusionVector *dest) {
  * turns off Low-Power Mode and the Temp sensor, while auto-selecting the best clock and enabling
  * the gyroscope and accelerometer sensors
  * @param SYS_CLK
+ * @param quatDest Location to store Quaternion data after Fusion update
+ * @param hasNewData State to track new Quaternion after Fusion update
  */
-void ICM20948_Init(uint32_t SYS_CLK) {
+void ICM20948_Init(uint32_t SYS_CLK, volatile Quaternion *quatDest, volatile bool *hasNewData) {
+  __quatDest = quatDest;
+  __hasNewData = hasNewData;
+
   SYS_CLOCK = SYS_CLK;
 
   SysTick_Init(); // Initialize SysTick
@@ -282,7 +290,7 @@ void ICM20948_Interrupt_Pin_Init(void) {
 
 /**
  * @brief Disables the Pin connected to the INT pin of the ICM-20948 from triggering an interrupt
- * @param  
+ * @param
  */
 void ICM20948_Interrupt_Pin_Disable(void) {
   GPIO_PORTB_IM_R &= ~INT_BIT; // Disable the INT pin interrupt

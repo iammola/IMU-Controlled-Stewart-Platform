@@ -9,6 +9,7 @@
 
 extern volatile bool HasNewData;
 extern uint8_t       RX_Data_Buffer[MAX_MESSAGE_SIZE];
+extern uint8_t       TX_Data_Buffer[MAX_MESSAGE_SIZE];
 
 typedef enum {
   TX_20dBm = 8,

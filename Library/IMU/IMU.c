@@ -1,17 +1,17 @@
 #include "IMU.h"
 
-volatile FusionQuaternion quaternion;
-
 /**
- * @brief 
- * @param SYS_CLK 
+ * @brief
+ * @param SYS_CLK
+ * @param quatDest
+ * @param hasNewData
  */
-void IMU_Init(uint32_t SYS_CLK) {
+void IMU_Init(uint32_t SYS_CLK, volatile Quaternion *quatDest, volatile bool *hasNewData) {
   uint8_t whoAmI = 0;
   uint8_t MAG_whoAmI = 0;
   uint8_t userCtrl = 0;
 
-  ICM20948_Init(SYS_CLK);
+  ICM20948_Init(SYS_CLK, quatDest, hasNewData);
 
   ICM20948_Write(GYRO_CONFIG_1_ADDR, GYRO_FS_SEL_2000 | GYRO_DLPF_ENABLE); // Configure gyro scale to 2000dps and enable Low-pass filter
   gyroscopeSensitivity.axis.x = gyroscopeSensitivity.axis.y = gyroscopeSensitivity.axis.z = GYRO_2000_SENSITIVITY;
@@ -50,8 +50,8 @@ void IMU_Init(uint32_t SYS_CLK) {
 }
 
 /**
- * @brief 
- * @param  
+ * @brief
+ * @param
  */
 void IMU_Enable(void) {
   // Specify the Interrupt pin is push-pull and is an active high pin (falling edge interrupt)
@@ -64,8 +64,8 @@ void IMU_Enable(void) {
 }
 
 /**
- * @brief 
- * @param  
+ * @brief
+ * @param
  */
 void IMU_Disable(void) {
   ICM20948_Write(INT_ENABLE_1_ADDR, ~RAW_DATA_INT_ENABLE); // Disable Raw Data interrupt

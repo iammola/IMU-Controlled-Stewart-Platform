@@ -25,28 +25,34 @@ void ADC0SS1_Handler(void);
 static void Joystick_ADC_Init(uint32_t SYS_CLOCK, uint16_t SAMPLING_FREQ);
 static void Joystick_Timer_Init(uint32_t LOAD);
 
-volatile JoystickCoords coords = {0};
-volatile bool           HasNewJoystickCoords = false;
+static volatile bool       *__hasNewData;
+static volatile Quaternion *__quatDest;
 
 void ADC0SS1_Handler(void) {
+  // Calculate co-ordinates, from -X, -Y (-1) to X, Y (1)
+  float x = (ADC0_SSFIFO1_R / 2048.0f) - 1.0f; // 1st sample
+  float y = (ADC0_SSFIFO1_R / 2048.0f) - 1.0f; // 2nd sample
+  
+  float angle = atan2f(-y, -x);
+
   // Clear SS1 Interrupt
   ADC0_ISC_R |= ADC_ISC_IN1;
 
-  // Calculate co-ordinates, from -X, -Y (-1) to X, Y (1)
-  coords.x = (ADC0_SSFIFO1_R / 2048.0f) - 1.0f; // 1st Sample
-  coords.y = (ADC0_SSFIFO1_R / 2048.0f) - 1.0f; // 2nd Sample
-
-  coords.angle = atan2f(-coords.y, -coords.x);
-
-  HasNewJoystickCoords = true;
+  *__quatDest = normalizeQuaternion(-13.0f, -cosf(angle), sinf(angle), 0);
+  *__hasNewData = true;
 }
 
 /**
  * @brief
  * @param SYS_CLOCK
  * @param SAMPLING_FREQ
+ * @param quatDest
+ * @param hasNewData
  */
-void Joystick_Init(uint32_t SYS_CLOCK, uint16_t SAMPLING_FREQ) {
+void Joystick_Init(uint32_t SYS_CLOCK, uint16_t SAMPLING_FREQ, volatile Quaternion *quatDest, volatile bool *hasNewData) {
+  __quatDest = quatDest;
+  __hasNewData = hasNewData;
+
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R3;                 // Enable Port D
   while ((SYSCTL_PRGPIO_R & SYSCTL_RCGCGPIO_R3) == 0x00) { // Wait for Port ready
   }
@@ -61,8 +67,8 @@ void Joystick_Init(uint32_t SYS_CLOCK, uint16_t SAMPLING_FREQ) {
 }
 
 /**
- * @brief 
- * @param  
+ * @brief
+ * @param
  */
 void Joystick_Enable(void) {
   TIMER_ENABLE()
@@ -70,8 +76,8 @@ void Joystick_Enable(void) {
 }
 
 /**
- * @brief 
- * @param  
+ * @brief
+ * @param
  */
 void Joystick_Disable(void) {
   TIMER_DISABLE()

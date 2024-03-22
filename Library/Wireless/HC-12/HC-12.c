@@ -34,7 +34,9 @@ static bool HC12_SendCommand(char *FORMAT, char *RESPONSE_FORMAT, ...);
 
 static MODE   CURRENT_MODE = 0xFF;
 volatile bool HasNewData = false;
-uint8_t       RX_Data_Buffer[MAX_MESSAGE_SIZE] = {0};
+
+uint8_t RX_Data_Buffer[MAX_MESSAGE_SIZE] = {0};
+uint8_t TX_Data_Buffer[MAX_MESSAGE_SIZE] = {0};
 
 static const uint8_t INTERRUPT_PRIORITY = 5;
 
@@ -55,14 +57,14 @@ void UART5_Handler(void) {
   if (!success || SYN != SYNC_WORD) // Ensure sync word matches to assume valid data
     return;
 
-  success = UART5_Receive(&dataLength, 1); // Get amount of bytes sent
+  success = UART5_Receive(RX_Data_Buffer, 1); // Get amount of bytes sent
   if (!success)
     return;
 
-  if (dataLength > MAX_MESSAGE_SIZE) // Ensure it's within expected range
-    dataLength = MAX_MESSAGE_SIZE;
+  if (RX_Data_Buffer[0] > MAX_MESSAGE_SIZE) // Ensure it's within expected range
+    RX_Data_Buffer[0] = MAX_MESSAGE_SIZE;
 
-  success = UART5_Receive(RX_Data_Buffer, dataLength); // Read data
+  success = UART5_Receive(RX_Data_Buffer + 1, dataLength); // Read data
   if (!success)
     return;
 
