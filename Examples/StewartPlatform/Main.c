@@ -34,69 +34,52 @@
 
 #include "IMU/IMU.h"
 #include "Joystick/Joystick.h"
-#include "Quaternion/Quaternion.h"
 #include "Pololu Maestro/Maestro.h"
+#include "Quaternion/Quaternion.h"
 #include "StewartPlatform/StewartPlatform.h"
 
 #define SYS_CLOCK 80e6
 
-static char                text[CLI_TXT_BUF] = "";
-static const StewartCoords translation = {0.0f};
+static char text[CLI_TXT_BUF] = "";
 
 void WaitForInterrupt(void);
 void EnableInterrupts(void);
 void DisableInterrupts(void);
 
 int main(void) {
-  uint8_t    legIdx = 0;
-  Quaternion stewartQuaternion = {0.0f};
+  uint8_t  legIdx = 0;
+  Position position = {0};
 
-  PLL_Init(); // Initialize the PLL
+  PLL_Init();              // Initialize the PLL
   FPULazyStackingEnable(); // Enable Floating Point
 
   CLI_Init(SYS_CLOCK, 115200, WORD_8_BIT, RX_FIFO_OFF, NO_PARITY, ONE_STOP_BIT); // Init UART COM
 
 #if CONTROL_METHOD == 0
-  IMU_Init(SYS_CLOCK); // Initialize IMU
+  IMU_Init(SYS_CLOCK, &position); // Initialize IMU
   IMU_Enable();
 #elif CONTROL_METHOD == 1
-  Joystick_Init(SYS_CLOCK, 100); // Initialize Joystick
+  Joystick_Init(SYS_CLOCK, 100, &position); // Initialize Joystick
   Joystick_Enable();
 #endif
-  Maestro_Init(SYS_CLOCK);                      // Initialize Maestro Controller
-  StewartPlatform_Init(); // Initialize stewart platform
+  Maestro_Init(SYS_CLOCK); // Initialize Maestro Controller
+  StewartPlatform_Init();  // Initialize stewart platform
 
   while (1) {
     WaitForInterrupt();
 
-#if CONTROL_METHOD == 0
-    if (HasNewIMUAngles) {
-      stewartQuaternion.w = quaternion.element.w;
-      stewartQuaternion.x = quaternion.element.x;
-      stewartQuaternion.y = quaternion.element.y;
-      stewartQuaternion.z = quaternion.element.z;
-
-      HasNewIMUAngles = false;
-    }
-#elif CONTROL_METHOD == 1
-    if (HasNewJoystickCoords) {
-      stewartQuaternion = normalizeQuaternion(-13.0f, -cosf(coords.angle), sinf(coords.angle), 0.0f);
-      HasNewJoystickCoords = false;
-    }
-#endif
-    else {
+    if (!position.isNew)
       continue;
-    }
 
-    StewartPlatform_Update(translation, stewartQuaternion);
+    StewartPlatform_Update(position.translation, position.quaternion);
 
     DisableInterrupts();
-
     for (legIdx = 0; legIdx < Maestro_Channels; legIdx++) {
       Maestro_SetAngle(legIdx, legs[legIdx].servoAngle);
-      Maestro_WaitForIdle();
     }
-
+    Maestro_WaitForIdle();
     EnableInterrupts();
+
+    position.isNew = false;
   }
 }

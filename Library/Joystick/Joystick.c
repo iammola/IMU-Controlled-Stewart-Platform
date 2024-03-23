@@ -25,33 +25,34 @@ void ADC0SS1_Handler(void);
 static void Joystick_ADC_Init(uint32_t SYS_CLOCK, uint16_t SAMPLING_FREQ);
 static void Joystick_Timer_Init(uint32_t LOAD);
 
-static volatile bool       *__hasNewData;
-static volatile Quaternion *__quatDest;
+static volatile Position *__position;
 
 void ADC0SS1_Handler(void) {
   // Calculate co-ordinates, from -X, -Y (-1) to X, Y (1)
-  float x = (ADC0_SSFIFO1_R / 2048.0f) - 1.0f; // 1st sample
-  float y = (ADC0_SSFIFO1_R / 2048.0f) - 1.0f; // 2nd sample
-  
-  float angle = atan2f(-y, -x);
+  float x1 = (ADC0_SSFIFO1_R / 2048.0f) - 1.0f; // 1st sample
+  float y1 = (ADC0_SSFIFO1_R / 2048.0f) - 1.0f; // 2nd sample
+  float x2 = (ADC0_SSFIFO1_R / 2048.0f) - 1.0f; // 3rd sample
+  float y2 = (ADC0_SSFIFO1_R / 2048.0f) - 1.0f; // 4th sample
+
+  float  angle = atan2f(y2, x2);                                                          // Use 2nd Joystick for tilt
+  Coords translation = {.x = x1 * PAN_RANGE, .y = y1 * PAN_RANGE, .z = 0.0f * PAN_RANGE}; // Use 1st joystick for pan
 
   // Clear SS1 Interrupt
   ADC0_ISC_R |= ADC_ISC_IN1;
 
-  *__quatDest = normalizeQuaternion(-13.0f, -cosf(angle), sinf(angle), 0);
-  *__hasNewData = true;
+  __position->quaternion = normalizeQuaternion(-13.0f, -cosf(angle), sinf(angle), 0);
+  __position->translation = translation;
+  __position->isNew = true;
 }
 
 /**
  * @brief
  * @param SYS_CLOCK
  * @param SAMPLING_FREQ
- * @param quatDest
- * @param hasNewData
+ * @param position
  */
-void Joystick_Init(uint32_t SYS_CLOCK, uint16_t SAMPLING_FREQ, volatile Quaternion *quatDest, volatile bool *hasNewData) {
-  __quatDest = quatDest;
-  __hasNewData = hasNewData;
+void Joystick_Init(uint32_t SYS_CLOCK, uint16_t SAMPLING_FREQ, volatile Position *position) {
+  __position = position;
 
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R3;                 // Enable Port D
   while ((SYSCTL_PRGPIO_R & SYSCTL_RCGCGPIO_R3) == 0x00) { // Wait for Port ready
@@ -117,9 +118,11 @@ static void Joystick_ADC_Init(uint32_t SYS_CLOCK, uint16_t SAMPLING_FREQ) {
 
   ADC0_EMUX_R = (ADC0_EMUX_R & (unsigned)~ADC_EMUX_EM1_M) | ADC_EMUX_EM1_TIMER; // Select Timer for Sample Sequencer 1
 
-  ADC0_SSMUX1_R = (ADC0_SSMUX1_R & (unsigned)~(ADC_SSMUX1_MUX1_M | ADC_SSMUX1_MUX0_M)) | (VRy_AIN << ADC_SSMUX1_MUX1_S) | // Sample VRy in 2nd sample
-                  (VRx_AIN << ADC_SSMUX1_MUX0_S);                                                                         // Sample VRx in 1st sample
-  ADC0_SSCTL1_R = ADC_SSCTL1_END1 | ADC_SSCTL1_IE1; // Use 2nd sample for end of sequence and trigger interrupt
+  ADC0_SSMUX1_R = (V2Ry_AIN << ADC_SSMUX1_MUX3_S) | // Sample V2Ry in 4th sample
+                  (V2Rx_AIN << ADC_SSMUX1_MUX2_S) | // Sample V2Rx in 3rd sample
+                  (V1Ry_AIN << ADC_SSMUX1_MUX1_S) | // Sample V1Ry in 2nd sample
+                  (V1Rx_AIN << ADC_SSMUX1_MUX0_S);  // Sample V1Rx in 1st sample
+  ADC0_SSCTL1_R = ADC_SSCTL1_END3 | ADC_SSCTL1_IE3; // Use 4th sample for end of sequence and trigger interrupt
 
   ADC0_ISC_R |= ADC_ISC_IN1;    // Clear Sample Sequencer 1 interrupts
   ADC0_IM_R |= ADC_IM_MASK1;    // Unmask Sample Sequencer 1 interrupts

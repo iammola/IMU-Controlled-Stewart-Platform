@@ -1,5 +1,5 @@
 /**
- * @file GLOBAL.h
+ * @file STATIONS.h
  * @author Ademola Adedeji (a.mola.dev@gmail.com)
  * @brief
  * @version 0.1
@@ -14,4 +14,4 @@ typedef enum MAZE_CONTROL_METHOD {
   IMU_CTL_METHOD = 0xAC,
 } MAZE_CONTROL_METHOD;
 
-const MAZE_CONTROL_METHOD  DEFAULT_CTL_METHOD = JOYSTICK_CTL_METHOD;
+const MAZE_CONTROL_METHOD DEFAULT_CTL_METHOD = JOYSTICK_CTL_METHOD;

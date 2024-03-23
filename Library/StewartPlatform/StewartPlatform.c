@@ -11,6 +11,7 @@
 #include <math.h>
 #include <stdint.h>
 
+#include "POSITION.h"
 #include "StewartPlatform.h"
 
 #define LEGS_COUNT 6
@@ -39,14 +40,12 @@ Legs legs[LEGS_COUNT] = {0};
 
 static const float RAD_TO_DEG = 180.0f / (float)M_PI;
 
-static StewartCoords T0 = {0};
+static Coords T0 = {0};
 
-static StewartCoords l[] = {0}; // vector from Base anchor to Platform anchor
-
-static void StewartPlatform_RotateVector(StewartCoords *dest, Quaternion orientation, StewartCoords vector);
+static void StewartPlatform_RotateVector(Coords *dest, Quaternion orientation, Coords vector);
 static void StewartPlatform_GetLegs(void);
 
-static void getHexPlate(StewartCoords (*ret)[LEGS_COUNT], float r_o, float r_i, float rot);
+static void getHexPlate(Coords (*ret)[LEGS_COUNT], float r_o, float r_i, float rot);
 
 void StewartPlatform_Init(void) {
   StewartPlatform_GetLegs();
@@ -59,7 +58,7 @@ void StewartPlatform_Init(void) {
   );
 }
 
-static void getHexPlate(StewartCoords (*ret)[LEGS_COUNT], float r_o, float r_i, float rot) {
+static void getHexPlate(Coords (*ret)[LEGS_COUNT], float r_o, float r_i, float rot) {
   uint8_t legIdx = 0;
 
   float ap = 0.0f, phi = 0.0f;
@@ -77,8 +76,8 @@ static void getHexPlate(StewartCoords (*ret)[LEGS_COUNT], float r_o, float r_i, 
 static void StewartPlatform_GetLegs(void) {
   uint8_t legIdx = 0;
 
-  StewartCoords baseInts[LEGS_COUNT] = {0};
-  StewartCoords platformInts[LEGS_COUNT] = {0};
+  Coords baseInts[LEGS_COUNT] = {0};
+  Coords platformInts[LEGS_COUNT] = {0};
 
   float baseCx, baseCy, baseNx, baseNY;
   float platCx, platCy, platNx, platNY;
@@ -134,33 +133,34 @@ static void StewartPlatform_GetLegs(void) {
   }
 }
 
-void StewartPlatform_Update(StewartCoords translation, Quaternion orientation) {
-  StewartCoords coords = {0};
-  uint8_t       legIdx = 0;
+void StewartPlatform_Update(Coords translation, Quaternion orientation) {
+  Coords  coords = {0};
+  uint8_t legIdx = 0;
 
   float angle;
+  float x, y, z;
   float gk, ek, fk;
 
-  static const float sqrROD_HORN = sqr(ROD_LENGTH) + sqr(HORN_LENGTH);
-  static const float doubleHORN_LENGTH = 2 * HORN_LENGTH;
+  static const float twiceHornLength = 2 * HORN_LENGTH;
+  static const float squareRodL_HornL = sqr(ROD_LENGTH) + sqr(HORN_LENGTH);
 
   for (legIdx = 0; legIdx < LEGS_COUNT; legIdx++) {
     StewartPlatform_RotateVector(&coords, orientation, legs[legIdx].platformJoint);
 
-    l[legIdx].x = translation.x + coords.x - legs[legIdx].baseJoint.x;
-    l[legIdx].y = translation.y + coords.y - legs[legIdx].baseJoint.y;
-    l[legIdx].z = translation.z + coords.z - legs[legIdx].baseJoint.z + T0.z;
+    x = translation.x + coords.x - legs[legIdx].baseJoint.x;
+    y = translation.y + coords.y - legs[legIdx].baseJoint.y;
+    z = translation.z + coords.z - legs[legIdx].baseJoint.z + T0.z;
 
-    gk = sqr(l[legIdx].x) + sqr(l[legIdx].y) + sqr(l[legIdx].z) - sqrROD_HORN;
-    ek = doubleHORN_LENGTH * l[legIdx].z;
-    fk = doubleHORN_LENGTH * ((legs[legIdx].cosBeta * l[legIdx].x) + (legs[legIdx].sinBeta * l[legIdx].y));
+    gk = sqr(x) + sqr(y) + sqr(z) - squareRodL_HornL;
+    ek = twiceHornLength * z;
+    fk = twiceHornLength * ((legs[legIdx].cosBeta * x) + (legs[legIdx].sinBeta * y));
 
     angle = (asinf(gk / sqrtf(sqr(ek) + sqr(fk))) - atan2f(fk, ek)) * RAD_TO_DEG;
     legs[legIdx].servoAngle = InRange(angle, SERVO_ANGLE_MIN, SERVO_ANGLE_MAX);
   }
 }
 
-static void StewartPlatform_RotateVector(StewartCoords *dest, Quaternion orientation, StewartCoords vector) {
+static void StewartPlatform_RotateVector(Coords *dest, Quaternion orientation, Coords vector) {
   float qw = orientation.w;
   float qx = orientation.x;
   float qy = orientation.y;

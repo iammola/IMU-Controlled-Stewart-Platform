@@ -95,8 +95,7 @@ FusionVector accelerometerOffset = {
     .axis = {.x = -6168.63965f, .y = -4822.40723f, .z = 13846.6348f}
 };
 
-static volatile Quaternion *__quatDest;
-static volatile bool       *__hasNewData;
+static volatile Position *__position;
 
 /**
  * @brief ICM-20948 Interrupt Handler
@@ -135,11 +134,23 @@ void GPIOB_Handler(void) {
   gyroscope = FusionOffsetUpdate(&offset, gyroscope);                         // Update gyroscope offset correction algorithm
   FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, deltaTime); // Update gyroscope AHRS algorithm
 
-  __quatDest->w = ahrs.quaternion.element.w;
-  __quatDest->x = ahrs.quaternion.element.x;
-  __quatDest->y = ahrs.quaternion.element.y;
-  __quatDest->z = ahrs.quaternion.element.z;
-  *__hasNewData = true;
+  __position->quaternion.w = ahrs.quaternion.element.w;
+  __position->quaternion.x = ahrs.quaternion.element.x;
+  __position->quaternion.y = ahrs.quaternion.element.y;
+  __position->quaternion.z = ahrs.quaternion.element.z;
+  __position->translation.x = 0.0f;
+  __position->translation.y = 0.0f;
+  __position->translation.z = 0.0f;
+  __position->isNew = true;
+
+  // Serial Plot
+  // snprintf(text, CLI_TXT_BUF, "%0.4f %0.4f %0.4f ", gyroscope.axis.x, gyroscope.axis.y, gyroscope.axis.z);
+  // CLI_Write(text);
+  // snprintf(text, CLI_TXT_BUF, "%0.4f %0.4f %0.4f ", accelerometer.axis.x, accelerometer.axis.y, accelerometer.axis.z);
+  // CLI_Write(text);
+  // snprintf(text, CLI_TXT_BUF, "%0.4f %0.4f %0.4f ", magnetometer.axis.x, magnetometer.axis.y, magnetometer.axis.z);
+  // CLI_Write(text);
+  // CLI_Write("\n");
 }
 
 /**
@@ -241,12 +252,10 @@ static bool ICM20948_GetMagReadings(FusionVector *dest) {
  * turns off Low-Power Mode and the Temp sensor, while auto-selecting the best clock and enabling
  * the gyroscope and accelerometer sensors
  * @param SYS_CLK
- * @param quatDest Location to store Quaternion data after Fusion update
- * @param hasNewData State to track new Quaternion after Fusion update
+ * @param position Struct for IMU location updates
  */
-void ICM20948_Init(uint32_t SYS_CLK, volatile Quaternion *quatDest, volatile bool *hasNewData) {
-  __quatDest = quatDest;
-  __hasNewData = hasNewData;
+void ICM20948_Init(uint32_t SYS_CLK, volatile Position *position) {
+  __position = position;
 
   SYS_CLOCK = SYS_CLK;
 

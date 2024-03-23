@@ -14,18 +14,26 @@
 
 #include "tm4c123gh6pm.h"
 
+#include "POSITION.h"
 #include "Quaternion/Quaternion.h"
 
-#define VRx_PIN (1 << 1) // PD1 (AIN6)
-#define VRx_AIN 6        // AIN6
-#define VRy_PIN (1 << 2) // PD2 (AIN5)
-#define VRy_AIN 5        // AIN5
+#define V1Rx_PIN (1 << 0) // PD0 (AIN7)
+#define V1Rx_AIN 7        // AIN7
+#define V1Ry_PIN (1 << 1) // PD1 (AIN6)
+#define V1Ry_AIN 6        // AIN6
 
-#define PINS   (unsigned)(VRx_PIN | VRy_PIN)
-#define PCTL   (unsigned)(GPIO_PCTL_PD1_AIN6 | GPIO_PCTL_PD2_AIN5)
-#define PCTL_M (unsigned)(GPIO_PCTL_PD1_M | GPIO_PCTL_PD2_M)
+#define V2Rx_PIN (1 << 2) // PD2 (AIN5)
+#define V2Rx_AIN 5        // AIN5
+#define V2Ry_PIN (1 << 3) // PD3 (AIN4)
+#define V2Ry_AIN 4        // AIN4
+
+#define PINS   (unsigned)(V1Rx_PIN | V1Ry_PIN)
+#define PCTL   (unsigned)(GPIO_PCTL_PD0_AIN7 | GPIO_PCTL_PD1_AIN6 | GPIO_PCTL_PD2_AIN5 | GPIO_PCTL_PD3_AIN4)
+#define PCTL_M (unsigned)(GPIO_PCTL_PD0_M | GPIO_PCTL_PD1_M | GPIO_PCTL_PD2_M | GPIO_PCTL_PD3_M)
 
 #define JOYSTICK_INT_PRIORITY 2
+
+#define PAN_RANGE 30.0f
 
 extern volatile bool HasNewJoystickCoords;
 
@@ -33,10 +41,9 @@ extern volatile bool HasNewJoystickCoords;
  * @brief
  * @param SYS_CLOCK
  * @param SAMPLING_FREQ
- * @param quatDest
- * @param hasNewData
+ * @param position
  */
-void Joystick_Init(uint32_t SYS_CLOCK, uint16_t SAMPLING_FREQ, volatile Quaternion *quatDest, volatile bool *hasNewData);
+void Joystick_Init(uint32_t SYS_CLOCK, uint16_t SAMPLING_FREQ, volatile Position *position);
 
 /**
  * @brief

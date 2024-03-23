@@ -1,16 +1,15 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "POSITION.h"
 #include "ICM-20948/ICM-20948.h"
-#include "Quaternion/Quaternion.h"
 
 /**
  * @brief
  * @param SYS_CLK
- * @param quatDest
- * @param hasNewData
+ * @param position
  */
-void IMU_Init(uint32_t SYS_CLK, volatile Quaternion *quatDest, volatile bool *hasNewData);
+void IMU_Init(uint32_t SYS_CLK, volatile Position *position);
 
 /**
  * @brief

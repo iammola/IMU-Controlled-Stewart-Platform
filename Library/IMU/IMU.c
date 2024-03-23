@@ -3,15 +3,14 @@
 /**
  * @brief
  * @param SYS_CLK
- * @param quatDest
- * @param hasNewData
+ * @param position
  */
-void IMU_Init(uint32_t SYS_CLK, volatile Quaternion *quatDest, volatile bool *hasNewData) {
+void IMU_Init(uint32_t SYS_CLK, volatile Position *position) {
   uint8_t whoAmI = 0;
   uint8_t MAG_whoAmI = 0;
   uint8_t userCtrl = 0;
 
-  ICM20948_Init(SYS_CLK, quatDest, hasNewData);
+  ICM20948_Init(SYS_CLK, position);
 
   ICM20948_Write(GYRO_CONFIG_1_ADDR, GYRO_FS_SEL_2000 | GYRO_DLPF_ENABLE); // Configure gyro scale to 2000dps and enable Low-pass filter
   gyroscopeSensitivity.axis.x = gyroscopeSensitivity.axis.y = gyroscopeSensitivity.axis.z = GYRO_2000_SENSITIVITY;

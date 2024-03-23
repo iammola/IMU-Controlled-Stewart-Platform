@@ -34,15 +34,43 @@ MAZE_CONTROL_METHOD CTL_METHOD = DEFAULT_CTL_METHOD;
  * @param
  */
 void Maze_ChangeControlMethod(uint8_t *RX_Data_Buffer) {
+  uint8_t data = 0x00;
+
+  if (RX_Data_Buffer[0] != 1)
+    return;
+
+  memcpy(&data, RX_Data_Buffer + DATA_OFFSET, 1);
   // Update Screen
-  CTL_METHOD = RX_Data_Buffer[2];
+
+  CTL_METHOD = data; // Set new method
+
   // Reset Game and Servo Positions
 }
 
+/**
+ * @brief
+ * @param RX_Data_Buffer
+ */
+void Maze_MoveTo(uint8_t *RX_Data_Buffer) {
+  uint8_t  legIdx = 0;
+  Position position = {0};
+
+  // Verify length matches expected
+  if (RX_Data_Buffer[0] != POSITION_BYTE_SIZE)
+    return;
+
+  memcpy(&position, RX_Data_Buffer + DATA_OFFSET, POSITION_BYTE_SIZE);
+
+  StewartPlatform_Update(position.translation, position.quaternion);
+  for (legIdx = 0; legIdx < Maestro_Channels; legIdx++) {
+    Maestro_SetAngle(legIdx, legs[legIdx].servoAngle);
+  }
+
+  Maestro_WaitForIdle();
+}
+
 int main(void) {
-  uint8_t       legIdx = 0;
-  float         angle = 0.0f;
-  StewartCoords translation = {0};
+  float angle = 0.0f;
 
   PLL_Init();
   FPULazyStackingEnable(); // Enable Floating Point
@@ -63,25 +91,16 @@ int main(void) {
 
     switch (RX_Data_Buffer[1]) {
       case CHANGE_CONTROL_METHOD:
-        /* code */
+        Maze_ChangeControlMethod(RX_Data_Buffer);
         break;
       case NEW_QUATERNION:
+        Maze_MoveTo(RX_Data_Buffer);
         break;
       default:
         continue;
     }
 
     EnableInterrupts();
-
-    memcpy(&angle, RX_Data_Buffer, 4); // Read only 4 bytes for angle float
-
-    stewartQuaternion = normalizeQuaternion(-13.0f, -cosf(angle), sinf(angle), 0.0f);
-    StewartPlatform_Update(translation, stewartQuaternion);
-
-    for (legIdx = 0; legIdx < Maestro_Channels; legIdx++) {
-      Maestro_SetAngle(legIdx, legs[legIdx].servoAngle);
-      Maestro_WaitForIdle();
-    }
 
     HasNewData = false; // Clear data flag
   }

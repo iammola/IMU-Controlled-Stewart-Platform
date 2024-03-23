@@ -13,6 +13,8 @@
 
 #include "HC-12/HC-12.h"
 
+#define DATA_OFFSET 2
+
 typedef enum COMMAND {
   CHANGE_CONTROL_METHOD = 0x57,
   NEW_QUATERNION = 0x21,
