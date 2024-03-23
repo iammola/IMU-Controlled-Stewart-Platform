@@ -174,11 +174,9 @@ void UART4_Transmit(uint8_t *data, uint32_t byteCount) {
 }
 
 bool UART4_Receive(uint8_t *data, uint32_t length) {
-  uint16_t wait = 0;
-
   while (length > 0) {
-    for (wait = 0xFFFF; (wait > 0) && (UART4_FR_R & UART_FR_RXFE); wait--) {
-    } // Wait for Receive FIFO to have data
+    while (UART4_FR_R & UART_FR_RXFE) { // Wait for Receive FIFO to have data
+    }
 
     *data = (uint8_t)UART4_DR_R; // Read data
 
