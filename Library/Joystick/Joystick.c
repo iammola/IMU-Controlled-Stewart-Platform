@@ -16,9 +16,9 @@
 #include "Joystick.h"
 
 #define TIMER_ENABLE()  TIMER0_CTL_R |= TIMER_CTL_TAEN | TIMER_CTL_TAOTE; // Enable Timer A and trigger ADC
-#define TIMER_DISABLE() TIMER0_CTL_R |= (unsigned)~TIMER_CTL_TAEN;        // Disable Timer A
+#define TIMER_DISABLE() TIMER0_CTL_R &= (unsigned)~TIMER_CTL_TAEN;        // Disable Timer A
 #define ADC_ENABLE()    ADC0_ACTSS_R |= ADC_ACTSS_ASEN1;                  // Enable Sample Sequencer 1
-#define ADC_DISABLE()   ADC0_ACTSS_R |= (unsigned)~ADC_ACTSS_ASEN1;       // Disable Sample Sequencer 1
+#define ADC_DISABLE()   ADC0_ACTSS_R &= (unsigned)~ADC_ACTSS_ASEN1;       // Disable Sample Sequencer 1
 
 void ADC0SS1_Handler(void);
 
