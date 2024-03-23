@@ -19,11 +19,14 @@
 #include "Pololu Maestro/Maestro.h"
 
 int main(void) {
-  float sequence1[] = {0.0f, 10.0f, 25.0f, 35.0f, 60.0f, -23.0f};
-  float sequence2[] = {-15.0f, 19.0f, 10.0f, -35.0f, -45.0f, 90.0f};
-  float sequence3[] = {-90.0f, -1.0f, 9.0f, 80.0f, 5.0f, 15.0f};
-  float sequence4[] = {5.0f, 20.0f, -90.0f, -75.0f, 0.0f, 72.0f};
-  float sequence5[] = {30.0f, 45.0f, -20.0f, -45.0f, 10.0f, -45.0f};
+  int8_t idx = 0;
+  float  sequences[][Maestro_Channels] = {
+      {0.0f,   10.0f, 25.0f,  35.0f,  60.0f,  -23.0f},
+      {-15.0f, 19.0f, 10.0f,  -35.0f, -45.0f, 90.0f },
+      {-90.0f, -1.0f, 9.0f,   80.0f,  5.0f,   15.0f },
+      {5.0f,   20.0f, -90.0f, -75.0f, 0.0f,   72.0f },
+      {30.0f,  45.0f, -20.0f, -45.0f, 10.0f,  -45.0f},
+  };
 
   PLL_Init();
   SysTick_Init();
@@ -31,16 +34,30 @@ int main(void) {
 
   Maestro_Init(80e6);
 
+  /*
+    // Loop channel 0 from -90 to 90
+    int8_t diff = 30;
+    int8_t target = 90;
+    float  angle = 0.0f;
+
+    while (1) {
+      for (; idx != target; idx += diff) {
+        Maestro_SetAngle(0, (float)idx);
+        angle = Maestro_GetPosition(0);
+        Maestro_WaitForIdle();
+        SysTick_Wait10ms(50);
+      }
+
+      diff *= -1;
+      target *= -1;
+    }
+  */
+
   while (1) {
-    Maestro_SetAngles(sequence1);
-    SysTick_Wait10ms(50);
-    Maestro_SetAngles(sequence2);
-    SysTick_Wait10ms(50);
-    Maestro_SetAngles(sequence3);
-    SysTick_Wait10ms(50);
-    Maestro_SetAngles(sequence4);
-    SysTick_Wait10ms(50);
-    Maestro_SetAngles(sequence5);
-    SysTick_Wait10ms(50);
+    for (idx = 0; idx < Maestro_Channels; idx++) {
+      Maestro_SetAngles(sequences[idx]);
+      Maestro_WaitForIdle();
+      SysTick_Wait10ms(50);
+    }
   }
 }
