@@ -24,6 +24,8 @@ void Maestro_Init(uint32_t SYS_CLOCK) {
 
   GPIO_PORTC_ODR_R |= UART4_TX_BIT;  // Enable Open-Drain for Pull-Up to 5V
   GPIO_PORTC_DR4R_R |= UART4_TX_BIT; // Use 4mA drive, for intended 5V
+
+  Maestro_GetErrors(); // Clear all errors
 }
 
 /**
@@ -141,8 +143,14 @@ void Maestro_WaitForIdle(void) {
 /**
  * @brief
  * @param
+ * @return
  */
-void Maestro_GoHome(void) {
-  uint8_t cmd = CMD__GO_HOME;
-  UART4_Transmit(&cmd, 1);
+uint16_t Maestro_GetErrors(void) {
+  uint8_t cmd = CMD__GET_ERRORS;
+  uint8_t response[2] = {0};
+
+  UART4_Transmit(&cmd, 1);    // Get error status
+  UART4_Receive(response, 2); // Read response
+
+  return (uint16_t)((response[1] << 8) | response[0]);
 }
