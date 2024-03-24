@@ -10,13 +10,6 @@
  * @copyright Copyright (c) 2024
  */
 //-------- <<< Use Configuration Wizard in Context Menu >>> ------------------
-//
-// This file can be used by the Keil uVision configuration wizard to set
-// the following system clock configuration values.  Or the value of the
-// macros can be directly edited below if not using the uVision configuration
-// wizard.
-//
-//--------------------- Clock Configuration ----------------------------------
 
 //      <o> CAL: Calibration
 //              < 0=>  0: Off

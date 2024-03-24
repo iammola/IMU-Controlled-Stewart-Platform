@@ -9,12 +9,6 @@
  *
  */
 //-------- <<< Use Configuration Wizard in Context Menu >>> ------------------
-//
-// This file can be used by the Keil uVision configuration wizard to set
-// the following system clock configuration values.  Or the value of the
-// macros can be directly edited below if not using the uVision configuration
-// wizard.
-//
 
 //      <o> CTL: Control Method
 //              < 0=>  0: ICM-20948 MU

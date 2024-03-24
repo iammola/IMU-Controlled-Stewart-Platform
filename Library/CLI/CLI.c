@@ -31,10 +31,6 @@
 static void UART_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate);
 /* Sets the LCRH configuration */
 static void UART_LCRHConfigure(uint8_t wordLength, uint8_t parity, bool useTwoStopBits);
-/* Enables the UART module, TX and RX operations */
-static void UART_Enable(void);
-/* Disables the UART module */
-static void UART_Disable(void);
 /* Enables the Receive Timeout and FIFO interrupts */
 static void UART_InterruptInit(uint8_t RXFIFOLevel);
 
@@ -123,20 +119,20 @@ static void UART_LCRHConfigure(uint8_t wordLength, uint8_t parity, bool useTwoSt
   UART0_LCRH_R = result;
 }
 
-// -------- UART_Enable -------
+// -------- CLI_Enable -------
 // Enables the UART, Transmit and Receive operations
 // Input: None
 // Output: None
-static void UART_Enable(void) {
+void CLI_Enable(void) {
   UART0_CTL_R |= UART_CTL_UARTEN | UART_CTL_TXE | UART_CTL_RXE;
 }
 
-// -------- UART_Disable -------
+// -------- CLI_Disable -------
 // Waits for the UART to be IDLE before clearing the FIFO by disabling it and
 // then disables the UART, Transmit and Receive operations
 // Input: None
 // Output: None
-static void UART_Disable(void) {
+void CLI_Disable(void) {
   // Wait for transmission to finish
   while (UART0_FR_R & UART_FR_BUSY)
     ;
@@ -206,13 +202,13 @@ void CLI_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t
   GPIO_PORTA_DIR_R = (GPIO_PORTA_DIR_R & ~PINS) | TX_BIT;      // Configure I/O pins
   GPIO_PORTA_DEN_R |= PINS;                                    // Enable Digital on PINS
 
-  UART_Disable(); // Disable UART
+  CLI_Disable(); // Disable UART
 
   UART_BRDConfigure(SYS_CLOCK, baudRate);                 // Set Baud-Rate Divisor (BRD)
   UART_LCRHConfigure(wordLength, useTwoStopBits, parity); // Configure (Line Control) LCRH
   UART_InterruptEnable(RXFIFOLevel);                      // Enable UART 4 Interrupts
 
-  UART_Enable(); // Enable UART
+  CLI_Enable(); // Enable UART
 }
 
 // ----------- CLI_Write -------------

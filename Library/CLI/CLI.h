@@ -1,5 +1,5 @@
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #define CLI_TXT_BUF 1000
 
@@ -13,7 +13,7 @@
 #define NO_PARITY   0
 
 #define TWO_STOP_BITS true
-#define ONE_STOP_BIT false
+#define ONE_STOP_BIT  false
 
 #define RX_FIFO_OFF 5
 #define RX_FIFO_7_8 4
@@ -50,3 +50,9 @@ void CLI_Write(char *data);
 // Input: None
 // Output: Data received from UART
 uint8_t CLI_Read(void);
+
+/* Enables the UART module, TX and RX operations */
+void CLI_Enable(void);
+
+/* Disables the UART module */
+void CLI_Disable(void);

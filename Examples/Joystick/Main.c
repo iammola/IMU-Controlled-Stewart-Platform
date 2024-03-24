@@ -10,13 +10,13 @@
  */
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "CLI/CLI.h"
 #include "FPU/fpu.h"
 #include "PLL/PLL.h"
 
 #include "Joystick/Joystick.h"
-#include "Quaternion/Quaternion.h"
 
 #define SYS_CLOCK   80e6
 #define SAMPLE_RATE 250
@@ -28,27 +28,27 @@ void EnableInterrupts(void);
 static char text[CLI_TXT_BUF] = "";
 
 int main(void) {
-  Quaternion quat = {0};
+  Position position = {0};
 
   PLL_Init();
   FPULazyStackingEnable(); // Enable Floating Point
 
   CLI_Init(SYS_CLOCK, 115200, WORD_8_BIT, RX_FIFO_OFF, NO_PARITY, ONE_STOP_BIT); // Init UART COM
 
-  Joystick_Init(SYS_CLOCK, SAMPLE_RATE);
+  Joystick_Init(SYS_CLOCK, SAMPLE_RATE, &position);
   Joystick_Enable();
 
   while (1) {
     WaitForInterrupt();
 
-    quat = normalizeQuaternion(-13.0f, /* 1.0f - */ -cosf(coords.angle), /* 1.0f - */ sinf(coords.angle), 0.0f);
-
-    // snprintf(text, CLI_TXT_BUF, "%0.6f %0.6f %0.6f %0.6f", -cosf(coords.angle), VRx, sinf(coords.angle), VRy);
-    snprintf(text, CLI_TXT_BUF, "%0.6f %0.6f %0.6f %0.6f", quat.w, quat.x, quat.y, quat.z);
+    if (!position.isNew)
+      continue;
 
     DisableInterrupts();
-    CLI_Write(text);
-    CLI_Write("\n");
+#define Q position.quaternion
+    snprintf(text, CLI_TXT_BUF, "%0.6f %0.6f %0.6f %0.6f\n", Q.w, Q.x, Q.y, Q.z);
+#undef Q
+    position.isNew = false;
     EnableInterrupts();
   }
 }
