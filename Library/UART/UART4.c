@@ -16,8 +16,8 @@
 #include "tm4c123gh6pm.h"
 
 #define UART4_PINS      (unsigned)(UART4_RX_BIT | UART4_TX_BIT)
-#define UART4_PCTL_MASK (unsigned)(GPIO_PCTL_PE4_M | GPIO_PCTL_PE5_M)
-#define UART4_PCTL      (unsigned)(GPIO_PCTL_PE4_U5RX | GPIO_PCTL_PE5_U5TX)
+#define UART4_PCTL_MASK (unsigned)(GPIO_PCTL_PC4_M | GPIO_PCTL_PC5_M)
+#define UART4_PCTL      (unsigned)(GPIO_PCTL_PC4_U4RX | GPIO_PCTL_PC5_U4TX)
 
 static void UART4_NVIC_Enable(uint8_t interruptPriority);
 static void UART4_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate);

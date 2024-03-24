@@ -104,7 +104,7 @@ float Maestro_GetPosition(uint8_t channel) {
  */
 void Maestro_GetPositions(void) {
   uint8_t channel = 0;
-  float   angles[Maestro_Channels] = {0.0f};
+  float   angles[Maestro_Channels] = {0};
 
   for (channel = 0; channel < Maestro_Channels; channel++) {
     // reversed formula to calculate angle from returned pulse width
@@ -130,6 +130,7 @@ void Maestro_WaitForIdle(void) {
   } while (!(scriptRunningState & SCRIPT_STATE__STOPPED));
 
   /*
+    // Doesn't work because of Micro Maestro bug
     uint8_t isMovingCMD = CMD__MOVING_STATE;
     uint8_t isMovingState = MOVING_STATE__MOVING;
 

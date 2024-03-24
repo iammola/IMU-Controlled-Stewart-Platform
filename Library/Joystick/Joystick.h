@@ -35,8 +35,6 @@
 
 #define PAN_RANGE 30.0f
 
-extern volatile bool HasNewJoystickCoords;
-
 /**
  * @brief
  * @param SYS_CLOCK

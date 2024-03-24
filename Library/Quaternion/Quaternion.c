@@ -24,7 +24,7 @@
  * @return
  */
 Quaternion normalizeQuaternion(float w, float x, float y, float z) {
-  Quaternion result = {0.0f};
+  Quaternion result = {0};
   float      norm = sqrtf(sqr(w) + sqr(x) + sqr(y) + sqr(z));
 
   result.w = w / norm;
