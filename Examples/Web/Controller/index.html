@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PS5 Controller to COM port</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <style>
+      html,
+      body {
+        width: 100vw;
+        height: 100vh;
+      }
+    </style>
+  </head>
+
+  <body class="overflow-x-hidden">
+    <main
+      class="prose flex flex-col m-auto gap-4 items-center w-full h-full p-4"
+    >
+      <h4 id="connectionState">Disconnected</h4>
+      <h6
+        id="nameWrapper"
+        class="before:content-['To:_'] font-medium empty:hidden text-center text-balance"
+      ></h6>
+      <button
+        hidden
+        id="connectToMCU"
+        class="rounded-full px-5 py-1 bg-slate-300 text-sm shadow-sm"
+      >
+        Connect to MCU
+      </button>
+      <table id="table">
+        <thead>
+          <tr>
+            <td>Name</td>
+            <td>State</td>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </main>
+    <script>
+      let gamepad;
+      let serialPort, writer;
+      let animationId, intervalId;
+      let table, connectionState, nameWrapper, connectToMCU;
+      let continueAnimationFrame = true;
+
+      const buttonsMap = [
+        "X Button",
+        "O Button",
+        "Button Button",
+        "Triangle Button",
+        "L1 Button",
+        "R1 Button",
+        "L2 Button",
+        "R2 Button",
+        "Create Button",
+        "Options Button",
+        "L3 Button",
+        "R3 Button",
+        "D-Pad Up",
+        "D-Pad Down",
+        "D-Pad Left",
+        "D-Pad Right",
+        "PS Button",
+        "Touch Pad",
+      ];
+      const axesMap = [
+        "Left Joystick X",
+        "Left Joystick Y",
+        "Right Joystick X",
+        "Right Joystick Y",
+      ];
+      const rowsMap = {};
+
+      addEventListener("DOMContentLoaded", setup);
+
+      function setup() {
+        table = document.getElementById("table");
+        nameWrapper = document.getElementById("nameWrapper");
+        connectToMCU = document.getElementById("connectToMCU");
+        connectionState = document.getElementById("connectionState");
+
+        addEventListener("gamepadconnected", ({ gamepad }) => {
+          connectToMCU.hidden = false;
+          continueAnimationFrame = true;
+          nameWrapper.innerText = gamepad.id;
+          connectionState.innerText = "Connected";
+
+          watchInputs();
+        });
+
+        addEventListener("gamepaddisconnected", () => {
+          nameWrapper.innerText = "";
+          connectToMCU.hidden = true;
+          continueAnimationFrame = false;
+          connectionState.innerText = "Disconnected";
+
+          cancelAnimationFrame(animationId);
+        });
+
+        connectToMCU.addEventListener("click", async () => {
+          if (writer != null && serialPort != null) {
+            closePort();
+            return;
+          }
+
+          await navigator.serial.requestPort();
+          [serialPort] = await navigator.serial.getPorts();
+          await serialPort.open({ baudRate: 115200 });
+
+          writer = serialPort.writable.getWriter();
+
+          sendData();
+        });
+      }
+
+      async function closePort() {
+        await writer.close();
+        await writer.releaseLock();
+        await serialPort.forget();
+
+        writer = null;
+        serialPort = null;
+      }
+
+      function addMissingRow(name) {
+        const element = document.createElement("tr");
+
+        element.append(
+          ...[
+            Object.assign(document.createElement("td"), { innerText: name }),
+            document.createElement("td"),
+          ]
+        );
+
+        table.tBodies[0].append(element);
+        rowsMap[name] = { ...rowsMap[name], element };
+      }
+
+      function sendData() {
+        (async () => {
+          await writer.write(new Uint8Array([0xea]));
+          const buffer = new Uint8Array(new Float32Array(gamepad.axes).buffer);
+          await writer.write(buffer);
+          setTimeout(sendData, 5000);
+        })();
+      }
+
+      async function watchInputs() {
+        [gamepad] = navigator.getGamepads
+          ? navigator.getGamepads()
+          : navigator.webkitGetGamepads
+          ? navigator.webkitGetGamepads
+          : [];
+
+        try {
+          if (gamepad == null) return;
+          gamepad.axes.forEach((axis, idx) => {
+            const name = axesMap[idx];
+            rowsMap[name] ??= {};
+
+            if (rowsMap[name].element == null) addMissingRow(name);
+
+            rowsMap[name].element.lastElementChild.innerText = axis.toFixed(6);
+          });
+
+          gamepad.buttons.forEach((btn, idx) => {
+            const name = buttonsMap[idx] ?? `Button ${idx + 1}`;
+            rowsMap[name] ??= {};
+            if (rowsMap[name].element == null) addMissingRow(name);
+
+            rowsMap[name].element.lastElementChild.innerText = btn.value
+              ? "Pressed"
+              : "Unpressed";
+          });
+        } catch (error) {
+          closePort();
+          console.error(error);
+          continueAnimationFrame = false;
+        } finally {
+          if (continueAnimationFrame) {
+            animationId = requestAnimationFrame(watchInputs);
+          }
+        }
+      }
+    </script>
+  </body>
+</html>
