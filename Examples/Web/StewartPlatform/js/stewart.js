@@ -1243,6 +1243,7 @@
         p.pop();
 
         for (var i = 0; i < this.B.length; i++) {
+          if (i > +(document.getElementById("legsDrawn")?.value ?? this.B.length)) continue;
           // Base Joints
           p.push();
           p.translate(this.B[i][0], this.B[i][1], this.B[i][2]);

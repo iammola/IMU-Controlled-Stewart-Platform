@@ -50,11 +50,11 @@ static void getHexPlate(Coords (*ret)[LEGS_COUNT], float r_o, float r_i, float r
 void StewartPlatform_Init(void) {
   StewartPlatform_GetLegs();
 
-  T0.z = sqrtf(                                            //
-      sqr(ROD_LENGTH) +                                    // sqr(∣d∣)
-      sqr(HORN_LENGTH) -                                   // sqr(∣h∣)
-      sqr(legs[0].platformJoint.x - legs[0].baseJoint.x) - // sqr(pk(x) - bk(x))
-      sqr(legs[0].platformJoint.y - legs[0].baseJoint.y)   // sqr(pk(y) - bk(y))
+  T0.z = sqrtf(                                                //
+      sqr(ROD_LENGTH) +                                        // sqr(∣d∣)
+      sqr(HORN_LENGTH) -                                       // sqr(∣h∣)
+      powf(legs[0].platformJoint.x - legs[0].baseJoint.x, 2) - // sqr(pk(x) - bk(x))
+      powf(legs[0].platformJoint.y - legs[0].baseJoint.y, 2)   // sqr(pk(y) - bk(y))
   );
 }
 
@@ -142,7 +142,7 @@ void StewartPlatform_Update(Coords translation, Quaternion orientation) {
   float gk, ek, fk;
 
   static const float twiceHornLength = 2 * HORN_LENGTH;
-  static const float squareRodL_HornL = sqr(ROD_LENGTH) + sqr(HORN_LENGTH);
+  static const float squareRodL_HornL = sqr(ROD_LENGTH) - sqr(HORN_LENGTH);
 
   for (legIdx = 0; legIdx < LEGS_COUNT; legIdx++) {
     StewartPlatform_RotateVector(&coords, orientation, legs[legIdx].platformJoint);

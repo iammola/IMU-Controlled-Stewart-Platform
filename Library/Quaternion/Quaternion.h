@@ -20,7 +20,7 @@ typedef struct {
   float z;
 } Quaternion;
 
-#define sqr(g) (g * g)
+#define sqr(num) ((num) * (num))
 
 /**
  * @brief Normalizes a Quaternion

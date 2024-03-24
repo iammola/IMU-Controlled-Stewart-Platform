@@ -56,8 +56,8 @@ int main(void) {
   while (1) {
     for (idx = 0; idx < Maestro_Channels; idx++) {
       Maestro_SetAngles(sequences[idx]);
-      Maestro_WaitForIdle();
       SysTick_Wait10ms(50);
     }
+    Maestro_WaitForIdle();
   }
 }

@@ -27,19 +27,20 @@ void WaitForInterrupt(void);
 void EnableInterrupts(void);
 void DisableInterrupts(void);
 
-MAZE_CONTROL_METHOD CTL_METHOD = DEFAULT_CTL_METHOD;
+static volatile Position            position = {0};
+static volatile MAZE_CONTROL_METHOD CTL_METHOD = DEFAULT_CTL_METHOD;
 
 /**
  * @brief
  * @param
  */
-void Maze_ChangeControlMethod(uint8_t *RX_Data_Buffer) {
+void Maze_ChangeControlMethod(uint8_t *buffer) {
   uint8_t data = 0x00;
 
-  if (RX_Data_Buffer[0] != 1)
+  if (buffer[0] != 1)
     return;
 
-  memcpy(&data, RX_Data_Buffer + DATA_OFFSET, 1);
+  memcpy(&data, buffer + DATA_OFFSET, 1);
   // Update Screen
 
   CTL_METHOD = data; // Set new method
@@ -49,17 +50,16 @@ void Maze_ChangeControlMethod(uint8_t *RX_Data_Buffer) {
 
 /**
  * @brief
- * @param RX_Data_Buffer
+ * @param buffer
  */
-void Maze_MoveTo(uint8_t *RX_Data_Buffer) {
-  uint8_t  legIdx = 0;
-  Position position = {0};
+void Maze_MoveTo(uint8_t *buffer) {
+  uint8_t legIdx = 0;
 
   // Verify length matches expected
-  if (RX_Data_Buffer[0] != POSITION_BYTE_SIZE)
+  if (buffer[0] != POSITION_BYTE_SIZE)
     return;
 
-  memcpy(&position, RX_Data_Buffer + DATA_OFFSET, POSITION_BYTE_SIZE);
+  memcpy(&position, buffer + DATA_OFFSET, POSITION_BYTE_SIZE);
 
   StewartPlatform_Update(position.translation, position.quaternion);
   for (legIdx = 0; legIdx < Maestro_Channels; legIdx++) {
