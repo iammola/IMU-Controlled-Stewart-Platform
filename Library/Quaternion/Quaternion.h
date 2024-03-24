@@ -42,4 +42,24 @@ static inline Quaternion normalizeQuaternion(float w, float x, float y, float z)
   return result;
 }
 
+/**
+ * @brief
+ * @param axis
+ * @param angle
+ * @return
+ */
+static inline Quaternion QuaternionFromAxisAngle(float x, float y, float z, float angle) {
+  Quaternion result = {0};
+
+  float halfAngle = angle / 2.0f;
+  float sin_norm = sinf(halfAngle) / sqrtf(sqr(x) + sqr(y) + sqr(z));
+
+  result.w = cosf(halfAngle);
+  result.x = x * sin_norm;
+  result.y = y * sin_norm;
+  result.z = z * sin_norm;
+
+  return result;
+}
+
 #endif

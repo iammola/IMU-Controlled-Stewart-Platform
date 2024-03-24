@@ -8,16 +8,6 @@
  * @copyright Copyright (c) 2024
  *
  */
-//-------- <<< Use Configuration Wizard in Context Menu >>> ------------------
-
-//      <o> CTL: Control Method
-//              < 0=>  0: ICM-20948 MU
-//              < 1=>  1: Joystick
-//          <i> Input control method
-//
-#define CONTROL_METHOD 1
-
-//-------- <<< end of configuration section >>> ------------------------------
 #include <stdint.h>
 #include <stdio.h>
 
@@ -35,34 +25,75 @@ void WaitForInterrupt(void);
 void EnableInterrupts(void);
 void DisableInterrupts(void);
 
+#define DURATION 7000.0f
+
+volatile float    current = 0.0f;
+volatile Position position = {0};
+
+void TIMER0A_Handler(void) {
+  float b = 0.0f;
+  float a = 0.0f, z = 0.0f;
+  float x = 0.0f, y = 0.0f;
+
+  float inCurrent = (++current) / DURATION;
+
+  if (inCurrent < (1.0f / 4.0f)) {
+    a = 0.0f;
+  } else if (inCurrent < (1.0f / 2.0f)) {
+    inCurrent -= 1.0f / 4.0f;
+    a = M_PI / 3.0f;
+  } else if (inCurrent < (3.0f / 4.0f)) {
+    inCurrent -= 1.0f / 2.0f;
+    a = (2 * M_PI) / 3.0f;
+  } else {
+    inCurrent -= 3.0f / 4.0f;
+    z = 1.0f;
+  }
+  inCurrent *= 4.0f;
+
+  if (z == 0.0f) {
+    x = sinf(a);
+    y = -cosf(a);
+  }
+
+  b = powf(sinf((inCurrent * M_PI * 2) - (M_PI * 8)), 5) / 3.0f;
+
+  position.isNew = true;
+  position.translation = ((Coords){0});
+  position.quaternion = QuaternionFromAxisAngle(x, y, z, b);
+
+  TIMER0_ICR_R |= TIMER_ICR_TATOCINT; // Clear interrupt
+}
+
+void Timer_Init(uint32_t FREQ) {
+  SYSCTL_RCGCTIMER_R |= SYSCTL_RCGCTIMER_R0; // Enable Timer Module 0
+
+  TIMER0_CFG_R = TIMER_CFG_32_BIT_TIMER;
+  TIMER0_TAMR_R = TIMER_TAMR_TAMR_PERIOD; // Periodic timer
+  TIMER0_IMR_R |= TIMER_IMR_TATOIM;       // Trigger interrupt when reaches limit
+  TIMER0_TAILR_R = SYS_CLOCK / FREQ;      // Set Load value
+
+  NVIC_EN0_R |= NVIC_EN0_INT19;                                                             // Enable Timer 0 SubTimer A Interrupt Handler
+  NVIC_PRI14_R = (NVIC_PRI14_R & ~NVIC_PRI4_INT19_M) | (INT_PRIORITY << NVIC_PRI4_INT19_S); // Set Priority
+  TIMER0_CTL_R |= TIMER_CTL_TAEN;                                                           // Enable Timer A
+}
+
 int main(void) {
   uint8_t  legIdx = 0;
-  Position position = {0};
+  float    current = 0.0f;
+  uint32_t start;
 
   PLL_Init();              // Initialize the PLL
   FPULazyStackingEnable(); // Enable Floating Point
 
-#if CONTROL_METHOD == 0
-  IMU_Init(SYS_CLOCK, &position); // Initialize IMU
-  IMU_Enable();
-#elif CONTROL_METHOD == 1
-  Joystick_Init(SYS_CLOCK, 100, &position); // Initialize Joystick
-  Joystick_Enable();
-#endif
   Maestro_Init(SYS_CLOCK); // Initialize Maestro Controller
   StewartPlatform_Init();  // Initialize stewart platform
-
-  for (legIdx = 0; legIdx < Maestro_Channels; legIdx++) { // Set Initial angles
-    Maestro_SetAngle(legIdx, legs[legIdx].servoAngle);
-  }
+  Timer_Init(60);
 
   while (1) {
-    WaitForInterrupt();
-
     if (!position.isNew)
       continue;
 
-    DisableInterrupts();
     StewartPlatform_Update(position.translation, position.quaternion);
 
     for (legIdx = 0; legIdx < Maestro_Channels; legIdx++) {
@@ -70,7 +101,6 @@ int main(void) {
     }
 
     position.isNew = false;
-    EnableInterrupts();
 
     Maestro_WaitForIdle();
   }
