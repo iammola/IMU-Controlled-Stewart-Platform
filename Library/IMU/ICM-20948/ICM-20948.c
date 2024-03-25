@@ -107,7 +107,7 @@ void GPIOB_Handler(void) {
   // Read sensor data
   ICM20948_GetRawGyroReadings(&rawGyroscope);
   ICM20948_GetRawAccelReadings(&rawAccelerometer);
-  ICM20948_GetMagReadings(&rawMagnetometer);
+  // ICM20948_GetMagReadings(&rawMagnetometer);
 
   if (lastTimestamp == 0)
     deltaTime = 0.0f; // Start of process
@@ -122,10 +122,12 @@ void GPIOB_Handler(void) {
   // Apply calibrations
   gyroscope = FusionCalibrationInertial(rawGyroscope, FUSION_IDENTITY_MATRIX, gyroscopeSensitivity, gyroscopeOffset);
   accelerometer = FusionCalibrationInertial(rawAccelerometer, FUSION_IDENTITY_MATRIX, accelerometerSensitivity, accelerometerOffset);
-  magnetometer = FusionCalibrationMagnetic(rawMagnetometer, softIronMatrix, hardIronOffset);
+  // magnetometer = FusionCalibrationMagnetic(rawMagnetometer, softIronMatrix, hardIronOffset);
 
-  gyroscope = FusionOffsetUpdate(&offset, gyroscope);                         // Update gyroscope offset correction algorithm
-  FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, deltaTime); // Update gyroscope AHRS algorithm
+  gyroscope = FusionOffsetUpdate(&offset, gyroscope); // Update gyroscope offset correction algorithm
+
+  FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, deltaTime); // Update gyroscope AHRS algorithm without magnetometer
+  // FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, deltaTime); // Update gyroscope AHRS algorithm
 
   __position->quaternion.w = ahrs.quaternion.element.w;
   __position->quaternion.x = ahrs.quaternion.element.x;
@@ -179,8 +181,8 @@ static void ICM20948_GetRawAccelReadings(FusionVector *dest) {
   ICM20948_Read(ACCEL_XOUT_L_ADDR, &accelXL);
   ICM20948_Read(ACCEL_YOUT_H_ADDR, &accelYH);
   ICM20948_Read(ACCEL_YOUT_L_ADDR, &accelYL);
-  ICM20948_Read(ACCEL_ZOUT_H_ADDR, &accelZH);
-  ICM20948_Read(ACCEL_ZOUT_L_ADDR, &accelZL);
+  // ICM20948_Read(ACCEL_ZOUT_H_ADDR, &accelZH);
+  // ICM20948_Read(ACCEL_ZOUT_L_ADDR, &accelZL);
 
   dest->axis.x = (int16_t)((accelXH << 8) | accelXL) * -1;
   dest->axis.y = (int16_t)((accelYH << 8) | accelYL) * -1;
@@ -203,8 +205,8 @@ static void ICM20948_GetRawGyroReadings(FusionVector *dest) {
   ICM20948_Read(GYRO_XOUT_L_ADDR, &gyroXL);
   ICM20948_Read(GYRO_YOUT_H_ADDR, &gyroYH);
   ICM20948_Read(GYRO_YOUT_L_ADDR, &gyroYL);
-  ICM20948_Read(GYRO_ZOUT_H_ADDR, &gyroZH);
-  ICM20948_Read(GYRO_ZOUT_L_ADDR, &gyroZL);
+  // ICM20948_Read(GYRO_ZOUT_H_ADDR, &gyroZH);
+  // ICM20948_Read(GYRO_ZOUT_L_ADDR, &gyroZL);
 
   dest->axis.x = (int16_t)((gyroXH << 8) | gyroXL) * -1;
   dest->axis.y = (int16_t)((gyroYH << 8) | gyroYL) * -1;
@@ -262,8 +264,8 @@ void ICM20948_Init(uint32_t SYS_CLK, volatile Position *position) {
   ICM20948_Write(PWR_MGMT_1_ADDR, CLKSEL_AUTO | TEMP_DISABLE); // Disables Sleep, Low-Power Mode and Temp Sensor. Auto selects clk
   SysTick_WaitCustom(40, -3);                                  // Wait atleast 35ms after waking from sleep
 
-  ICM20948_Write(PWR_MGMT_2_ADDR, (uint8_t) ~(ACCEL_DISABLE | GYRO_DISABLE)); // Enable the Accelerometer and Gyroscope
-  SysTick_WaitCustom(40, -3);                                                 // Wait atleast 35ms after enabling accel and gyro
+  ICM20948_Write(PWR_MGMT_2_ADDR, ACCEL_ENABLE(1, 1, 0) | GYRO_ENABLE(1, 1, 0)); // Enable the Accelerometer and Gyroscope without z-axis
+  SysTick_WaitCustom(40, -3);                                                    // Wait atleast 35ms after enabling accel and gyro
 }
 
 /**
@@ -455,10 +457,11 @@ void ICM20948_MagCalibration(void) {
     magSample.axis.y *= -1.0f;
     magSample.axis.z *= -1.0f;
 
+#define M magSample.axis
     // Suggested to multiply by 10 for "Good Integer Value"
-    snprintf(text, CLI_TXT_BUF, "Raw:0,0,0,0,0,0,%d,%d,%d\n\r", (int)(magSample.axis.x * 10), (int)(magSample.axis.y * 10),
-             (int)(magSample.axis.z * 10));
+    snprintf(text, CLI_TXT_BUF, "Raw:0,0,0,0,0,0,%d,%d,%d\n\r", (int)(M.x * 10), (int)(M.y * 10), (int)(M.z * 10));
     CLI_Write(text);
+#undef M
 
     if (!(UART0_FR_R & UART_FR_RXFE)) {
       for (calibrationDataIdx = 0; calibrationDataIdx < 68; calibrationDataIdx++) {
