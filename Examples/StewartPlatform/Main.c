@@ -33,6 +33,11 @@ void Timer_Init(uint32_t FREQ);
 static volatile float    elapsed = 0.0f;
 static volatile Position position = {0};
 
+/**
+ * @brief Stewart Platform "Tilt" Animation
+ * @link https://github.com/rawify/Stewart.js/blob/961177ccb21a9dbb22b54393f991f315925f5a52/stewart.js#L592-L624
+ * @param  
+ */
 void TIMER0A_Handler(void) {
   float elapsedInPercent = 0.0f;
 

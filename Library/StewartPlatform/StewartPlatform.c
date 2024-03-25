@@ -1,9 +1,10 @@
 /**
  * @file StewartPlatform.c
  * @author Ademola Adedeji (a.mola.dev@gmail.com)
- * @brief
- * @version 0.1
- * @date 2024-02-24
+ * @brief Library for the Inverse Kinematics of a 6-DOF Stewart Platform. Rewritten in C
+ * from Robert Eisele's implementation https://github.com/rawify/Stewart.js/tree/master
+ * @version 0.2
+ * @date 2024-03-25
  *
  * @copyright Copyright (c) 2024
  *
@@ -14,26 +15,28 @@
 #include "StewartPlatform.h"
 #include "UTILS/UTILS.h"
 
-#define BASE_OUTER_RADIUS     83.2665f
-#define BASE_INNER_RADIUS     60.0f
-#define PLATFORM_OUTER_RADIUS 70.946f
-#define PLATFORM_INNER_RADIUS 45.0f
-#define ROD_LENGTH            150.0f
-#define HORN_LENGTH           38.1f
-#define SHAFT_DISTANCE        19.05f  // Distance between servo pair on base
-#define ANCHOR_DISTANCE       22.225f // Distance between anchor points on platform
-#define HORN_DIRECTION        0       // If horns are pointed outwards 0, otherwise 1
-#define SERVO_ANGLE_LIMIT     90.0f
+#define BASE_OUTER_RADIUS     83.2665f // Radius (mm) of circumscribed circle of hexagonal platform plate
+#define BASE_INNER_RADIUS     60.0f    // Radius (mm) of inscribed circle of hexagonal platform plate
+#define PLATFORM_OUTER_RADIUS 70.946f  // Radius (mm) of circumscribed circle of hexagonal platform plate
+#define PLATFORM_INNER_RADIUS 45.0f    // Radius (mm) of inscribed circle of hexagonal platform plate
+#define ROD_LENGTH            150.0f   // Length (mm) of the rod attached to the servo horn and the platform
+#define HORN_LENGTH           38.1f    // Length (mm) of servo horn attached to the motor shaft and the rod
+#define SHAFT_DISTANCE        19.05f   // Distance (mm) from center of side to servo motor shaft/horn center
+#define ANCHOR_DISTANCE       22.225f  // Distance (mm) from center of side to platform anchor point
+#define HORN_DIRECTION        0        // If horns are pointed outwards 0, otherwise 1
+#define SERVO_ANGLE_LIMIT     90.0f    // Min/Max range (°) for the servo motors to rotate allowed
 
-Legs legs[LEGS_COUNT] = {0};
+StewartPlatformLeg legs[LEGS_COUNT] = {0};
 
 static Coords T0 = {0};
 
-static void StewartPlatform_RotateVector(Coords *dest, Quaternion orientation, Coords vector);
 static void StewartPlatform_GetLegs(void);
+static void StewartPlatform_GetHexPlate(Coords (*ret)[LEGS_COUNT], float r_o, float r_i, float rot);
 
-static void getHexPlate(Coords (*ret)[LEGS_COUNT], float r_o, float r_i, float rot);
-
+/**
+ * @brief Initializes the Stewart Platform model, calculating leg coordinates and home position
+ * @param None
+ */
 void StewartPlatform_Init(void) {
   StewartPlatform_GetLegs();
 
@@ -45,14 +48,53 @@ void StewartPlatform_Init(void) {
   );
 }
 
-static void getHexPlate(Coords (*ret)[LEGS_COUNT], float r_o, float r_i, float rot) {
+/**
+ * @brief Calculates the angle for each servo motor to position the platform in the desired orientation & translation
+ * @param translation The vector to move the model by
+ * @param orientation The vector to rotate the model by
+ */
+void StewartPlatform_Update(Coords translation, Quaternion orientation) {
+  Coords  coords = {0};
+  uint8_t legIdx = 0;
+
+  float angle;
+  float x, y, z;
+  float gk, ek, fk;
+
+  static const float twiceHornLength = 2 * HORN_LENGTH;
+  static const float squareRodL_HornL = sqr(ROD_LENGTH) - sqr(HORN_LENGTH);
+
+  for (legIdx = 0; legIdx < LEGS_COUNT; legIdx++) {
+    coords = QuaternionRotateVector(orientation, legs[legIdx].platformJoint);
+
+    x = translation.x + coords.x - legs[legIdx].baseJoint.x;
+    y = translation.y + coords.y - legs[legIdx].baseJoint.y;
+    z = translation.z + coords.z - legs[legIdx].baseJoint.z + T0.z;
+
+    gk = sqr(x) + sqr(y) + sqr(z) - squareRodL_HornL;
+    ek = twiceHornLength * z;
+    fk = twiceHornLength * ((legs[legIdx].cosBeta * x) + (legs[legIdx].sinBeta * y));
+
+    angle = (asinf(gk / sqrtf(sqr(ek) + sqr(fk))) - atan2f(fk, ek)) * RAD_TO_DEG;
+    legs[legIdx].servoAngle = clamp(angle, -SERVO_ANGLE_LIMIT, SERVO_ANGLE_LIMIT);
+  }
+}
+
+/**
+ * @brief Calculates the polar coordinates of each point (anchor/shaft) on the hex plate
+ * @param ret Destination to store each leg vector in
+ * @param r_o Outer radius of hex plate in mm
+ * @param r_i Inner radius of hex plate in mm
+ * @param rot Angle to rotate plate by in degrees °
+ */
+static void StewartPlatform_GetHexPlate(Coords (*ret)[LEGS_COUNT], float r_o, float r_i, float rot) {
   uint8_t legIdx = 0;
 
   float ap = 0.0f, phi = 0.0f;
   float a_2 = (2.0f * r_i - r_o) / sqrtf(3.0f);
 
   for (legIdx = 0; legIdx < LEGS_COUNT; legIdx++) {
-    phi = ((legIdx - (legIdx % 2)) / 3.0f) * M_PI + rot;
+    phi = ((legIdx - (legIdx % 2)) / 3.0f) * M_PI + (rot * DEG_TO_RAD);
     ap = a_2 * powf(-1, legIdx);
 
     (*ret)[legIdx].x = r_o * cosf(phi) + ap * sinf(phi);
@@ -60,6 +102,11 @@ static void getHexPlate(Coords (*ret)[LEGS_COUNT], float r_o, float r_i, float r
   }
 }
 
+/**
+ * @brief Calculates the vector and polar angles for each leg in the model. It's base and
+ * platform connection points.
+ * @param None
+ */
 static void StewartPlatform_GetLegs(void) {
   uint8_t legIdx = 0;
 
@@ -74,21 +121,21 @@ static void StewartPlatform_GetLegs(void) {
   float baseDX, baseDY;
   float motorRotation;
 
-  getHexPlate(&baseInts, BASE_OUTER_RADIUS, BASE_INNER_RADIUS, 0);
-  getHexPlate(&platformInts, PLATFORM_OUTER_RADIUS, PLATFORM_INNER_RADIUS, 0);
+  StewartPlatform_GetHexPlate(&baseInts, BASE_OUTER_RADIUS, BASE_INNER_RADIUS, 0);
+  StewartPlatform_GetHexPlate(&platformInts, PLATFORM_OUTER_RADIUS, PLATFORM_INNER_RADIUS, 0);
 
-  for (legIdx = 0; legIdx < 6; legIdx++) {
+  for (legIdx = 0; legIdx < LEGS_COUNT; legIdx++) {
     uint8_t midK = legIdx | 1;
 
     baseCx = baseInts[midK].x;
     baseCy = baseInts[midK].y;
-    baseNx = baseInts[(midK + 1) % 6].x;
-    baseNY = baseInts[(midK + 1) % 6].y;
+    baseNx = baseInts[(midK + 1) % LEGS_COUNT].x;
+    baseNY = baseInts[(midK + 1) % LEGS_COUNT].y;
 
     platCx = platformInts[midK].x;
     platCy = platformInts[midK].y;
-    platNx = platformInts[(midK + 1) % 6].x;
-    platNY = platformInts[(midK + 1) % 6].y;
+    platNx = platformInts[(midK + 1) % LEGS_COUNT].x;
+    platNY = platformInts[(midK + 1) % LEGS_COUNT].y;
 
     baseDX = baseNx - baseCx;
     baseDY = baseNY - baseCy;
@@ -118,52 +165,4 @@ static void StewartPlatform_GetLegs(void) {
     legs[legIdx].sinBeta = sinf(motorRotation);
     legs[legIdx].cosBeta = cosf(motorRotation);
   }
-}
-
-void StewartPlatform_Update(Coords translation, Quaternion orientation) {
-  Coords  coords = {0};
-  uint8_t legIdx = 0;
-
-  float angle;
-  float x, y, z;
-  float gk, ek, fk;
-
-  static const float twiceHornLength = 2 * HORN_LENGTH;
-  static const float squareRodL_HornL = sqr(ROD_LENGTH) - sqr(HORN_LENGTH);
-
-  for (legIdx = 0; legIdx < LEGS_COUNT; legIdx++) {
-    StewartPlatform_RotateVector(&coords, orientation, legs[legIdx].platformJoint);
-
-    x = translation.x + coords.x - legs[legIdx].baseJoint.x;
-    y = translation.y + coords.y - legs[legIdx].baseJoint.y;
-    z = translation.z + coords.z - legs[legIdx].baseJoint.z + T0.z;
-
-    gk = sqr(x) + sqr(y) + sqr(z) - squareRodL_HornL;
-    ek = twiceHornLength * z;
-    fk = twiceHornLength * ((legs[legIdx].cosBeta * x) + (legs[legIdx].sinBeta * y));
-
-    angle = (asinf(gk / sqrtf(sqr(ek) + sqr(fk))) - atan2f(fk, ek)) * RAD_TO_DEG;
-    legs[legIdx].servoAngle = clamp(angle, -SERVO_ANGLE_LIMIT, SERVO_ANGLE_LIMIT);
-  }
-}
-
-static void StewartPlatform_RotateVector(Coords *dest, Quaternion orientation, Coords vector) {
-  float qw = orientation.w;
-  float qx = orientation.x;
-  float qy = orientation.y;
-  float qz = orientation.z;
-
-  float vx = vector.x;
-  float vy = vector.y;
-  float vz = vector.z;
-
-  // t = 2q x v
-  float tx = 2 * (qy * vz - qz * vy);
-  float ty = 2 * (qz * vx - qx * vz);
-  float tz = 2 * (qx * vy - qy * vx);
-
-  // v + w t + q x t
-  dest->x = vx + qw * tx + qy * tz - qz * ty;
-  dest->y = vy + qw * ty + qz * tx - qx * tz;
-  dest->z = vz + qw * tz + qx * ty - qy * tx;
 }
