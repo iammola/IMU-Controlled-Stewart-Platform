@@ -62,7 +62,7 @@ void Maze_MoveTo(uint8_t *buffer) {
   memcpy(&position, buffer + DATA_OFFSET, POSITION_BYTE_SIZE);
 
   StewartPlatform_Update(position.translation, position.quaternion);
-  for (legIdx = 0; legIdx < Maestro_Channels; legIdx++) {
+  for (legIdx = 0; legIdx < LEGS_COUNT; legIdx++) {
     Maestro_SetAngle(legIdx, legs[legIdx].servoAngle);
   }
 
@@ -70,8 +70,6 @@ void Maze_MoveTo(uint8_t *buffer) {
 }
 
 int main(void) {
-  float angle = 0.0f;
-
   PLL_Init();
   FPULazyStackingEnable(); // Enable Floating Point
 

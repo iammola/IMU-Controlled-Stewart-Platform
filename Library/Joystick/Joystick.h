@@ -14,8 +14,7 @@
 
 #include "tm4c123gh6pm.h"
 
-#include "POSITION.h"
-#include "Quaternion/Quaternion.h"
+#include "UTILS/UTILS.h"
 
 #define V1Rx_PIN (1 << 0) // PD0 (AIN7)
 #define V1Rx_AIN 7        // AIN7

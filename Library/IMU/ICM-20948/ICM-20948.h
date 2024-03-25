@@ -13,9 +13,8 @@
 #define ICM20948_H
 #include <stdint.h>
 
+#include "UTILS/UTILS.h"
 #include "Fusion/Fusion.h"
-#include "POSITION.h"
-#include "Quaternion/Quaternion.h"
 
 #define INT_BIT      (unsigned)(1 << 3) // (PB3) Interrupt Pin
 #define INT_PCTL_M   (unsigned)GPIO_PCTL_PB3_M

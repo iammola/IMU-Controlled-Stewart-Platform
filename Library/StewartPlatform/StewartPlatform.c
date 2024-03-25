@@ -11,13 +11,8 @@
 #include <math.h>
 #include <stdint.h>
 
-#include "POSITION.h"
 #include "StewartPlatform.h"
-
-#define LEGS_COUNT 6
-
-#define sqr(num)                 (num * num)
-#define InRange(angle, min, max) (angle < min ? min : angle > max ? max : angle)
+#include "UTILS/UTILS.h"
 
 #define BASE_OUTER_RADIUS     83.2665f
 #define BASE_INNER_RADIUS     60.0f
@@ -28,17 +23,9 @@
 #define SHAFT_DISTANCE        19.05f  // Distance between servo pair on base
 #define ANCHOR_DISTANCE       22.225f // Distance between anchor points on platform
 #define HORN_DIRECTION        0       // If horns are pointed outwards 0, otherwise 1
-
-#define SERVO_ANGLE_MIN -90
-#define SERVO_ANGLE_MAX 90
-
-#ifndef M_PI
-#define M_PI 3.14159265358979323846f
-#endif
+#define SERVO_ANGLE_LIMIT     90.0f
 
 Legs legs[LEGS_COUNT] = {0};
-
-static const float RAD_TO_DEG = 180.0f / (float)M_PI;
 
 static Coords T0 = {0};
 
@@ -156,7 +143,7 @@ void StewartPlatform_Update(Coords translation, Quaternion orientation) {
     fk = twiceHornLength * ((legs[legIdx].cosBeta * x) + (legs[legIdx].sinBeta * y));
 
     angle = (asinf(gk / sqrtf(sqr(ek) + sqr(fk))) - atan2f(fk, ek)) * RAD_TO_DEG;
-    legs[legIdx].servoAngle = InRange(angle, SERVO_ANGLE_MIN, SERVO_ANGLE_MAX);
+    legs[legIdx].servoAngle = clamp(angle, -SERVO_ANGLE_LIMIT, SERVO_ANGLE_LIMIT);
   }
 }
 

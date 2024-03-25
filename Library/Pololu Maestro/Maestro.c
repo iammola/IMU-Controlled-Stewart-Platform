@@ -12,6 +12,7 @@
 #include "tm4c123gh6pm.h"
 
 #include "UART/UART4.h"
+#include "UTILS/UTILS.h"
 
 #include "Maestro.h"
 
@@ -33,15 +34,12 @@ void Maestro_Init(uint32_t SYS_CLOCK) {
  * @param channel
  * @param angle
  */
-void Maestro_SetAngle(uint8_t channel, float angle) {
+inline void Maestro_SetAngle(uint8_t channel, float angle) {
   uint16_t pulseWidth = 0;
   uint8_t  cmd[4] = {0};
 
   // Keep in bounds
-  if (angle > FULL_ANGLE)
-    angle = FULL_ANGLE;
-  else if (angle < -FULL_ANGLE)
-    angle = -FULL_ANGLE;
+  angle = clamp(angle, -FULL_ANGLE, FULL_ANGLE);
 
 #if PROTOCOL == PROTOCOL__COMPACT
   // Get pulse width from zero position, in us converted to quarter-us

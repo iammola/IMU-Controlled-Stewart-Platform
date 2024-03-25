@@ -1,18 +1,16 @@
 /**
  * @file StewartPlatform.h
  * @author Ademola Adedeji (a.mola.dev@gmail.com)
- * @brief 
  * @version 0.1
  * @date 2024-02-24
- * 
+ * @brief
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
-#include "POSITION.h"
-#include "Quaternion/Quaternion.h"
+#include "UTILS/UTILS.h"
 
 #define LEGS_COUNT 6
-#define AXES_COUNT 3
 
 typedef struct Legs {
   float  servoAngle;
