@@ -13,6 +13,18 @@
 
 /**
  * @brief
- * @param
+ * @param buffer
  */
-void Maze_ChangeControlMethod(uint8_t * RX_Data_Buffer);
+void Maze_ChangeControlMethod(uint8_t * buffer);
+
+/**
+ * @brief
+ * @param buffer
+ */
+void Maze_NewQuaternion(uint8_t *buffer);
+
+/**
+ * @brief 
+ * @param  
+ */
+inline void Maze_MoveToPosition(void);

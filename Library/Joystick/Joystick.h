@@ -37,10 +37,9 @@
 /**
  * @brief
  * @param SYS_CLOCK
- * @param SAMPLING_FREQ
  * @param position
  */
-void Joystick_Init(uint32_t SYS_CLOCK, uint16_t SAMPLING_FREQ, volatile Position *position);
+void Joystick_Init(uint32_t SYS_CLOCK, volatile Position *position);
 
 /**
  * @brief

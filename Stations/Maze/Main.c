@@ -32,7 +32,7 @@ static volatile MAZE_CONTROL_METHOD CTL_METHOD = DEFAULT_CTL_METHOD;
 
 /**
  * @brief
- * @param
+ * @param buffer
  */
 void Maze_ChangeControlMethod(uint8_t *buffer) {
   uint8_t data = 0x00;
@@ -52,19 +52,34 @@ void Maze_ChangeControlMethod(uint8_t *buffer) {
  * @brief
  * @param buffer
  */
-void Maze_MoveTo(uint8_t *buffer) {
-  uint8_t legIdx = 0;
+void Maze_NewQuaternion(uint8_t *buffer) {
 
   // Verify length matches expected
   if (buffer[0] != POSITION_BYTE_SIZE)
     return;
 
   memcpy(&position, buffer + DATA_OFFSET, POSITION_BYTE_SIZE);
+  position.isNew = true;
+
+  Maze_MoveToPosition();
+}
+
+/**
+ * @brief
+ * @param
+ */
+inline void Maze_MoveToPosition(void) {
+  uint8_t legIdx = 0;
+
+  if (!position.isNew)
+    return;
 
   StewartPlatform_Update(position.translation, position.quaternion);
   for (legIdx = 0; legIdx < LEGS_COUNT; legIdx++) {
     Maestro_SetAngle(legIdx, legs[legIdx].servoAngle);
   }
+
+  position.isNew = false;
 
   Maestro_WaitForIdle();
 }
@@ -81,6 +96,9 @@ int main(void) {
   while (1) {
     WaitForInterrupt();
 
+    if (CTL_METHOD == JOYSTICK_CTL_METHOD && position.isNew)
+      Maze_MoveToPosition();
+
     // Wait for new data to be confirmed
     if (!HasNewData)
       continue;
@@ -92,10 +110,8 @@ int main(void) {
         Maze_ChangeControlMethod(RX_Data_Buffer);
         break;
       case NEW_QUATERNION:
-        Maze_MoveTo(RX_Data_Buffer);
+        Maze_NewQuaternion(RX_Data_Buffer);
         break;
-      default:
-        continue;
     }
 
     EnableInterrupts();

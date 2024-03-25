@@ -15,7 +15,6 @@
 #include "PLL/PLL.h"
 
 #include "IMU/IMU.h"
-#include "Joystick/Joystick.h"
 #include "Wireless/Wireless.h"
 
 #include "Glove.h"
@@ -37,19 +36,11 @@ int main(void) {
   FPULazyStackingEnable(); // Enable Floating Point
 
   Wireless_Init(SYS_CLOCK);
-
-  Joystick_Init(SYS_CLOCK, JOYSTICK_SAMPLING_RATE, &position);
   IMU_Init(SYS_CLOCK, &position);
-
-  if (CTL_METHOD == JOYSTICK_CTL_METHOD) {
-    Joystick_Enable();
-  } else if (CTL_METHOD == IMU_CTL_METHOD) {
-    IMU_Enable();
-  }
 
   switch (CTL_METHOD) {
     case JOYSTICK_CTL_METHOD:
-      Joystick_Enable();
+      IMU_Disable();
       break;
     case IMU_CTL_METHOD:
       IMU_Enable();
