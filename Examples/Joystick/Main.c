@@ -18,8 +18,7 @@
 
 #include "Joystick/Joystick.h"
 
-#define SYS_CLOCK   80e6
-#define SAMPLE_RATE 250
+#define SYS_CLOCK 80e6
 
 void WaitForInterrupt(void);
 void DisableInterrupts(void);
@@ -35,7 +34,7 @@ int main(void) {
 
   CLI_Init(SYS_CLOCK, 115200, WORD_8_BIT, RX_FIFO_OFF, NO_PARITY, ONE_STOP_BIT); // Init UART COM
 
-  Joystick_Init(SYS_CLOCK, SAMPLE_RATE, &position);
+  Joystick_Init(SYS_CLOCK, &position);
   Joystick_Enable();
 
   while (1) {

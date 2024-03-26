@@ -24,7 +24,7 @@
 #define SHAFT_DISTANCE        19.05f   // Distance (mm) from center of side to servo motor shaft/horn center
 #define ANCHOR_DISTANCE       22.225f  // Distance (mm) from center of side to platform anchor point
 #define HORN_DIRECTION        0        // If horns are pointed outwards 0, otherwise 1
-#define SERVO_ANGLE_LIMIT     30.0f    // Min/Max range (°) for the servo motors to rotate allowed
+#define SERVO_ANGLE_LIMIT     45.0f    // Min/Max range (°) for the servo motors to rotate allowed
 
 StewartPlatformLeg legs[LEGS_COUNT] = {0};
 

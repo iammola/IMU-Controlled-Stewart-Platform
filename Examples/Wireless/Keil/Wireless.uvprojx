@@ -390,11 +390,6 @@
               <FilePath>..\Main.c</FilePath>
             </File>
             <File>
-              <FileName>HC-12.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\Library\HC-12\HC-12.c</FilePath>
-            </File>
-            <File>
               <FileName>PLL.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\Library\PLL\PLL.c</FilePath>
@@ -408,6 +403,11 @@
               <FileName>UART5.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\Library\UART\UART5.c</FilePath>
+            </File>
+            <File>
+              <FileName>HC-12.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Library\Wireless\HC-12\HC-12.c</FilePath>
             </File>
           </Files>
         </Group>

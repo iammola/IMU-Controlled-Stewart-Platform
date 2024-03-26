@@ -104,6 +104,7 @@
 
         connectToMCU.addEventListener("click", async () => {
           if (writer != null && serialPort != null) {
+            connectToMCU.innerText = "Connect to MCU";
             closePort();
             return;
           }
@@ -115,6 +116,7 @@
           writer = serialPort.writable.getWriter();
 
           sendData();
+          connectToMCU.innerText = "Disconnect from MCU";
         });
       }
 
@@ -146,7 +148,7 @@
           await writer.write(new Uint8Array([0xea]));
           const buffer = new Uint8Array(new Float32Array(gamepad.axes).buffer);
           await writer.write(buffer);
-          setTimeout(sendData, 5000);
+          setTimeout(sendData, 50);
         })();
       }
 

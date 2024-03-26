@@ -13,8 +13,8 @@
 #define ICM20948_H
 #include <stdint.h>
 
-#include "UTILS/UTILS.h"
 #include "Fusion/Fusion.h"
+#include "UTILS/UTILS.h"
 
 #define INT_BIT      (unsigned)(1 << 3) // (PB3) Interrupt Pin
 #define INT_PCTL_M   (unsigned)GPIO_PCTL_PB3_M
@@ -48,9 +48,9 @@ typedef struct REG_ADDRESS_STRUCT {
 #define CLKSEL_STOP     0x07
 
 // PWR_MGMT_2
-#define GYRO_AXES_S          0
-#define GYRO_DISABLE         (7 << GYRO_AXES_S)
-#define GYRO_ENABLE(x, y, z) (((x & 0x1) | (y & 0x1) | (z & 1)) << GYRO_AXES_S)
+#define GYRO_AXES_S           0
+#define GYRO_DISABLE          (7 << GYRO_AXES_S)
+#define GYRO_ENABLE(x, y, z)  (((x & 0x1) | (y & 0x1) | (z & 1)) << GYRO_AXES_S)
 #define ACCEL_AXES_S          3
 #define ACCEL_DISABLE         (7 << ACCEL_AXES_S)
 #define ACCEL_ENABLE(x, y, z) (((x & 0x1) | (y & 0x1) | (z & 1)) << ACCEL_AXES_S)
@@ -128,14 +128,18 @@ typedef struct REG_ADDRESS_STRUCT {
 #define GYRO_1000_SENSITIVITY SENSITIVITY(1000.0f)
 #define GYRO_2000_SENSITIVITY SENSITIVITY(2000.0f)
 
+#define ACCEL_MAX_SMPLRT 1125 // 1.125 kHz
+#define GYRO_MAX_SMPLRT  1100 // 1.100 kHz
+
 /**
  * @brief Initializes the SysTick, and the SPI module for communication. It resets the device,
  * turns off Low-Power Mode and the Temp sensor, while auto-selecting the best clock and enabling
  * the gyroscope and accelerometer sensors
  * @param SYS_CLK
+ * @param SAMPLE_RATE
  * @param position Struct for IMU location updates
  */
-void ICM20948_Init(uint32_t SYS_CLK, volatile Position *position);
+void ICM20948_Init(uint32_t SYS_CLK, uint32_t SAMPLE_RATE, volatile Position *position);
 
 /**
  * @brief Configures the Pin connected to the INT pin of the ICM-20948 as a Digital GPIO Input,

@@ -1,16 +1,19 @@
 #include "IMU.h"
 
+#define SAMPLE_RATE 400
+
+static uint16_t IMU_CalcSDR(uint32_t frequency, uint32_t desired);
+
 /**
  * @brief
  * @param SYS_CLK
  * @param position
  */
 void IMU_Init(uint32_t SYS_CLK, volatile Position *position) {
-  uint8_t whoAmI = 0;
-  uint8_t MAG_whoAmI = 0;
+  uint8_t whoAmI = 0; //, MAG_whoAmI = 0;
   uint8_t userCtrl = 0;
 
-  ICM20948_Init(SYS_CLK, position);
+  ICM20948_Init(SYS_CLK, SAMPLE_RATE, position);
 
   ICM20948_Write(GYRO_CONFIG_1_ADDR, GYRO_FS_SEL_2000 | GYRO_DLPF_ENABLE); // Configure gyro scale to 2000dps and enable Low-pass filter
   gyroscopeSensitivity.axis.x = gyroscopeSensitivity.axis.y = gyroscopeSensitivity.axis.z = GYRO_2000_SENSITIVITY;
@@ -26,10 +29,10 @@ void IMU_Init(uint32_t SYS_CLK, volatile Position *position) {
   accelerometerOffset.axis.y /= 8 / 2;
   accelerometerOffset.axis.z /= 8 / 2;
 
-  ICM20948_Write(ODR_ALIGN_EN_ADDR, ODR_ALIGN_ENABLE); // Align output data rate
-  ICM20948_Write(GYRO_SMPLRT_DIV_ADDR, 0x0A);          // Configure for sample rate of 100 Hz (1.1kHz / (1 + 10))
-  ICM20948_Write(ACCEL_SMPLRT_DIV_1_ADDR, 0x00);       // Configure for max sample rate of 100 Hz (1.1kHz / (1 + 10))
-  ICM20948_Write(ACCEL_SMPLRT_DIV_2_ADDR, 0x0A);       // Configure for max sample rate of 100 Hz (1.1kHz / (1 + 10))
+  ICM20948_Write(ODR_ALIGN_EN_ADDR, ODR_ALIGN_ENABLE);                                               // Align output data rate
+  ICM20948_Write(GYRO_SMPLRT_DIV_ADDR, IMU_CalcSDR(GYRO_MAX_SMPLRT, SAMPLE_RATE) & 0xFF);            // Configure sample rate
+  ICM20948_Write(ACCEL_SMPLRT_DIV_1_ADDR, (IMU_CalcSDR(ACCEL_MAX_SMPLRT, SAMPLE_RATE) >> 8) & 0xFF); // Configure (MSB) sample rate
+  ICM20948_Write(ACCEL_SMPLRT_DIV_2_ADDR, IMU_CalcSDR(ACCEL_MAX_SMPLRT, SAMPLE_RATE) & 0xFF);        // Configure (LSB) sample rate
 
   ICM20948_Read(USER_CTRL_ADDR, &userCtrl);
   ICM20948_Write(USER_CTRL_ADDR, (userCtrl | SPI_ENABLE) & ~(DMP_ENABLE | FIFO_ENABLE)); // Enable SPI
@@ -67,6 +70,23 @@ void IMU_Enable(void) {
  * @param
  */
 void IMU_Disable(void) {
-  ICM20948_Write(INT_ENABLE_1_ADDR, ~RAW_DATA_INT_ENABLE); // Disable Raw Data interrupt
-  ICM20948_Interrupt_Pin_Disable();                        // Disable the Interrupt pin
+  ICM20948_Write(INT_ENABLE_1_ADDR, (uint8_t)~RAW_DATA_INT_ENABLE); // Disable Raw Data interrupt
+  ICM20948_Interrupt_Pin_Disable();                                 // Disable the Interrupt pin
+}
+
+/**
+ * @brief
+ * @param frequency
+ * @param desired
+ * @return
+ */
+static uint16_t IMU_CalcSDR(uint32_t frequency, uint32_t desired) {
+  float SMPLRT = 0.0f;
+
+  if (desired > frequency)
+    return 0;
+
+  SMPLRT = ((float)frequency / (float)desired) - 1.0f + 0.5f;
+
+  return (uint16_t)(SMPLRT);
 }

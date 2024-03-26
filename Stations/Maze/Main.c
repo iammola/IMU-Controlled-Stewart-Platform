@@ -15,6 +15,7 @@
 #include "FPU/fpu.h"
 #include "PLL/PLL.h"
 
+#include "Joystick/Joystick.h"
 #include "Pololu Maestro/Maestro.h"
 #include "StewartPlatform/StewartPlatform.h"
 #include "Wireless/Wireless.h"
@@ -43,7 +44,16 @@ void Maze_ChangeControlMethod(uint8_t *buffer) {
   memcpy(&data, buffer + DATA_OFFSET, 1);
   // Update Screen
 
+  if (data == CTL_METHOD)
+    return;
+
   CTL_METHOD = data; // Set new method
+
+  if (CTL_METHOD == JOYSTICK_CTL_METHOD) {
+    Joystick_Enable();
+  } else {
+    Joystick_Disable();
+  }
 
   // Reset Game and Servo Positions
 }
@@ -68,7 +78,7 @@ void Maze_NewQuaternion(uint8_t *buffer) {
  * @brief
  * @param
  */
-inline void Maze_MoveToPosition(void) {
+void Maze_MoveToPosition(void) {
   uint8_t legIdx = 0;
 
   if (!position.isNew)
@@ -90,14 +100,22 @@ int main(void) {
 
   Wireless_Init(SYS_CLOCK);
 
-  Maestro_Init(SYS_CLOCK); // Initialize Maestro Controller
-  StewartPlatform_Init();  // Initialize stewart platform
+  Maestro_Init(SYS_CLOCK);             // Initialize Maestro Controller
+  StewartPlatform_Init();              // Initialize stewart platform
+  Joystick_Init(SYS_CLOCK, &position); // Initialize Joystick
+
+  if (CTL_METHOD == JOYSTICK_CTL_METHOD) {
+    Joystick_Enable();
+  }
 
   while (1) {
     WaitForInterrupt();
 
-    if (CTL_METHOD == JOYSTICK_CTL_METHOD && position.isNew)
+    if (CTL_METHOD == JOYSTICK_CTL_METHOD && position.isNew) {
+      DisableInterrupts();
       Maze_MoveToPosition();
+      EnableInterrupts();
+    }
 
     // Wait for new data to be confirmed
     if (!HasNewData)

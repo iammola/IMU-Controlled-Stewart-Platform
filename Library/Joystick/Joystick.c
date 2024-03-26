@@ -18,13 +18,41 @@
 #include "Joystick.h"
 
 static volatile Position *__position;
+static volatile float     angle = 0.0f;
+static volatile float     axes[4] = {0};
+static volatile uint8_t   data[16] = {0};
+
+void UART0_Handler(void) {
+  uint8_t idx = 0;
+  uint8_t match = UART0_DR_R; // Get sync word
+
+  UART0_ICR_R = UART_ICR_RXIC; // Clear interrupt
+
+  if (match != 0xEA) {
+    while (!(UART0_FR_R & UART_FR_RXFE)) {
+      match = (uint8_t)UART0_DR_R; // Clear all the remaining invalid data
+    }
+
+    return;
+  }
+
+  for (idx = 0; idx < 16; idx++)
+    data[idx] = CLI_Read();
+
+  memcpy(axes, &data, 16); // Create 4 32-bit floats from 16 8-bit numbers
+
+  angle = atan2f(-axes[3], -axes[2]);
+  __position->quaternion = normalizeQuaternion(-13.0f, -cosf(angle), sinf(angle), 0);                            // Use 2nd Joystick for tilt
+  __position->translation = (Coords){.x = axes[1] * PAN_RANGE, .y = axes[0] * PAN_RANGE, .z = 0.0f * PAN_RANGE}; // Use 1st joystick for pan
+  __position->isNew = true;
+}
 
 /**
  * @brief
  * @param SYS_CLOCK
  * @param position
  */
-void Joystick_Init(uint32_t SYS_CLOCK, volatile Position *position){
+void Joystick_Init(uint32_t SYS_CLOCK, volatile Position *position) {
   __position = position;
 
   CLI_Init(SYS_CLOCK, 115200, WORD_8_BIT, RX_FIFO_OFF, NO_PARITY, ONE_STOP_BIT);
@@ -33,10 +61,10 @@ void Joystick_Init(uint32_t SYS_CLOCK, volatile Position *position){
 
 void Joystick_Enable(void) {
   // Allow Receive FIFO and Timeout interrupts on to be handled by controller
-  UART0_IM_R = UART_IM_RXIM | UART_IM_RTIM;
+  UART0_IM_R = UART_IM_RXIM;
 
   // Set RX FIFO level
-  UART0_IFLS_R = (UART0_IFLS_R & (unsigned)~UART_IFLS_RX_M) | UART_IFLS_RX2_8;
+  UART0_IFLS_R = (UART0_IFLS_R & (unsigned)~UART_IFLS_RX_M) | UART_IFLS_RX1_8;
 
   NVIC_EN0_R |= NVIC_EN0_INT5;                                                         // Enable Interrupt 5 for UART0
   NVIC_PRI1_R = (NVIC_PRI1_R & (unsigned)~NVIC_PRI1_INT5_M) | (6 << NVIC_PRI1_INT5_S); // Set Priority
@@ -46,33 +74,4 @@ void Joystick_Enable(void) {
 
 void Joystick_Disable(void) {
   CLI_Disable(); // Disable UART
-}
-
-static uint8_t data[16] = {0};
-static float   axes[4] = {0};
-
-void UART0_Handler(void) {
-  uint8_t idx = 0;
-  float   angle = 0.0f;
-  uint8_t match = 0xEA;
-
-  UART0_ICR_R |= UART_ICR_RTIC | UART_ICR_RXIC; // Clear interrupt
-
-  do {
-    match = CLI_Read();
-  } while ((match != 0xEA) && (UART0_FR_R & UART_FR_RXFE));
-
-  if (match != 0xEA)
-    return;
-
-  for (idx = 0; idx < 16; idx++) {
-    data[idx] = CLI_Read();
-  }
-
-  memcpy(axes, &data, 16); // Create 4 32-bit floats from 16 8-bit numbers
-
-  angle = atan2f(axes[3], axes[2]);
-  __position->quaternion = normalizeQuaternion(-13.0f, -cosf(angle), sinf(angle), 0);                            // Use 2nd Joystick for tilt
-  __position->translation = (Coords){.x = axes[0] * PAN_RANGE, .y = axes[1] * PAN_RANGE, .z = 0.0f * PAN_RANGE}; // Use 1st joystick for pan
-  __position->isNew = true;
 }

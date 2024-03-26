@@ -9,13 +9,15 @@
  *
  */
 
+#include <stdint.h>
+
 #include "STATIONS.h"
 
 /**
  * @brief
  * @param buffer
  */
-void Maze_ChangeControlMethod(uint8_t * buffer);
+void Maze_ChangeControlMethod(uint8_t *buffer);
 
 /**
  * @brief
@@ -24,7 +26,7 @@ void Maze_ChangeControlMethod(uint8_t * buffer);
 void Maze_NewQuaternion(uint8_t *buffer);
 
 /**
- * @brief 
- * @param  
+ * @brief
+ * @param
  */
-inline void Maze_MoveToPosition(void);
+void Maze_MoveToPosition(void);

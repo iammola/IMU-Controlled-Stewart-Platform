@@ -175,7 +175,7 @@ void UART5_Transmit(uint8_t *data, uint32_t byteCount) {
 
 bool UART5_Receive(uint8_t *data, uint32_t length) {
   while (length > 0) {
-    while (UART4_FR_R & UART_FR_RXFE) { // Wait for Receive FIFO to have data
+    while (UART5_FR_R & UART_FR_RXFE) { // Wait for Receive FIFO to have data
     }
 
     *data = (uint8_t)UART5_DR_R; // Read data

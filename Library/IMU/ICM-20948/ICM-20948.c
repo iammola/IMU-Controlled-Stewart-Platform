@@ -51,14 +51,16 @@ static bool ICM20948_GetMagReadings(FusionVector *dest);
 static void ICM20948_GetRawGyroReadings(FusionVector *dest);
 static void ICM20948_GetRawAccelReadings(FusionVector *dest);
 
-// Initialise algorithms
-#define SAMPLE_RATE 100 // Gyro Sample Rate of 100 Hz
-#define SSI_SPEED   1e6
+#define SSI_SPEED 1e6
 
 static FusionAhrs   ahrs = {0};
 static FusionOffset offset = {0};
 
-static uint32_t          SYS_CLOCK;
+static volatile Position *__position;
+
+static uint32_t __sysClock;
+static uint32_t __sampleRate;
+
 static volatile float    deltaTime = 0.0f;
 static volatile uint32_t lastTimestamp = 0;
 
@@ -88,8 +90,6 @@ FusionVector accelerometerOffset = {
     .axis = {.x = -6168.63965f, .y = -4822.40723f, .z = 13846.6348f}
 };
 
-static volatile Position *__position;
-
 /**
  * @brief ICM-20948 Interrupt Handler
  * @param
@@ -112,17 +112,20 @@ void GPIOB_Handler(void) {
   if (lastTimestamp == 0)
     deltaTime = 0.0f; // Start of process
   else if (lastTimestamp < timestamp)
-    deltaTime = ST_RELOAD_R - (timestamp - lastTimestamp); // Restarted at max reload value, so have to find ticks in reverse
+    deltaTime = (float)(ST_RELOAD_R - (timestamp - lastTimestamp)); // Restarted at max reload value, so have to find ticks in reverse
   else
-    deltaTime = lastTimestamp - timestamp; // Ticks since last interrupt
+    deltaTime = (float)(lastTimestamp - timestamp); // Ticks since last interrupt
 
-  deltaTime /= (float)(SYS_CLOCK); // Calculate delta time (in seconds) to account for gyroscope sample clock error
-  lastTimestamp = timestamp;       // Update timestamp tracker
+  deltaTime /= (float)(__sysClock); // Calculate delta time (in seconds) to account for gyroscope sample clock error
+  lastTimestamp = timestamp;        // Update timestamp tracker
 
   // Apply calibrations
   gyroscope = FusionCalibrationInertial(rawGyroscope, FUSION_IDENTITY_MATRIX, gyroscopeSensitivity, gyroscopeOffset);
   accelerometer = FusionCalibrationInertial(rawAccelerometer, FUSION_IDENTITY_MATRIX, accelerometerSensitivity, accelerometerOffset);
   // magnetometer = FusionCalibrationMagnetic(rawMagnetometer, softIronMatrix, hardIronOffset);
+
+  gyroscope.axis.z = 0.0f;
+  accelerometer.axis.z = 0.0f;
 
   gyroscope = FusionOffsetUpdate(&offset, gyroscope); // Update gyroscope offset correction algorithm
 
@@ -247,16 +250,22 @@ static bool ICM20948_GetMagReadings(FusionVector *dest) {
  * turns off Low-Power Mode and the Temp sensor, while auto-selecting the best clock and enabling
  * the gyroscope and accelerometer sensors
  * @param SYS_CLK
+ * @param SAMPLE_RATE
  * @param position Struct for IMU location updates
  */
-void ICM20948_Init(uint32_t SYS_CLK, volatile Position *position) {
-  __position = position;
+void ICM20948_Init(uint32_t SYS_CLK, uint32_t SAMPLE_RATE, volatile Position *position) {
+  if (position == NULL || SYS_CLK == NULL || SAMPLE_RATE == NULL) {
+    while (1)
+      ;
+  }
 
-  SYS_CLOCK = SYS_CLK;
+  __position = position;
+  __sysClock = SYS_CLK;
+  __sampleRate = SAMPLE_RATE;
 
   SysTick_Init(); // Initialize SysTick
 
-  SSI2_Init(SYS_CLOCK, SSI_SPEED, SSI_MODE3, SSI_DATA_16); // Initialize the SPI pins
+  SSI2_Init(__sysClock, SSI_SPEED, SSI_MODE3, SSI_DATA_16); // Initialize the SPI pins
 
   ICM20948_Write(PWR_MGMT_1_ADDR, DEVICE_RESET | SLEEP_ENABLE); // Reset the device
   SysTick_WaitCustom(101, -3);                                  // Wait atleast 100ms after device reset
@@ -413,14 +422,14 @@ void ICM20948_Mag_Write(uint8_t MAG_ADDRESS, uint8_t data) {
 void ICM20948_MadgwickFusion_Init(void) {
   const FusionAhrsSettings settings = {
       .convention = FusionConventionNwu,
-      .gain = 1.5f,
+      .gain = 4.5f,
       .gyroscopeRange = 2000.0f, // gyroscope range in dps
-      .accelerationRejection = 5.0f,
+      .accelerationRejection = 2.0f,
       .magneticRejection = 5.0f,
-      .recoveryTriggerPeriod = 5 * SAMPLE_RATE, /* 5 seconds */
+      .recoveryTriggerPeriod = 5 * __sampleRate, /* 5 seconds */
   };
 
-  FusionOffsetInitialise(&offset, SAMPLE_RATE);
+  FusionOffsetInitialise(&offset, __sampleRate);
   FusionAhrsInitialise(&ahrs);
 
   FusionAhrsSetSettings(&ahrs, &settings);
@@ -444,7 +453,7 @@ void ICM20948_MagCalibration(void) {
   float magField = 0.0f;
   float offsets[10] = {0};
 
-  CLI_Init(SYS_CLOCK, 115200, WORD_8_BIT, RX_FIFO_OFF, NO_PARITY, ONE_STOP_BIT); // Init UART COM
+  CLI_Init(__sysClock, 115200, WORD_8_BIT, RX_FIFO_OFF, NO_PARITY, ONE_STOP_BIT); // Init UART COM
 
   while (1) {
     if (!ICM20948_GetMagReadings(&magSample))

@@ -1,3 +1,13 @@
+/**
+ * @file Main.c
+ * @author Ademola Adedeji (a.mola.dev@gmail.com)
+ * @brief 
+ * @version 0.1
+ * @date 2024-02-01
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
 #include <stdint.h>
 #include <stdio.h>
 
@@ -12,6 +22,9 @@
 static char text[CLI_TXT_BUF] = "";
 
 int main(void) {
+  FusionQuaternion quat = {0};
+  FusionEuler      euler = {0};
+
   volatile Position position = {0};
 
   PLL_Init();              // Initialize the PLL
@@ -27,12 +40,17 @@ int main(void) {
       continue;
 
 #define Q position.quaternion
-#define T position.quaternion
+    // Serial Plot
+    quat.element.w = Q.w;
+    quat.element.x = Q.x;
+    quat.element.y = Q.y;
+    quat.element.z = Q.z;
+    euler = FusionQuaternionToEuler(quat);
+    snprintf(text, CLI_TXT_BUF, "%0.6f %0.6f %0.6f", euler.angle.roll, euler.angle.pitch, euler.angle.yaw);
     // AdaFruit_3D_Model_Viewer
-    snprintf(text, CLI_TXT_BUF, "Quaternion: %0.4f,%0.4f,%0.4f,%0.4f", Q.w, Q.x, Q.y, Q.z);
+    // snrintf(text, CLI_TXT_BUF, "Quaternion: %0.4f,%0.4f,%0.4f,%0.4f", Q.w, Q.x, Q.y, Q.z);
     // Stewart Platform
-    snprintf(text, CLI_TXT_BUF, "%0.4f %0.4f %0.4f %0.4f %0.4f %0.4f %0.4f", Q.w, Q.x, Q.y, Q.z, T.x, T.y, T.z);
-#undef T
+    snprintf(text, CLI_TXT_BUF, "%0.6f %0.6f %0.6f %0.6f", Q.w, Q.x, Q.y, Q.z);
 #undef Q
 
     CLI_Write(text);

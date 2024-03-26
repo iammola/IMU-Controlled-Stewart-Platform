@@ -36,7 +36,7 @@ static volatile Position position = {0};
 /**
  * @brief Stewart Platform "Tilt" Animation
  * @link https://github.com/rawify/Stewart.js/blob/961177ccb21a9dbb22b54393f991f315925f5a52/stewart.js#L592-L624
- * @param  
+ * @param
  */
 void TIMER0A_Handler(void) {
   float elapsedInPercent = 0.0f;
@@ -107,17 +107,21 @@ int main(void) {
   }
 
   while (1) {
+    WaitForInterrupt();
+
     if (!position.isNew)
       continue;
 
-    StewartPlatform_Update(position.translation, position.quaternion);
+    DisableInterrupts();
 
+    StewartPlatform_Update(position.translation, position.quaternion);
     for (legIdx = 0; legIdx < Maestro_Channels; legIdx++) {
       Maestro_SetAngle(legIdx, legs[legIdx].servoAngle);
     }
 
     position.isNew = false;
-
     Maestro_WaitForIdle();
+
+    EnableInterrupts();
   }
 }
