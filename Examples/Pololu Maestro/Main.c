@@ -36,15 +36,15 @@ int main(void) {
 
   /*
     // Loop channel 0 from -90 to 90
-    int8_t diff = 30;
+    int8_t diff = 15;
     int8_t target = 90;
     float  angle = 0.0f;
 
     while (1) {
       for (; idx != target; idx += diff) {
         Maestro_SetAngle(0, (float)idx);
-        angle = Maestro_GetPosition(0);
         Maestro_WaitForIdle();
+        angle = Maestro_GetPosition(0);
         SysTick_Wait10ms(50);
       }
 

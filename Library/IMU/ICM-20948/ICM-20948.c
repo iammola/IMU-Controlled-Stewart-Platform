@@ -422,10 +422,10 @@ void ICM20948_Mag_Write(uint8_t MAG_ADDRESS, uint8_t data) {
 void ICM20948_MadgwickFusion_Init(void) {
   const FusionAhrsSettings settings = {
       .convention = FusionConventionNwu,
-      .gain = 4.5f,
+      .gain = 10.0f,
       .gyroscopeRange = 2000.0f, // gyroscope range in dps
-      .accelerationRejection = 2.0f,
-      .magneticRejection = 5.0f,
+      .accelerationRejection = 10.0f,
+      .magneticRejection = 0,
       .recoveryTriggerPeriod = 5 * __sampleRate, /* 5 seconds */
   };
 
@@ -537,7 +537,9 @@ void ICM20948_AccelGyroCalibration(void) {
   sampleSensitivity.axis.x = sampleSensitivity.axis.y = sampleSensitivity.axis.z = ACCEL_2G_SENSITIVITY;
 #endif
 
-  for (SAMPLES_LEFT = SAMPLES_COUNT; SAMPLES_LEFT > 0; SAMPLES_LEFT--) {
+  for (SAMPLES_LEFT = SAMPLES_COUNT; SAMPLES_LEFT > 0; SAMPLES_LEFT--)
+  // while (1)
+  {
 #if (CALIBRATION_MODE == 3) || (CALIBRATION_MODE == 4)
     ICM20948_GetRawGyroReadings(&sample);
 #elif (CALIBRATION_MODE == 1) || (CALIBRATION_MODE == 2)
@@ -568,7 +570,7 @@ void ICM20948_AccelGyroCalibration(void) {
   totalSamples.axis.y /= (SAMPLES_COUNT * sampleSensitivity.axis.y);
   totalSamples.axis.z /= (SAMPLES_COUNT * sampleSensitivity.axis.z);
 
-  snprintf(text, CLI_TXT_BUF, "Measurement finished. X= %0.4f Y = %0.4f Z = %0.4f", totalSamples.axis.x, totalSamples.axis.y, totalSamples.axis.z);
+  snprintf(text, CLI_TXT_BUF, "Measurement finished. X = %0.4f Y = %0.4f Z = %0.4f\n", totalSamples.axis.x, totalSamples.axis.y, totalSamples.axis.z);
   CLI_Write(text);
 
   while (1)
