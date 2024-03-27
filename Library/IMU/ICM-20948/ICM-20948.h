@@ -48,12 +48,13 @@ typedef struct REG_ADDRESS_STRUCT {
 #define CLKSEL_STOP     0x07
 
 // PWR_MGMT_2
-#define GYRO_AXES_S           0
-#define GYRO_DISABLE          (7 << GYRO_AXES_S)
-#define GYRO_ENABLE(x, y, z)  (((x & 0x1) | (y & 0x1) | (z & 1)) << GYRO_AXES_S)
-#define ACCEL_AXES_S          3
-#define ACCEL_DISABLE         (7 << ACCEL_AXES_S)
-#define ACCEL_ENABLE(x, y, z) (((x & 0x1) | (y & 0x1) | (z & 1)) << ACCEL_AXES_S)
+#define GYRO_AXES_S                 0
+#define ACCEL_AXES_S                3
+#define AXES_ENABLE(x, y, z, SHIFT) ((((x & 1) ^ 1) | (((y & 1) ^ 1) << 1) | (((z & 1) ^ 1) << 2)) << SHIFT)
+#define GYRO_ENABLE(x, y, z)        AXES_ENABLE(x, y, z, GYRO_AXES_S)
+#define ACCEL_ENABLE(x, y, z)       AXES_ENABLE(x, y, z, ACCEL_AXES_S)
+#define GYRO_DISABLE                AXES_ENABLE(0, 0, 0, GYRO_AXES_S)
+#define ACCEL_DISABLE               AXES_ENABLE(0, 0, 0, ACCEL_AXES_S)
 
 // USER_CTRL
 #define DMP_ENABLE     0x80
