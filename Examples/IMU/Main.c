@@ -50,7 +50,7 @@ int main(void) {
     // AdaFruit_3D_Model_Viewer
     // snrintf(text, CLI_TXT_BUF, "Quaternion: %0.4f,%0.4f,%0.4f,%0.4f", Q.w, Q.x, Q.y, Q.z);
     // Stewart Platform
-    snprintf(text, CLI_TXT_BUF, "%0.6f %0.6f %0.6f %0.6f", Q.w, Q.x, Q.y, Q.z);
+    // snprintf(text, CLI_TXT_BUF, "%0.6f %0.6f %0.6f %0.6f", Q.w, Q.x, Q.y, Q.z);
 #undef Q
 
     CLI_Write(text);

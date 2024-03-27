@@ -23,7 +23,7 @@ void Maze_ChangeControlMethod(uint8_t *buffer);
  * @brief
  * @param buffer
  */
-void Maze_NewQuaternion(uint8_t *buffer);
+void Maze_ReadNewPosition(uint8_t *buffer);
 
 /**
  * @brief

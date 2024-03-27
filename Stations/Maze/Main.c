@@ -62,8 +62,7 @@ void Maze_ChangeControlMethod(uint8_t *buffer) {
  * @brief
  * @param buffer
  */
-void Maze_NewQuaternion(uint8_t *buffer) {
-
+void Maze_ReadNewPosition(uint8_t *buffer) {
   // Verify length matches expected
   if (buffer[0] != POSITION_BYTE_SIZE)
     return;
@@ -86,7 +85,8 @@ void Maze_MoveToPosition(void) {
 
   StewartPlatform_Update(position.translation, position.quaternion);
   for (legIdx = 0; legIdx < LEGS_COUNT; legIdx++) {
-    Maestro_SetAngle(legIdx, legs[legIdx].servoAngle);
+    // The servos on the odd channels are reversed, so -ve angles to rotate up
+    Maestro_SetAngle(legIdx, legs[legIdx].servoAngle * ((legIdx % 2 == 0) ? 1.0f : -1.0f));
   }
 
   position.isNew = false;
@@ -98,24 +98,24 @@ int main(void) {
   PLL_Init();
   FPULazyStackingEnable(); // Enable Floating Point
 
-  Wireless_Init(SYS_CLOCK);
+  DisableInterrupts(); // Disable interrupts until after config
 
+  Wireless_Init(SYS_CLOCK);            // Initialize Wireless
   Maestro_Init(SYS_CLOCK);             // Initialize Maestro Controller
   StewartPlatform_Init();              // Initialize stewart platform
   Joystick_Init(SYS_CLOCK, &position); // Initialize Joystick
 
-  if (CTL_METHOD == JOYSTICK_CTL_METHOD) {
+  if (CTL_METHOD == JOYSTICK_CTL_METHOD) // Enable Joystick Handler if default
     Joystick_Enable();
-  }
+
+  EnableInterrupts(); // Enable all interrupts
 
   while (1) {
     WaitForInterrupt();
 
-    if (CTL_METHOD == JOYSTICK_CTL_METHOD && position.isNew) {
-      DisableInterrupts();
+    // Direct Joystick control
+    if (CTL_METHOD == JOYSTICK_CTL_METHOD && position.isNew)
       Maze_MoveToPosition();
-      EnableInterrupts();
-    }
 
     // Wait for new data to be confirmed
     if (!HasNewData)
@@ -127,8 +127,8 @@ int main(void) {
       case CHANGE_CONTROL_METHOD:
         Maze_ChangeControlMethod(RX_Data_Buffer);
         break;
-      case NEW_QUATERNION:
-        Maze_NewQuaternion(RX_Data_Buffer);
+      case NEW_POSITION:
+        Maze_ReadNewPosition(RX_Data_Buffer);
         break;
     }
 

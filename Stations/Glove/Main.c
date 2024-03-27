@@ -53,7 +53,7 @@ int main(void) {
     if (!position.isNew)
       continue;
 
-    TX_Data_Buffer[0] = NEW_QUATERNION;
+    TX_Data_Buffer[0] = NEW_POSITION;
     memcpy(TX_Data_Buffer + 1, &position, POSITION_BYTE_SIZE);
 
     HC12_SendData(TX_Data_Buffer, POSITION_BYTE_SIZE + 1);

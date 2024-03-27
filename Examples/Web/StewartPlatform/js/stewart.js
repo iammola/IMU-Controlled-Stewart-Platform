@@ -848,29 +848,6 @@
           },
         };
       })(),
-      test: (function () {
-        return {
-          duration: 0,
-          pathVisible: false,
-          next: null,
-          start: function () {
-            this.orientation = Quaternion.ONE;
-            this.translation = [0, 0, 0];
-          },
-          fn: function (pct) {
-            var axes = gamepads[0].axes;
-            // Control with both joysticks
-            var b = Math.atan2(-axes[3], -axes[2]);
-            this.translation = [axes[1] * 30, axes[0] * 30, 0];
-            this.orientation = new Quaternion(
-              -13,
-              -Math.cos(b),
-              Math.sin(b),
-              0
-            ).normalize();
-          },
-        };
-      })(),
     },
     map: {
       q: "square",
@@ -879,9 +856,6 @@
       r: "rotate",
       t: "tilt",
       y: "lissajous",
-
-      v: "test",
-
       m: "mouse",
       g: "gamepad",
       b: "breathe",

@@ -17,7 +17,7 @@
 
 typedef enum COMMAND {
   CHANGE_CONTROL_METHOD = 0x57,
-  NEW_QUATERNION = 0x21,
+  NEW_POSITION = 0x21,
 } COMMAND;
 
 static inline void Wireless_Init(uint32_t SYS_CLOCK) {
