@@ -35,7 +35,7 @@ void Maestro_Init(uint32_t SYS_CLOCK) {
  * @param angle
  */
 inline void Maestro_SetAngle(uint8_t channel, float angle) {
-  uint16_t pulseWidth = 0;
+  uint16_t target = 0;
   uint8_t  cmd[4] = {0};
 
   // Keep in bounds
@@ -43,21 +43,21 @@ inline void Maestro_SetAngle(uint8_t channel, float angle) {
 
 #if PROTOCOL == PROTOCOL__COMPACT
   // Get pulse width from zero position, in us converted to quarter-us
-  pulseWidth = (NEUTRAL_PULSE_POS + (angle * K)) * 4;
+  target = (NEUTRAL_PULSE_POS + (angle * K)) * 4;
 
   cmd[0] = CMD__SET_TARGET;
   cmd[1] = channel;                    // Set channel
-  cmd[2] = pulseWidth & 0x7F;          // lower 7 bits of quarter-us
-  cmd[3] = (pulseWidth & 0x7F00) >> 7; // upper 7 bits of quarter-us
+  cmd[2] = target & 0x7F;          // lower 7 bits of quarter-us
+  cmd[3] = (target & 0x7F00) >> 7; // upper 7 bits of quarter-us
 
   UART4_Transmit(cmd, 4); // send data
 #elif PROTOCOL == PROTOCOL__MINI_SSC
   angle += FULL_ANGLE;
-  pulseWidth = (uint8_t)(254.0f * (angle / (FULL_ANGLE * 2)));
+  target = (uint8_t)(254.0f * (angle / (FULL_ANGLE * 2)));
 
   cmd[0] = CMD__SET_TARGET_MINI_SSC;
   cmd[1] = channel + MINI_SSC__OFFSET; // Set channel
-  cmd[2] = (uint8_t)pulseWidth;        // Set target from 0 to 254
+  cmd[2] = (uint8_t)target;        // Set target from 0 to 254
 
   UART4_Transmit(cmd, 3); // send data
 #endif
