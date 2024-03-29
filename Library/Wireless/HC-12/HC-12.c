@@ -27,7 +27,10 @@
 #define VCC_PCTL_M (unsigned)(GPIO_PCTL_PE2_M)
 #define VCC_ADDR   (*((volatile uint32_t *)(PORTE_BASE | (VCC_BIT << 2))))
 
-typedef enum { TRANSMISSION_MODE = 0x4B, COMMAND_MODE = 0xEA } MODE;
+typedef enum MODE {
+  TRANSMISSION_MODE = 0x4B,
+  COMMAND_MODE = 0xEA,
+} MODE;
 
 static void HC12_SetMode(MODE NewMode);
 static bool HC12_SendCommand(char *FORMAT, char *RESPONSE_FORMAT, ...);
@@ -48,7 +51,6 @@ void UART5_Handler(void);
  */
 void UART5_Handler(void) {
   uint8_t SYN = 0;
-  uint8_t dataLength = 0;
   bool    success = false;
 
   UART5_ICR_R |= UART_ICR_RXIC | UART_ICR_RTIC;
@@ -64,7 +66,7 @@ void UART5_Handler(void) {
   if (RX_Data_Buffer[0] > MAX_MESSAGE_SIZE) // Ensure it's within expected range
     RX_Data_Buffer[0] = MAX_MESSAGE_SIZE;
 
-  success = UART5_Receive(RX_Data_Buffer + 1, dataLength); // Read data
+  success = UART5_Receive(RX_Data_Buffer + 1, RX_Data_Buffer[0]); // Read data
   if (!success)
     return;
 
@@ -112,12 +114,14 @@ static void HC12_SetMode(MODE NewMode) {
   if (CURRENT_MODE == NewMode)
     return; // Ignore repeated disables of the device
 
-  VCC_ADDR = VCC_BIT; // Drive VCC pin HIGH to turn off device
-
+  VCC_ADDR = VCC_BIT;                                         // Drive VCC pin HIGH to turn off device
   SET_ADDR = (NewMode == TRANSMISSION_MODE) ? SET_BIT : 0x00; // Drive SET pin HIGH for mode
-  SysTick_Wait10ms(35);                                       // Wait for 200ms to enter Transmission Mode or 40ms to enter AT command mode
 
-  VCC_ADDR = 0; // Drive VCC pin LOW to turn device on with mode
+  SysTick_Wait10ms(35); // Wait for 200ms to enter Transmission Mode or 40ms to enter AT command mode
+
+  VCC_ADDR = 0x00;      // Drive VCC pin LOW to turn device on with mode
+  SysTick_Wait10ms(10); // Wait at least 80ms to enter Transmission Mode or 40ms to enter AT command mode
+
   CURRENT_MODE = NewMode;
 }
 
@@ -138,7 +142,6 @@ void HC12_Init(void) {
   GPIO_PORTE_AMSEL_R &= ~(SET_BIT | VCC_BIT);      // Disable Analog Mode
   GPIO_PORTE_AFSEL_R &= ~(SET_BIT | VCC_BIT);      // Disable Alternate functions
   GPIO_PORTE_PCTL_R &= ~(SET_PCTL_M | VCC_PCTL_M); // Clear Peripheral functions
-  GPIO_PORTE_DR8R_R |= VCC_BIT;                    // Use 8mA drive for VCC pin
 
   HC12_SetMode(TRANSMISSION_MODE);
 }
