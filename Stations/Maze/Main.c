@@ -33,15 +33,16 @@ static volatile MAZE_CONTROL_METHOD CTL_METHOD = DEFAULT_CTL_METHOD;
 
 /**
  * @brief
+ * @param dataLength
  * @param buffer
  */
-void Maze_ChangeControlMethod(uint8_t *buffer) {
+void Maze_ChangeControlMethod(uint8_t dataLength, uint8_t *buffer) {
   uint8_t data = 0x00;
 
-  if (buffer[0] != 1)
+  if (dataLength != 0x01)
     return;
 
-  memcpy(&data, buffer + DATA_OFFSET, 1);
+  memcpy(&data, buffer, 1);
   // Update Screen
 
   if (data == CTL_METHOD)
@@ -49,25 +50,25 @@ void Maze_ChangeControlMethod(uint8_t *buffer) {
 
   CTL_METHOD = data; // Set new method
 
-  if (CTL_METHOD == JOYSTICK_CTL_METHOD) {
+  if (CTL_METHOD == JOYSTICK_CTL_METHOD)
     Joystick_Enable();
-  } else {
+  else
     Joystick_Disable();
-  }
 
   // Reset Game and Servo Positions
 }
 
 /**
  * @brief
+ * @param dataLength
  * @param buffer
  */
-void Maze_ReadNewPosition(uint8_t *buffer) {
+void Maze_ReadNewPosition(uint8_t dataLength, uint8_t *buffer) {
   // Verify length matches expected
-  if (buffer[0] != POSITION_BYTE_SIZE)
+  if (dataLength != POSITION_BYTE_SIZE)
     return;
 
-  memcpy(&position, buffer + DATA_OFFSET, POSITION_BYTE_SIZE);
+  memcpy(&position, buffer, POSITION_BYTE_SIZE);
   position.isNew = true;
 
   Maze_MoveToPosition();
@@ -95,12 +96,15 @@ void Maze_MoveToPosition(void) {
 }
 
 int main(void) {
+  COMMAND cmd = 0x00;
+  uint8_t dataLength = 0x00;
+
   PLL_Init();
   FPULazyStackingEnable(); // Enable Floating Point
 
   DisableInterrupts(); // Disable interrupts until after config
 
-  Wireless_Init(SYS_CLOCK);            // Initialize Wireless
+  Wireless_Init(SYS_CLOCK, true);      // Initialize Wireless
   Maestro_Init(SYS_CLOCK);             // Initialize Maestro Controller
   StewartPlatform_Init();              // Initialize stewart platform
   Joystick_Init(SYS_CLOCK, &position); // Initialize Joystick
@@ -123,12 +127,15 @@ int main(void) {
 
     DisableInterrupts();
 
-    switch (RX_Data_Buffer[1]) {
+    cmd = RX_Data_Buffer[0];
+    dataLength = RX_Data_Buffer[1];
+
+    switch (cmd) {
       case CHANGE_CONTROL_METHOD:
-        Maze_ChangeControlMethod(RX_Data_Buffer);
+        Maze_ChangeControlMethod(dataLength, RX_Data_Buffer + DATA_OFFSET);
         break;
       case NEW_POSITION:
-        Maze_ReadNewPosition(RX_Data_Buffer);
+        Maze_ReadNewPosition(dataLength, RX_Data_Buffer + DATA_OFFSET);
         break;
     }
 

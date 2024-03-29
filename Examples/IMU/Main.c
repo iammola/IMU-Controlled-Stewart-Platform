@@ -1,12 +1,12 @@
 /**
  * @file Main.c
  * @author Ademola Adedeji (a.mola.dev@gmail.com)
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2024-02-01
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 #include <stdint.h>
 #include <stdio.h>
@@ -46,7 +46,7 @@ int main(void) {
     quat.element.y = Q.y;
     quat.element.z = Q.z;
     euler = FusionQuaternionToEuler(quat);
-    snprintf(text, CLI_TXT_BUF, "%0.6f %0.6f %0.6f", euler.angle.roll, euler.angle.pitch, euler.angle.yaw);
+    snprintf(text, CLI_TXT_BUF, "%0.6f %0.6f %0.6f", euler.angle.roll - 100.88f, euler.angle.pitch - 57.9f, euler.angle.yaw);
     // AdaFruit_3D_Model_Viewer
     // snrintf(text, CLI_TXT_BUF, "Quaternion: %0.4f,%0.4f,%0.4f,%0.4f", Q.w, Q.x, Q.y, Q.z);
     // Stewart Platform

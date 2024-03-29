@@ -100,14 +100,11 @@
           connectionState.innerText = "Disconnected";
 
           cancelAnimationFrame(animationId);
+          closePort().catch();
         });
 
         connectToMCU.addEventListener("click", async () => {
-          if (writer != null && serialPort != null) {
-            connectToMCU.innerText = "Connect to MCU";
-            closePort();
-            return;
-          }
+          if (writer != null && serialPort != null) return closePort();
 
           await navigator.serial.requestPort();
           [serialPort] = await navigator.serial.getPorts();
@@ -127,6 +124,7 @@
 
         writer = null;
         serialPort = null;
+        connectToMCU.innerText = "Connect to MCU";
       }
 
       function addMissingRow(name) {

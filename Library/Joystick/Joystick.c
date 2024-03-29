@@ -18,13 +18,14 @@
 #include "Joystick.h"
 
 static volatile Position *__position;
-static volatile float     angle = 0.0f;
-static volatile float     axes[4] = {0};
-static volatile uint8_t   data[16] = {0};
 
 void UART0_Handler(void) {
+  float   angle = 0.0f;
+  float   axes[4] = {0};
+  uint8_t data[16] = {0};
+
   uint8_t idx = 0;
-  uint8_t match = UART0_DR_R; // Get sync word
+  uint8_t match = (uint8_t)UART0_DR_R; // Get sync word
 
   UART0_ICR_R = UART_ICR_RXIC; // Clear interrupt
 

@@ -28,4 +28,4 @@ void UART4_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8
 
 void UART4_Transmit(uint8_t *data, uint32_t length);
 
-bool UART4_Receive(uint8_t *data, uint32_t length);
+void UART4_Receive(uint8_t *data, uint32_t length);

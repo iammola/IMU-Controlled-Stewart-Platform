@@ -173,7 +173,7 @@ void UART4_Transmit(uint8_t *data, uint32_t byteCount) {
   } while (byteIndex < byteCount);
 }
 
-bool UART4_Receive(uint8_t *data, uint32_t length) {
+void UART4_Receive(uint8_t *data, uint32_t length) {
   while (length > 0) {
     while (UART4_FR_R & UART_FR_RXFE) { // Wait for Receive FIFO to have data
     }
@@ -183,6 +183,4 @@ bool UART4_Receive(uint8_t *data, uint32_t length) {
     if (--length > 0) // Increment pointer if there's still data to write
       data++;
   }
-
-  return true;
 }

@@ -47,8 +47,9 @@ void HC12_Init(void);
  * @param SYS_CLOCK System clock speed
  * @param baud Desired baud rate for communication, changes the Over-the-Air baud rate
  * @param powerLevel Desired power level for transmission
+ * @param enableRX Enable RX FIFO
  */
-void HC12_Config(uint32_t SYS_CLOCK, BAUD_RATE baud, TX_POWER powerLevel);
+void HC12_Config(uint32_t SYS_CLOCK, BAUD_RATE baud, TX_POWER powerLevel, bool enableRX);
 
 /**
  * @brief Used to send data at the configured baud rate through the air

@@ -41,7 +41,7 @@ volatile bool HasNewData = false;
 uint8_t RX_Data_Buffer[MAX_MESSAGE_SIZE] = {0};
 uint8_t TX_Data_Buffer[MAX_MESSAGE_SIZE] = {0};
 
-static const uint8_t INTERRUPT_PRIORITY = 5;
+static const uint8_t INTERRUPT_PRIORITY = 1;
 
 void UART5_Handler(void);
 
@@ -51,24 +51,25 @@ void UART5_Handler(void);
  */
 void UART5_Handler(void) {
   uint8_t SYN = 0;
-  bool    success = false;
+  uint8_t dataLength = 0;
 
-  UART5_ICR_R |= UART_ICR_RXIC | UART_ICR_RTIC;
+  UART5_ICR_R |= UART_ICR_RXIC;
 
-  success = UART5_Receive(&SYN, 1);
-  if (!success || SYN != SYNC_WORD) // Ensure sync word matches to assume valid data
+  do {
+    UART5_Receive(&SYN, 1);
+    // Ensure sync word matches to assume valid data
+    // Check full FIFO for start
+  } while ((SYN != SYNC_WORD) && !(UART5_FR_R & UART_FR_RXFE));
+
+  if (SYN != SYNC_WORD)
     return;
 
-  success = UART5_Receive(RX_Data_Buffer, 1); // Get amount of bytes sent
-  if (!success)
-    return;
+  UART5_Receive(&dataLength, 1); // Get amount of bytes sent
 
-  if (RX_Data_Buffer[0] > MAX_MESSAGE_SIZE) // Ensure it's within expected range
-    RX_Data_Buffer[0] = MAX_MESSAGE_SIZE;
+  if (dataLength > MAX_MESSAGE_SIZE) // Ensure it's within expected range
+    dataLength = MAX_MESSAGE_SIZE;
 
-  success = UART5_Receive(RX_Data_Buffer + 1, RX_Data_Buffer[0]); // Read data
-  if (!success)
-    return;
+  UART5_Receive(RX_Data_Buffer, dataLength); // Read data
 
   HasNewData = true; // Toggle to alert for new data
 }
@@ -153,8 +154,9 @@ void HC12_Init(void) {
  * @param SYS_CLOCK System clock speed
  * @param baud Desired baud rate for communication, changes the Over-the-Air baud rate
  * @param powerLevel Desired power level for transmission
+ * @param enableRX Enable RX FIFO
  */
-void HC12_Config(uint32_t SYS_CLOCK, BAUD_RATE baud, TX_POWER powerLevel) {
+void HC12_Config(uint32_t SYS_CLOCK, BAUD_RATE baud, TX_POWER powerLevel, bool enableRX) {
   HC12_SetMode(COMMAND_MODE); // Enter Command Mode
 
   UART5_Init(SYS_CLOCK, 9600, WORD_8_BIT, NO_PARITY, ONE_STOP_BIT); // Starts at Default config 9600 bps, 8-N-1 control
@@ -173,8 +175,9 @@ void HC12_Config(uint32_t SYS_CLOCK, BAUD_RATE baud, TX_POWER powerLevel) {
   HC12_SetMode(TRANSMISSION_MODE); // Exit Command Mode
 
   UART5_Init(SYS_CLOCK, baud, WORD_8_BIT, NO_PARITY, ONE_STOP_BIT); // Use new Baud-Rate
-  UART5_TimeoutInterrupt(INTERRUPT_PRIORITY);
-  UART5_FIFOInterrupt(RX_FIFO_1_8, INTERRUPT_PRIORITY); // Use 1/8 full for 2 bytes (metadata) out of 16
+  if (enableRX) {
+    UART5_FIFOInterrupt(RX_FIFO_1_8, INTERRUPT_PRIORITY); // Use 1/8 full for 2 bytes (metadata) out of 16
+  }
 }
 
 /**

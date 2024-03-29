@@ -26,16 +26,16 @@ void WaitForInterrupt(void);
 void EnableInterrupts(void);
 void DisableInterrupts(void);
 
-volatile bool                HasNewQuat = false;
-volatile MAZE_CONTROL_METHOD CTL_METHOD = DEFAULT_CTL_METHOD;
+static volatile MAZE_CONTROL_METHOD CTL_METHOD = DEFAULT_CTL_METHOD;
 
 int main(void) {
   Position position = {0};
+  uint8_t  positionInBytes[POSITION_BYTE_SIZE] = {0};
 
   PLL_Init();
   FPULazyStackingEnable(); // Enable Floating Point
 
-  Wireless_Init(SYS_CLOCK);
+  Wireless_Init(SYS_CLOCK, false);
   IMU_Init(SYS_CLOCK, &position);
 
   switch (CTL_METHOD) {
@@ -53,10 +53,8 @@ int main(void) {
     if (!position.isNew)
       continue;
 
-    TX_Data_Buffer[0] = NEW_POSITION;
-    memcpy(TX_Data_Buffer + 1, &position, POSITION_BYTE_SIZE);
-
-    HC12_SendData(TX_Data_Buffer, POSITION_BYTE_SIZE + 1);
+    memcpy(positionInBytes, &position, POSITION_BYTE_SIZE);
+    Wireless_Transmit(NEW_POSITION, positionInBytes, POSITION_BYTE_SIZE);
 
     position.isNew = false;
   }

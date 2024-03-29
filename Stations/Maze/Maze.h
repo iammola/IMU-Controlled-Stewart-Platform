@@ -14,16 +14,18 @@
 #include "STATIONS.h"
 
 /**
- * @brief
- * @param buffer
+ * @brief 
+ * @param dataLength 
+ * @param buffer 
  */
-void Maze_ChangeControlMethod(uint8_t *buffer);
+void Maze_ChangeControlMethod(uint8_t dataLength, uint8_t *buffer);
 
 /**
- * @brief
- * @param buffer
+ * @brief 
+ * @param dataLength 
+ * @param buffer 
  */
-void Maze_ReadNewPosition(uint8_t *buffer);
+void Maze_ReadNewPosition(uint8_t dataLength, uint8_t *buffer);
 
 /**
  * @brief

@@ -59,26 +59,34 @@ void GPIOF_Handler(void) {
 }
 
 int main(void) {
+  uint8_t cmd, dataLength;
+
   SysTick_Init(); // Initialize SysTick
   PLL_Init();     // Initialize PLL
   PortF_Init();   // Initialize Port F
 
-  Wireless_Init(SYS_CLOCK);
+  Wireless_Init(SYS_CLOCK, true);
 
   while (1) {
     // Wait for new data to be confirmed
     if (HasNewData) {
+      cmd = RX_Data_Buffer[0];
+      if (cmd != NEW_POSITION)
+        continue;
+
       // Require the length bit to be 1. Just for which color to turn on
-      if (RX_Data_Buffer[0] == 0x01) {
-        GPIO_PORTF_DATA_R = LED_BITS & (1 << RX_Data_Buffer[1]); // Turn RED on, then BLUE, then GREEN, then OFF.
-      }
+      dataLength = RX_Data_Buffer[1];
+      if (dataLength != 0x01)
+        continue;
+
+      GPIO_PORTF_DATA_R = LED_BITS & (1 << RX_Data_Buffer[2]); // Turn RED on, then BLUE, then GREEN, then OFF.
 
       HasNewData = false; // Clear data flag
     }
 
     if (SendData) {
-      peerLEDIdx = (peerLEDIdx + 1) & 3; // Update and keep index in bounds
-      Wireless_Transmit(&peerLEDIdx, 1);     // Transmit index
+      peerLEDIdx = (peerLEDIdx + 1) & 3;               // Update and keep index in bounds
+      Wireless_Transmit(NEW_POSITION, &peerLEDIdx, 1); // Transmit index
 
       SysTick_Wait10ms(200); // Wait 2s
     }
