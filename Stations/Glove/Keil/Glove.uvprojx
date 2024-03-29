@@ -314,7 +314,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>1</Optim>
+            <Optim>2</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -400,24 +400,49 @@
               <FilePath>..\..\..\Library\PLL\PLL.c</FilePath>
             </File>
             <File>
-              <FileName>HC-12.c</FileName>
+              <FileName>SysTick.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\Library\HC-12\HC-12.c</FilePath>
+              <FilePath>..\..\..\Library\SysTick\SysTick.c</FilePath>
             </File>
             <File>
-              <FileName>Joystick.c</FileName>
+              <FileName>HC-12.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\Library\Joystick\Joystick.c</FilePath>
+              <FilePath>..\..\..\Library\Wireless\HC-12\HC-12.c</FilePath>
+            </File>
+            <File>
+              <FileName>IMU.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Library\IMU\IMU.c</FilePath>
+            </File>
+            <File>
+              <FileName>ICM-20948.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Library\IMU\ICM-20948\ICM-20948.c</FilePath>
+            </File>
+            <File>
+              <FileName>FusionAhrs.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Library\IMU\ICM-20948\Fusion\FusionAhrs.c</FilePath>
+            </File>
+            <File>
+              <FileName>FusionCompass.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Library\IMU\ICM-20948\Fusion\FusionCompass.c</FilePath>
+            </File>
+            <File>
+              <FileName>FusionOffset.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Library\IMU\ICM-20948\Fusion\FusionOffset.c</FilePath>
+            </File>
+            <File>
+              <FileName>SSI2.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Library\SSI\SSI2.c</FilePath>
             </File>
             <File>
               <FileName>UART5.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\Library\UART\UART5.c</FilePath>
-            </File>
-            <File>
-              <FileName>SysTick.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\Library\SysTick\SysTick.c</FilePath>
             </File>
           </Files>
         </Group>
