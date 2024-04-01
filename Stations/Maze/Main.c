@@ -17,7 +17,9 @@
 
 #include "Joystick/Joystick.h"
 #include "Pololu Maestro/Maestro.h"
+#include "RA8875/RA8875.h"
 #include "StewartPlatform/StewartPlatform.h"
+#include "Timer/Ping/Ping.h"
 #include "Wireless/Wireless.h"
 
 #include "Maze.h"
@@ -29,6 +31,7 @@ void EnableInterrupts(void);
 void DisableInterrupts(void);
 
 static volatile Position            position = {0};
+static volatile bool                connectionState = 0xFF;
 static volatile MAZE_CONTROL_METHOD CTL_METHOD = DEFAULT_CTL_METHOD;
 
 /**
@@ -93,6 +96,25 @@ void Maze_MoveToPosition(void) {
   Maestro_WaitForIdle();
 }
 
+inline void Maze_UpdateConnectedState(bool connected) {
+  if (connectionState == connected)
+    return;
+
+  connectionState = connected;
+
+  RA8875_graphicsMode();
+  RA8875_fillRect(10, 10, 50, 10, RA8875_BLACK);
+
+  RA8875_textMode();
+  RA8875_textSetCursor(10, 10);
+  RA8875_textTransparent(connected ? RA8875_GREEN : RA8875_RED);
+  RA8875_textWrite(connected ? "Connected" : "Disconnected", 0);
+}
+
+void Ping_Handler(void) {
+  Maze_UpdateConnectedState(false);
+}
+
 int main(void) {
   COMMAND cmd = 0x00;
   uint8_t dataLength = 0x00;
@@ -102,13 +124,20 @@ int main(void) {
 
   DisableInterrupts(); // Disable interrupts until after config
 
-  Wireless_Init(SYS_CLOCK, true);      // Initialize Wireless
-  Maestro_Init(SYS_CLOCK);             // Initialize Maestro Controller
-  StewartPlatform_Init();              // Initialize stewart platform
-  Joystick_Init(SYS_CLOCK, &position); // Initialize Joystick
+  Ping_TimerInit(SYS_CLOCK);
+  Wireless_Init(SYS_CLOCK, true);          // Initialize Wireless
+  RA8875_begin(SYS_CLOCK, RA8875_800x480); // Init screen
+  Maestro_Init(SYS_CLOCK);                 // Initialize Maestro Controller
+  StewartPlatform_Init();                  // Initialize stewart platform
 
+  Joystick_Init(SYS_CLOCK, &position);   // Initialize Joystick
   if (CTL_METHOD == JOYSTICK_CTL_METHOD) // Enable Joystick Handler if default
     Joystick_Enable();
+
+  RA8875_textMode();
+  RA8875_textSetCursor(400, 10);
+  RA8875_textEnlarge(2);
+  RA8875_textWrite("Initialized", 0);
 
   EnableInterrupts(); // Enable all interrupts
 
@@ -134,6 +163,10 @@ int main(void) {
         break;
       case NEW_POSITION:
         Maze_ReadNewPosition(dataLength, RX_Data_Buffer + DATA_OFFSET);
+        break;
+      case PING: // Ping received, reset timeout
+        Ping_TimerReset();
+        Maze_UpdateConnectedState(true);
         break;
       default:
         break;

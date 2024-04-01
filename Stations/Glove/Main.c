@@ -15,6 +15,7 @@
 #include "PLL/PLL.h"
 
 #include "IMU/IMU.h"
+#include "Timer/Ping/Ping.h"
 #include "Wireless/Wireless.h"
 
 #include "Glove.h"
@@ -50,6 +51,12 @@ void GPIOD_Handler(void) {
   GPIO_PORTD_ICR_R |= BTN_BIT; // clear interrupt
 
   Wireless_Transmit(CHANGE_CONTROL_METHOD, &byte, CHANGE_CONTROL_METHOD_LENGTH);
+}
+
+void Ping_Handler(void) {
+  DisableInterrupts();
+  Wireless_Transmit(PING, 0, 0); // Send ping
+  EnableInterrupts();
 }
 
 /**
@@ -106,20 +113,21 @@ int main(void) {
   uint8_t          dataLength = 0x00;
   const Quaternion positionOffset = QuaternionInverse(0.628237f, 0.014747f, -0.585671f, -0.512185f);
 
+  DisableInterrupts();
+
   PLL_Init();
   FPULazyStackingEnable(); // Enable Floating Point
 
+  Ping_TimerInit(SYS_CLOCK);
   Wireless_Init(SYS_CLOCK, false);
   IMU_Init(SYS_CLOCK, &position);
 
-  switch (CTL_METHOD) {
-    case IMU_CTL_METHOD:
-      IMU_Enable();
-      break;
-    default:
-      IMU_Disable();
-      break;
-  }
+  if (CTL_METHOD == IMU_CTL_METHOD)
+    IMU_Enable();
+
+  Button_Init();
+
+  EnableInterrupts();
 
   while (1) {
     WaitForInterrupt();
@@ -145,6 +153,7 @@ int main(void) {
         default:
           break;
       }
+
       HasNewData = false;
     }
   }
