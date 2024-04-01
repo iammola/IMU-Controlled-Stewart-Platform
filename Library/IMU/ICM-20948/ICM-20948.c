@@ -41,6 +41,12 @@
 #define READ(addr)        (uint16_t)(0x80FF | (addr << 8))
 #define WRITE(addr, data) (uint16_t)(0x7FFF & ((addr << 8) | data))
 
+#define SSI_SPEED 1e6
+
+#define INT_BIT      (unsigned)(1 << 3) // (PB3) Interrupt Pin
+#define INT_PCTL_M   (unsigned)GPIO_PCTL_PB3_M
+#define INT_PRIORITY 1
+
 static USER_BANK LastUserBank = 0xFF;
 
 void GPIOB_Handler(void);
@@ -50,8 +56,6 @@ static void ICM20948_ChangeUserBank(REG_ADDRESS REGISTER);
 static bool ICM20948_GetMagReadings(FusionVector *dest);
 static void ICM20948_GetRawGyroReadings(FusionVector *dest);
 static void ICM20948_GetRawAccelReadings(FusionVector *dest);
-
-#define SSI_SPEED 1e6
 
 static FusionAhrs   ahrs = {0};
 static FusionOffset offset = {0};

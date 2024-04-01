@@ -45,8 +45,6 @@ typedef struct Position {
 
 #define clamp(a, min, max) ((a) < min ? min : ((a) > max ? max : a))
 
-#define POSITION_BYTE_SIZE 28 // (4 bytes per flaot * (4 quaternion floats) + (3 translation floats))
-
 /**
  * @brief Normalizes the quaternion to have |Q| = 1 as long as the norm is not zero
  * @link https://github.com/rawify/Quaternion.js/blob/c3834673b502e64e1866dbbf13568c0be93e52cc/quaternion.js#L385-L405

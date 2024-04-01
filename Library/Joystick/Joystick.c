@@ -17,6 +17,10 @@
 #include "CLI/CLI.h"
 #include "Joystick.h"
 
+#define JOYSTICK_INT_PRIORITY 2
+
+#define PAN_RANGE 30.0f
+
 static volatile Position *__position;
 
 void UART0_Handler(void) {
@@ -67,8 +71,8 @@ void Joystick_Enable(void) {
   // Set RX FIFO level
   UART0_IFLS_R = (UART0_IFLS_R & (unsigned)~UART_IFLS_RX_M) | UART_IFLS_RX1_8;
 
-  NVIC_EN0_R |= NVIC_EN0_INT5;                                                         // Enable Interrupt 5 for UART0
-  NVIC_PRI1_R = (NVIC_PRI1_R & (unsigned)~NVIC_PRI1_INT5_M) | (6 << NVIC_PRI1_INT5_S); // Set Priority
+  NVIC_EN0_R |= NVIC_EN0_INT5;                                                                             // Enable Interrupt 5 for UART0
+  NVIC_PRI1_R = (NVIC_PRI1_R & (unsigned)~NVIC_PRI1_INT5_M) | (JOYSTICK_INT_PRIORITY << NVIC_PRI1_INT5_S); // Set Priority
 
   CLI_Enable(); // Enable UART Module
 }

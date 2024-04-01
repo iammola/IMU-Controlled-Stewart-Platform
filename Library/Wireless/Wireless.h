@@ -9,16 +9,20 @@
  *
  */
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-#include <stdbool.h>
 
 #include "HC-12/HC-12.h"
 
 #define DATA_OFFSET 2
 
+#define CHANGE_CONTROL_METHOD_LENGTH 1
+#define NEW_POSITION_LENGTH          28 // (4 bytes per flaot * (4 quaternion floats) + (3 translation floats))
+
 typedef enum COMMAND {
   CHANGE_CONTROL_METHOD = 0x57,
+  CHANGE_CONTROL_METHOD_ACK = 0x58,
   NEW_POSITION = 0x21,
 } COMMAND;
 
@@ -34,4 +38,3 @@ inline void Wireless_Transmit(COMMAND cmd, uint8_t *data, uint8_t length) {
 
   HC12_SendData(TX_Data_Buffer, length + 2);
 }
-

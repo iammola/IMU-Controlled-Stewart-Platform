@@ -37,25 +37,23 @@ static volatile MAZE_CONTROL_METHOD CTL_METHOD = DEFAULT_CTL_METHOD;
  * @param buffer
  */
 void Maze_ChangeControlMethod(uint8_t dataLength, uint8_t *buffer) {
-  uint8_t data = 0x00;
-
-  if (dataLength != 0x01)
+  // Verify data length matches expected, and method is not already selected
+  if (dataLength != CHANGE_CONTROL_METHOD_LENGTH || buffer[0] == CTL_METHOD)
     return;
 
-  memcpy(&data, buffer, 1);
-  // Update Screen
+  CTL_METHOD = buffer[0]; // Set new method
 
-  if (data == CTL_METHOD)
-    return;
+  switch (CTL_METHOD) {
+    case JOYSTICK_CTL_METHOD:
+      Joystick_Enable();
+      break;
+    default:
+      Joystick_Disable();
+      break;
+  }
 
-  CTL_METHOD = data; // Set new method
-
-  if (CTL_METHOD == JOYSTICK_CTL_METHOD)
-    Joystick_Enable();
-  else
-    Joystick_Disable();
-
-  // Reset Game and Servo Positions
+  // Send ACK
+  Wireless_Transmit(CHANGE_CONTROL_METHOD_ACK, (uint8_t *)&CTL_METHOD, CHANGE_CONTROL_METHOD_LENGTH);
 }
 
 /**
@@ -65,10 +63,10 @@ void Maze_ChangeControlMethod(uint8_t dataLength, uint8_t *buffer) {
  */
 void Maze_ReadNewPosition(uint8_t dataLength, uint8_t *buffer) {
   // Verify length matches expected
-  if (dataLength != POSITION_BYTE_SIZE)
+  if (dataLength != NEW_POSITION_LENGTH)
     return;
 
-  memcpy(&position, buffer, POSITION_BYTE_SIZE);
+  memcpy(&position, buffer, NEW_POSITION_LENGTH);
   position.isNew = true;
 
   Maze_MoveToPosition();
@@ -136,6 +134,8 @@ int main(void) {
         break;
       case NEW_POSITION:
         Maze_ReadNewPosition(dataLength, RX_Data_Buffer + DATA_OFFSET);
+        break;
+      default:
         break;
     }
 

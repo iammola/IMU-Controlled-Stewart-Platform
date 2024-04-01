@@ -16,10 +16,6 @@
 #include "Fusion/Fusion.h"
 #include "UTILS/UTILS.h"
 
-#define INT_BIT      (unsigned)(1 << 3) // (PB3) Interrupt Pin
-#define INT_PCTL_M   (unsigned)GPIO_PCTL_PB3_M
-#define INT_PRIORITY 1
-
 typedef enum USER_BANK_STRUCT {
   USER_BANK_0 = 0x00,
   USER_BANK_1 = 0x10,
