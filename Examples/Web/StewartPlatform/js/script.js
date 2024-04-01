@@ -1,5 +1,4 @@
 let platform;
-let quaternion = Quaternion.ONE;
 
 const images = document.getElementById("images");
 const canvas = document.getElementById("canvas");
@@ -146,42 +145,6 @@ addEventListener("DOMContentLoaded", () => {
   addEventListener("keydown", startAnimation);
   canvas.addEventListener("mousedown", startViewAngleChange);
 
-  addEventListener(
-    "dblclick",
-    async () => {
-      await navigator.serial.requestPort();
-      worker.postMessage({ type: "CONNECT", baudRate: 115200 });
-    },
-    { once: true }
-  );
-
-  if ("serial" in navigator) {
-    const notSupported = document.getElementById("notSupported");
-    notSupported.classList.add("hidden");
-  }
-
-  if (isWebGLAvailable()) {
-    const webGLnotSupported = document.getElementById("webGLnotSupported");
-    webGLnotSupported.classList.add("hidden");
-  }
-
-  worker = new Worker("./js/worker.js");
-  worker.addEventListener("message", async ({ data }) => {
-    const { type, ...body } = data;
-
-    switch (type) {
-      case "DATA_READ":
-        try {
-          quaternion = new Quaternion(body.value);
-        } catch (err) {
-          console.log(body.value);
-        }
-        break;
-      default:
-        break;
-    }
-  });
-
   function createSVGImage(id, root, d, box) {
     const xmlns = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(xmlns, "svg");
@@ -208,15 +171,3 @@ addEventListener("DOMContentLoaded", () => {
     createSVGImage(i, images, SVGS[i].path, SVGS[i].box);
   }
 });
-
-let isWebGLAvailable = function () {
-  try {
-    var canvas = document.createElement("canvas");
-    return !!(
-      window.WebGLRenderingContext &&
-      (canvas.getContext("webgl") || canvas.getContext("experimental-webgl"))
-    );
-  } catch (e) {
-    return false;
-  }
-};

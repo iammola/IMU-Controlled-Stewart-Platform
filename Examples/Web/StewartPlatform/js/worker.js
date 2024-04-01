@@ -62,6 +62,7 @@ async function disconnect() {
   }
 
   await port.close();
+  self.postMessage({ type: "DISCONNECTED" });
 }
 
 /**

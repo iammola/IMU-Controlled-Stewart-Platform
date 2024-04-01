@@ -848,6 +848,61 @@
           },
         };
       })(),
+      serial: (function () {
+        let worker;
+        let serialActive;
+        const notSupported = document.getElementById("notSupported");
+
+        if (!("serial" in navigator)) {
+          notSupported.classList.remove("hidden");
+          return;
+        } else notSupported.classList.add("hidden");
+
+        navigator.serial.requestPort().then(() => {
+          worker = new Worker("./js/worker.js");
+
+          worker.addEventListener("message", async ({ data }) => {
+            const { type, ...body } = data;
+
+            switch (type) {
+              case "DATA_READ":
+                try {
+                  this.orientation = new Quaternion(body.value.slice(0, 3));
+                  this.translation = body.value.slice(4);
+                } catch (err) {
+                  console.log(body.value);
+                }
+                break;
+              case "CONNECTED":
+                serialActive = true;
+                break;
+              case "DISCONNECT":
+                serialActive = false;
+                notSupported.classList.add("hidden");
+                worker.terminate();
+              default:
+                break;
+            }
+          });
+
+          worker.postMessage({ type: "CONNECT", baudRate: 115200 });
+        });
+
+        return {
+          duration: 0,
+          pathVisible: false,
+          next: null,
+          start: function () {
+            this.orientation = Quaternion.ONE;
+            this.translation = [0, 0, 0];
+          },
+          fn: function () {
+            if (!serialActive) {
+              return;
+            }
+          },
+        };
+      })(),
     },
     map: {
       q: "square",
@@ -857,6 +912,7 @@
       t: "tilt",
       y: "lissajous",
       m: "mouse",
+      s: "serial",
       g: "gamepad",
       b: "breathe",
       h: "helical",
@@ -1217,7 +1273,10 @@
         p.pop();
 
         for (var i = 0; i < this.B.length; i++) {
-          if (i > +(document.getElementById("legsDrawn")?.value ?? this.B.length)) continue;
+          if (
+            i > +(document.getElementById("legsDrawn")?.value ?? this.B.length)
+          )
+            continue;
           // Base Joints
           p.push();
           p.translate(this.B[i][0], this.B[i][1], this.B[i][2]);
@@ -1342,7 +1401,7 @@
       }
     },
 
-    getServoAngles: function () {
+    getServoAngles: function (inDegrees = true) {
       var ret = [];
       for (var i = 0; i < this.B.length; i++) {
         ret[i] = Math.asin((this.H[i][2] - this.B[i][2]) / this.hornLength);
@@ -1356,7 +1415,8 @@
           ret[i] = null;
         }
       }
-      return ret;
+
+      return ret * (inDegrees ? 180 / Math.PI : 1);
     },
   };
 
