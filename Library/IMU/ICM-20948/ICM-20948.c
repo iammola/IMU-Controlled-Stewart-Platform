@@ -107,7 +107,7 @@ void GPIOB_Handler(void) {
   // Read sensor data
   ICM20948_GetRawGyroReadings(&rawGyroscope);
   ICM20948_GetRawAccelReadings(&rawAccelerometer);
-  // ICM20948_GetMagReadings(&rawMagnetometer);
+  ICM20948_GetMagReadings(&rawMagnetometer);
 
   if (lastTimestamp == 0)
     deltaTime = 0.0f; // Start of process
@@ -122,18 +122,15 @@ void GPIOB_Handler(void) {
   // Apply calibrations
   gyroscope = FusionCalibrationInertial(rawGyroscope, FUSION_IDENTITY_MATRIX, gyroscopeSensitivity, gyroscopeOffset);
   accelerometer = FusionCalibrationInertial(rawAccelerometer, FUSION_IDENTITY_MATRIX, accelerometerSensitivity, accelerometerOffset);
-  // magnetometer = FusionCalibrationMagnetic(rawMagnetometer, softIronMatrix, hardIronOffset);
-
-  gyroscope.axis.z = 0.0f;
-  accelerometer.axis.z = 0.0f;
+  magnetometer = FusionCalibrationMagnetic(rawMagnetometer, softIronMatrix, hardIronOffset);
 
   gyroscope = FusionOffsetUpdate(&offset, gyroscope); // Update gyroscope offset correction algorithm
 
-  FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, deltaTime); // Update gyroscope AHRS algorithm without magnetometer
-  // FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, deltaTime); // Update gyroscope AHRS algorithm
+  // FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, deltaTime); // Update gyroscope AHRS algorithm without magnetometer
+  FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, deltaTime); // Update gyroscope AHRS algorithm
 
   __position->quaternion.w = ahrs.quaternion.element.w;
-  __position->quaternion.x = ahrs.quaternion.element.x;
+  __position->quaternion.x = ahrs.quaternion.element.x; // Hard-fault here when building with -O0
   __position->quaternion.y = ahrs.quaternion.element.y;
   __position->quaternion.z = ahrs.quaternion.element.z;
   __position->translation.x = 0.0f;
@@ -184,8 +181,8 @@ static void ICM20948_GetRawAccelReadings(FusionVector *dest) {
   ICM20948_Read(ACCEL_XOUT_L_ADDR, &accelXL);
   ICM20948_Read(ACCEL_YOUT_H_ADDR, &accelYH);
   ICM20948_Read(ACCEL_YOUT_L_ADDR, &accelYL);
-  // ICM20948_Read(ACCEL_ZOUT_H_ADDR, &accelZH);
-  // ICM20948_Read(ACCEL_ZOUT_L_ADDR, &accelZL);
+  ICM20948_Read(ACCEL_ZOUT_H_ADDR, &accelZH);
+  ICM20948_Read(ACCEL_ZOUT_L_ADDR, &accelZL);
 
   dest->axis.x = (int16_t)((accelXH << 8) | accelXL) * -1;
   dest->axis.y = (int16_t)((accelYH << 8) | accelYL) * -1;
@@ -208,8 +205,8 @@ static void ICM20948_GetRawGyroReadings(FusionVector *dest) {
   ICM20948_Read(GYRO_XOUT_L_ADDR, &gyroXL);
   ICM20948_Read(GYRO_YOUT_H_ADDR, &gyroYH);
   ICM20948_Read(GYRO_YOUT_L_ADDR, &gyroYL);
-  // ICM20948_Read(GYRO_ZOUT_H_ADDR, &gyroZH);
-  // ICM20948_Read(GYRO_ZOUT_L_ADDR, &gyroZL);
+  ICM20948_Read(GYRO_ZOUT_H_ADDR, &gyroZH);
+  ICM20948_Read(GYRO_ZOUT_L_ADDR, &gyroZL);
 
   dest->axis.x = (int16_t)((gyroXH << 8) | gyroXL) * -1;
   dest->axis.y = (int16_t)((gyroYH << 8) | gyroYL) * -1;
@@ -273,7 +270,7 @@ void ICM20948_Init(uint32_t SYS_CLK, uint32_t SAMPLE_RATE, volatile Position *po
   ICM20948_Write(PWR_MGMT_1_ADDR, CLKSEL_AUTO | TEMP_DISABLE); // Disables Sleep, Low-Power Mode and Temp Sensor. Auto selects clk
   SysTick_WaitCustom(40, -3);                                  // Wait atleast 35ms after waking from sleep
 
-  ICM20948_Write(PWR_MGMT_2_ADDR, ACCEL_ENABLE(1, 1, 0) | GYRO_ENABLE(1, 1, 0)); // Enable the Accelerometer and Gyroscope without z-axis
+  ICM20948_Write(PWR_MGMT_2_ADDR, ACCEL_ENABLE(1, 1, 1) | GYRO_ENABLE(1, 1, 1)); // Enable the Accelerometer and Gyroscope without z-axis
   SysTick_WaitCustom(40, -3);                                                    // Wait atleast 35ms after enabling accel and gyro
 }
 

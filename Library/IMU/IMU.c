@@ -10,7 +10,7 @@ static uint16_t IMU_CalcSDR(uint32_t frequency, uint32_t desired);
  * @param position
  */
 void IMU_Init(uint32_t SYS_CLK, volatile Position *position) {
-  uint8_t whoAmI = 0; //, MAG_whoAmI = 0;
+  uint8_t whoAmI = 0, MAG_whoAmI = 0;
   uint8_t userCtrl = 0;
 
   ICM20948_Init(SYS_CLK, SAMPLE_RATE, position);
@@ -37,15 +37,15 @@ void IMU_Init(uint32_t SYS_CLK, volatile Position *position) {
   ICM20948_Read(USER_CTRL_ADDR, &userCtrl);
   ICM20948_Write(USER_CTRL_ADDR, (userCtrl | SPI_ENABLE) & ~(DMP_ENABLE | FIFO_ENABLE)); // Enable SPI
 
-  // ICM20948_Mag_Init(); // Enable I2C master for Magnetometer read
+  ICM20948_Mag_Init(); // Enable I2C master for Magnetometer read
 
   do {
     ICM20948_Read(WHO_AM_I_ADDR, &whoAmI); // Read IMU Identifier
   } while (whoAmI != 0xEA);
 
-  // do {
-  //   ICM20948_Mag_Read(MAG_WHO_AM_I, &MAG_whoAmI, 1); // Confirm communication success
-  // } while (MAG_whoAmI != 0x09);
+  do {
+    ICM20948_Mag_Read(MAG_WHO_AM_I, &MAG_whoAmI, 1); // Confirm communication success
+  } while (MAG_whoAmI != 0x09);
 
   // ICM20948_MagCalibration();       // Run Calibrations
   ICM20948_AccelGyroCalibration(); // Will be empty functions if undesired

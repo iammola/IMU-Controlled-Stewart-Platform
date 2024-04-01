@@ -28,9 +28,12 @@ void DisableInterrupts(void);
 
 static volatile MAZE_CONTROL_METHOD CTL_METHOD = DEFAULT_CTL_METHOD;
 
+static Position   position = {0};
+static Quaternion positionFromOffset = {0};
+static uint8_t    positionInBytes[POSITION_BYTE_SIZE] = {0};
+
 int main(void) {
-  Position position = {0};
-  uint8_t  positionInBytes[POSITION_BYTE_SIZE] = {0};
+  const Quaternion positionOffset = QuaternionInverse(0.628237f, 0.014747f, -0.585671f, -0.512185f);
 
   PLL_Init();
   FPULazyStackingEnable(); // Enable Floating Point
@@ -53,7 +56,10 @@ int main(void) {
     if (!position.isNew)
       continue;
 
-    memcpy(positionInBytes, &position, POSITION_BYTE_SIZE);
+    // Get the diff from the offset quaternion
+    positionFromOffset = QuaternionMultiply(position.quaternion, positionOffset);
+
+    memcpy(positionInBytes, &positionFromOffset, POSITION_BYTE_SIZE);
     Wireless_Transmit(NEW_POSITION, positionInBytes, POSITION_BYTE_SIZE);
 
     position.isNew = false;

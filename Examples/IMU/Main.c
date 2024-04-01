@@ -27,6 +27,11 @@ int main(void) {
 
   volatile Position position = {0};
 
+  // 0.582978 0.640293 0.336891 -0.370012 - Accel, Gyro no Z-axis
+  // 0.778757 0.489159 -0.332855 0.209075 - Accel, Gyro Z-axis
+  // 0.628237 0.014747 -0.585671 -0.512185 - Accel, Gyro, Mag
+  const Quaternion IMU_Quat_Offset = QuaternionInverse(0.628237f, 0.014747f, -0.585671f, -0.512185f);
+
   PLL_Init();              // Initialize the PLL
   FPULazyStackingEnable(); // Enable Floating Point
 
@@ -40,18 +45,23 @@ int main(void) {
       continue;
 
 #define Q position.quaternion
+#define T position.translation
+    Q = QuaternionMultiply(Q, IMU_Quat_Offset);
     // Serial Plot
-    quat.element.w = Q.w;
-    quat.element.x = Q.x;
-    quat.element.y = Q.y;
-    quat.element.z = Q.z;
-    euler = FusionQuaternionToEuler(quat);
-    snprintf(text, CLI_TXT_BUF, "%0.6f %0.6f %0.6f", euler.angle.roll - 100.88f, euler.angle.pitch - 57.9f, euler.angle.yaw);
+    // quat.element.w = Q.w;
+    // quat.element.x = Q.x;
+    // quat.element.y = Q.y;
+    // quat.element.z = Q.z;
+    // euler = FusionQuaternionToEuler(quat);
+    // snprintf(text, CLI_TXT_BUF, "%0.6f %0.6f %0.6f", euler.angle.roll, euler.angle.pitch, euler.angle.yaw);
+
     // AdaFruit_3D_Model_Viewer
-    // snrintf(text, CLI_TXT_BUF, "Quaternion: %0.4f,%0.4f,%0.4f,%0.4f", Q.w, Q.x, Q.y, Q.z);
+    // snprintf(text, CLI_TXT_BUF, "Quaternion: %0.6f,%0.6f,%0.6f,%0.6f", Q.w, Q.x, Q.y, Q.z);
+
     // Stewart Platform
-    // snprintf(text, CLI_TXT_BUF, "%0.6f %0.6f %0.6f %0.6f", Q.w, Q.x, Q.y, Q.z);
+    snprintf(text, CLI_TXT_BUF, "%0.6f %0.6f %0.6f %0.6f %0.6f %0.6f %0.6f", Q.w, Q.x, Q.y, Q.z, T.x, T.y, T.z);
 #undef Q
+#undef T
 
     CLI_Write(text);
     CLI_Write("\n");
