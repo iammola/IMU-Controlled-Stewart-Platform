@@ -444,6 +444,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\..\Library\UART\UART5.c</FilePath>
             </File>
+            <File>
+              <FileName>UTILS.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Library\UTILS\UTILS.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
