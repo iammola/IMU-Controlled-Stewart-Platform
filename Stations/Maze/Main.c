@@ -10,6 +10,7 @@
  */
 #include <math.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "FPU/fpu.h"
@@ -31,20 +32,11 @@ void EnableInterrupts(void);
 void DisableInterrupts(void);
 
 static volatile Position            position = {0};
-static volatile bool                connectionState = 0xFF;
-static volatile MAZE_CONTROL_METHOD CTL_METHOD = DEFAULT_CTL_METHOD;
+static volatile bool                connectionState;
+static volatile MAZE_CONTROL_METHOD CTL_METHOD;
 
-/**
- * @brief
- * @param dataLength
- * @param buffer
- */
-void Maze_ChangeControlMethod(uint8_t dataLength, uint8_t *buffer) {
-  // Verify data length matches expected, and method is not already selected
-  if (dataLength != CHANGE_CONTROL_METHOD_LENGTH || buffer[0] == CTL_METHOD)
-    return;
-
-  CTL_METHOD = buffer[0]; // Set new method
+void Maze_UpdateControlMethod(MAZE_CONTROL_METHOD newControl) {
+  CTL_METHOD = newControl; // Set new method
 
   switch (CTL_METHOD) {
     case JOYSTICK_CTL_METHOD:
@@ -55,24 +47,20 @@ void Maze_ChangeControlMethod(uint8_t dataLength, uint8_t *buffer) {
       break;
   }
 
-  // Send ACK
-  Wireless_Transmit(CHANGE_CONTROL_METHOD_ACK, (uint8_t *)&CTL_METHOD, CHANGE_CONTROL_METHOD_LENGTH);
-}
+  DisableInterrupts();
+  Wireless_Transmit(CHANGE_CONTROL_METHOD_ACK, (uint8_t *)&CTL_METHOD, CHANGE_CONTROL_METHOD_LENGTH); // Send ACK
+  EnableInterrupts();
 
-/**
- * @brief
- * @param dataLength
- * @param buffer
- */
-void Maze_ReadNewPosition(uint8_t dataLength, uint8_t *buffer) {
-  // Verify length matches expected
-  if (dataLength != NEW_POSITION_LENGTH)
-    return;
+  /* Clear section */
+  RA8875_graphicsMode();
+  RA8875_fillRect(CONTROL_METHOD_X, CONTROL_METHOD_Y, CONTROL_METHOD_WIDTH, CONTROL_METHOD_HEIGHT, RA8875_BLACK);
 
-  memcpy(&position, buffer, NEW_POSITION_LENGTH);
-  position.isNew = true;
-
-  Maze_MoveToPosition();
+  /* Print text */
+  RA8875_textMode();
+  RA8875_textSetCursor(CONTROL_METHOD_X, CONTROL_METHOD_Y);
+  RA8875_textEnlarge(0);
+  RA8875_textTransparent(RA8875_WHITE);
+  RA8875_textWrite(CTL_METHOD == JOYSTICK_CTL_METHOD ? "Control Method: Controller" : "Control Method: Glove", 0);
 }
 
 /**
@@ -96,19 +84,28 @@ void Maze_MoveToPosition(void) {
   Maestro_WaitForIdle();
 }
 
-inline void Maze_UpdateConnectedState(bool connected) {
+/**
+ * @brief
+ * @param connected
+ */
+void Maze_UpdateConnectedState(bool connected) {
   if (connectionState == connected)
     return;
 
-  connectionState = connected;
+  Ping_TimerReset();
 
+  /* Clear section */
   RA8875_graphicsMode();
-  RA8875_fillRect(10, 10, 50, 10, RA8875_BLACK);
+  RA8875_fillRect(CONNECTED_STATE_X, CONNECTED_STATE_Y, CONNECTED_STATE_WIDTH, CONNECTED_STATE_HEIGHT, RA8875_BLACK);
 
+  /* Print text */
   RA8875_textMode();
-  RA8875_textSetCursor(10, 10);
+  RA8875_textSetCursor(CONNECTED_STATE_X, CONNECTED_STATE_Y);
+  RA8875_textEnlarge(0);
   RA8875_textTransparent(connected ? RA8875_GREEN : RA8875_RED);
-  RA8875_textWrite(connected ? "Connected" : "Disconnected", 0);
+  RA8875_textWrite(connected ? "Connected to Glove" : "Disconnected from Glove", 0);
+
+  connectionState = connected;
 }
 
 void Ping_Handler(void) {
@@ -116,28 +113,30 @@ void Ping_Handler(void) {
 }
 
 int main(void) {
-  COMMAND cmd = 0x00;
-  uint8_t dataLength = 0x00;
+  uint8_t dataLength;
 
   PLL_Init();
   FPULazyStackingEnable(); // Enable Floating Point
 
   DisableInterrupts(); // Disable interrupts until after config
 
-  Ping_TimerInit(SYS_CLOCK);
+  Ping_TimerInit((uint32_t)(SYS_CLOCK * 3));
   Wireless_Init(SYS_CLOCK, true);          // Initialize Wireless
   RA8875_begin(SYS_CLOCK, RA8875_800x480); // Init screen
+  Joystick_Init(SYS_CLOCK, &position);     // Initialize Joystick
   Maestro_Init(SYS_CLOCK);                 // Initialize Maestro Controller
-  StewartPlatform_Init();                  // Initialize stewart platform
 
-  Joystick_Init(SYS_CLOCK, &position);   // Initialize Joystick
-  if (CTL_METHOD == JOYSTICK_CTL_METHOD) // Enable Joystick Handler if default
-    Joystick_Enable();
+  StewartPlatform_Init(); // Initialize stewart platform
 
   RA8875_textMode();
-  RA8875_textSetCursor(400, 10);
-  RA8875_textEnlarge(2);
+  RA8875_textSetCursor(230, 10);
+  RA8875_textEnlarge(1);
+  RA8875_textTransparent(RA8875_WHITE);
   RA8875_textWrite("Initialized", 0);
+  RA8875_textEnlarge(0);
+
+  Maze_UpdateControlMethod(DEFAULT_CTL_METHOD);
+  Maze_UpdateConnectedState(false);
 
   EnableInterrupts(); // Enable all interrupts
 
@@ -149,31 +148,31 @@ int main(void) {
       Maze_MoveToPosition();
 
     // Wait for new data to be confirmed
-    if (!HasNewData)
-      continue;
+    if (HasNewData) {
+      dataLength = RX_Data_Buffer[1];
 
-    DisableInterrupts();
+      Maze_UpdateConnectedState(true);
 
-    cmd = RX_Data_Buffer[0];
-    dataLength = RX_Data_Buffer[1];
+      switch (RX_Data_Buffer[0]) {
+        case CHANGE_CONTROL_METHOD:
+          if (dataLength == CHANGE_CONTROL_METHOD_LENGTH && RX_Data_Buffer[DATA_OFFSET] != CTL_METHOD) {
+            Maze_UpdateControlMethod(RX_Data_Buffer[DATA_OFFSET]);
+          }
+          break;
+        case NEW_POSITION:
+          // Verify length matches expected
+          if (dataLength == NEW_POSITION_LENGTH) {
+            memcpy(&position, RX_Data_Buffer + DATA_OFFSET, NEW_POSITION_LENGTH);
+            position.isNew = true;
 
-    switch (cmd) {
-      case CHANGE_CONTROL_METHOD:
-        Maze_ChangeControlMethod(dataLength, RX_Data_Buffer + DATA_OFFSET);
-        break;
-      case NEW_POSITION:
-        Maze_ReadNewPosition(dataLength, RX_Data_Buffer + DATA_OFFSET);
-        break;
-      case PING: // Ping received, reset timeout
-        Ping_TimerReset();
-        Maze_UpdateConnectedState(true);
-        break;
-      default:
-        break;
+            Maze_MoveToPosition();
+          }
+          break;
+        default:
+          break;
+      }
+
+      HasNewData = false; // Clear data flag
     }
-
-    EnableInterrupts();
-
-    HasNewData = false; // Clear data flag
   }
 }

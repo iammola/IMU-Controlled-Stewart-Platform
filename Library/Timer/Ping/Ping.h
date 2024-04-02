@@ -8,10 +8,12 @@
  * @copyright Copyright (c) 2024
  * 
  */
+ 
+ #include <stdint.h>
 
-#define PING_FREQUENCY 2
+#define PING_INTERRUPT_PRIORITY (unsigned)4
 
-void Ping_TimerInit(uint32_t SYS_CLOCK);
+void Ping_TimerInit(uint32_t LOAD);
 
 void Ping_Handler(void);
 

@@ -45,7 +45,7 @@
 
 #define INT_BIT      (unsigned)(1 << 3) // (PB3) Interrupt Pin
 #define INT_PCTL_M   (unsigned)GPIO_PCTL_PB3_M
-#define INT_PRIORITY 1
+#define INT_PRIORITY 2
 
 static USER_BANK LastUserBank = 0xFF;
 

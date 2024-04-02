@@ -56,10 +56,10 @@ void SysTick_Init(void) {
 // Time delay using busy wait.
 // The delay parameter is in units of the core clock. (units of 12.5 nsec for 80 MHz clock)
 void SysTick_Wait(uint32_t delay) {
-  volatile uint32_t elapsedTime = 0;
+  uint32_t elapsedTime = 0;
 
-  uint32_t currentTime = 0;
-  uint32_t startTime = ST_CURRENT_R;
+  volatile uint32_t currentTime = 0;
+  volatile uint32_t startTime = ST_CURRENT_R;
 
   do {
     currentTime = ST_CURRENT_R;

@@ -15,15 +15,15 @@
 #include "PLL/PLL.h"
 
 #include "IMU/IMU.h"
-#include "Timer/Ping/Ping.h"
 #include "Wireless/Wireless.h"
 
 #include "Glove.h"
 
 #include "tm4c123gh6pm.h"
 
-#define BTN_BIT    (1 << 0) // PD0
-#define BTN_PCTL_M (unsigned)(GPIO_PCTL_PD0_M)
+#define BTN_BIT                (unsigned)(1 << 0) // PD0
+#define BTN_INTERRUPT_PRIORITY (unsigned)4
+#define BTN_PCTL_M             (unsigned)(GPIO_PCTL_PD0_M)
 
 #define SYS_CLOCK 80e6
 
@@ -50,12 +50,8 @@ void GPIOD_Handler(void) {
 
   GPIO_PORTD_ICR_R |= BTN_BIT; // clear interrupt
 
-  Wireless_Transmit(CHANGE_CONTROL_METHOD, &byte, CHANGE_CONTROL_METHOD_LENGTH);
-}
-
-void Ping_Handler(void) {
   DisableInterrupts();
-  Wireless_Transmit(PING, 0, 0); // Send ping
+  Wireless_Transmit(CHANGE_CONTROL_METHOD, &byte, CHANGE_CONTROL_METHOD_LENGTH);
   EnableInterrupts();
 }
 
@@ -80,11 +76,11 @@ static void Button_Init(void) {
   GPIO_PORTD_IBE_R &= ~BTN_BIT; // Only listen on one edge event
   GPIO_PORTD_IEV_R |= BTN_BIT;  // Trigger interrupt on rising edge
 
-  NVIC_EN0_R |= NVIC_EN0_INT3;                                                         // Enable Port D's Interrupt Handler
-  NVIC_PRI0_R = (NVIC_PRI0_R & (unsigned)~NVIC_PRI0_INT3_M) | (4 << NVIC_PRI0_INT3_S); // Configure Port D's priority
-  GPIO_PORTB_ICR_R |= BTN_BIT;                                                         // Clear the INT pin's interrupt
+  NVIC_EN0_R |= NVIC_EN0_INT3;                                                                              // Enable Port D's Interrupt Handler
+  NVIC_PRI0_R = (NVIC_PRI0_R & (unsigned)~NVIC_PRI0_INT3_M) | (BTN_INTERRUPT_PRIORITY << NVIC_PRI0_INT3_S); // Configure Port D's priority
+  GPIO_PORTD_ICR_R |= BTN_BIT;                                                                              // Clear the INT pin's interrupt
 
-  GPIO_PORTB_IM_R |= BTN_BIT; // Allow the INT pin interrupt to be detected
+  GPIO_PORTD_IM_R |= BTN_BIT; // Allow the INT pin interrupt to be detected
 }
 
 /**
@@ -118,8 +114,7 @@ int main(void) {
   PLL_Init();
   FPULazyStackingEnable(); // Enable Floating Point
 
-  Ping_TimerInit(SYS_CLOCK);
-  Wireless_Init(SYS_CLOCK, false);
+  Wireless_Init(SYS_CLOCK, true);
   IMU_Init(SYS_CLOCK, &position);
 
   if (CTL_METHOD == IMU_CTL_METHOD)

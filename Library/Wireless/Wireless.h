@@ -24,7 +24,6 @@ typedef enum COMMAND {
   CHANGE_CONTROL_METHOD = 0x57,
   CHANGE_CONTROL_METHOD_ACK = 0x58,
   NEW_POSITION = 0x21,
-  PING = 0x05,
 } COMMAND;
 
 inline void Wireless_Init(uint32_t SYS_CLOCK, bool enableRX) {

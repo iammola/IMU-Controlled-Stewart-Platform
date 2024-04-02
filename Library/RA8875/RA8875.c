@@ -143,7 +143,7 @@ bool RA8875_begin(uint32_t SYS_CLOCK, enum RA8875sizes s) {
   RA8875_EnableGPIOX(true); // Enable TFT - display enable tied to GPIOX
 
   RA8875_PWM1out(255);
-  RA8875_PWM1config(true, RA8875_PWM_CLK_DIV8); // PWM output for backlight
+  RA8875_PWM1config(true, RA8875_PWM_CLK_DIV2048); // PWM output for backlight
 
   RA8875_fillScreen(RA8875_BLACK);
 

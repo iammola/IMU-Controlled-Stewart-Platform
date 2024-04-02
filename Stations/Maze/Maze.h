@@ -9,26 +9,36 @@
  *
  */
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "STATIONS.h"
 
-/**
- * @brief 
- * @param dataLength 
- * @param buffer 
- */
-void Maze_ChangeControlMethod(uint8_t dataLength, uint8_t *buffer);
+#define CONNECTED_STATE_X      10
+#define CONNECTED_STATE_Y      60
+#define CONNECTED_STATE_WIDTH  185
+#define CONNECTED_STATE_HEIGHT 20
+
+#define CONTROL_METHOD_X      10
+#define CONTROL_METHOD_Y      80
+#define CONTROL_METHOD_WIDTH  215
+#define CONTROL_METHOD_HEIGHT 20
 
 /**
- * @brief 
- * @param dataLength 
- * @param buffer 
+ * @brief
+ * @param dataLength
+ * @param buffer
  */
-void Maze_ReadNewPosition(uint8_t dataLength, uint8_t *buffer);
+void Maze_UpdateControlMethod(MAZE_CONTROL_METHOD newControl);
 
 /**
  * @brief
  * @param
  */
 void Maze_MoveToPosition(void);
+
+/**
+ * @brief
+ * @param connected
+ */
+void Maze_UpdateConnectedState(bool connected);

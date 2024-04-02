@@ -99,6 +99,10 @@ static bool HC12_SendCommand(char *FORMAT, char *RESPONSE_FORMAT, ...) {
   if (CURRENT_MODE != COMMAND_MODE) // Confirm in Command Mode
     HC12_SetMode(COMMAND_MODE);
 
+  while (!(UART5_FR_R & UART_FR_RXFE)) { // Clear FIFO
+    UART5_Receive((uint8_t *)cmd, 1);
+  }
+
   UART5_Transmit((uint8_t *)cmd, strlen((const char *)cmd));
   UART5_Receive((uint8_t *)CMDResponse, strlen((const char *)response));
 
