@@ -49,7 +49,7 @@
             <InvalidFlash>1</InvalidFlash>
           </TargetStatus>
           <OutputDirectory>.\Objects\</OutputDirectory>
-          <OutputName>Maze</OutputName>
+          <OutputName>Display</OutputName>
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>
           <CreateHexFile>0</CreateHexFile>
@@ -183,7 +183,7 @@
             <hadIRAM>1</hadIRAM>
             <hadXRAM>0</hadXRAM>
             <uocXRam>0</uocXRam>
-            <RvdsVP>2</RvdsVP>
+            <RvdsVP>1</RvdsVP>
             <RvdsMve>0</RvdsMve>
             <RvdsCdeCp>0</RvdsCdeCp>
             <nBranchProt>0</nBranchProt>
@@ -314,7 +314,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>2</Optim>
+            <Optim>1</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -390,9 +390,14 @@
               <FilePath>..\Main.c</FilePath>
             </File>
             <File>
-              <FileName>fpu.c</FileName>
+              <FileName>RA8875.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\Library\FPU\fpu.c</FilePath>
+              <FilePath>..\..\..\Library\RA8875\RA8875.c</FilePath>
+            </File>
+            <File>
+              <FileName>SSI0.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Library\SSI\SSI0.c</FilePath>
             </File>
             <File>
               <FileName>PLL.c</FileName>
@@ -400,64 +405,9 @@
               <FilePath>..\..\..\Library\PLL\PLL.c</FilePath>
             </File>
             <File>
-              <FileName>Maestro.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\Library\Pololu Maestro\Maestro.c</FilePath>
-            </File>
-            <File>
-              <FileName>StewartPlatform.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\Library\StewartPlatform\StewartPlatform.c</FilePath>
-            </File>
-            <File>
-              <FileName>UART5.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\Library\UART\UART5.c</FilePath>
-            </File>
-            <File>
               <FileName>SysTick.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\Library\SysTick\SysTick.c</FilePath>
-            </File>
-            <File>
-              <FileName>UART4.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\Library\UART\UART4.c</FilePath>
-            </File>
-            <File>
-              <FileName>HC-12.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\Library\Wireless\HC-12\HC-12.c</FilePath>
-            </File>
-            <File>
-              <FileName>UTILS.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\Library\UTILS\UTILS.c</FilePath>
-            </File>
-            <File>
-              <FileName>Joystick.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\Library\Joystick\Joystick.c</FilePath>
-            </File>
-            <File>
-              <FileName>CLI.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\Library\CLI\CLI.c</FilePath>
-            </File>
-            <File>
-              <FileName>RA8875.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\Library\RA8875\RA8875.c</FilePath>
-            </File>
-            <File>
-              <FileName>Ping.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\Library\Timer\Ping\Ping.c</FilePath>
-            </File>
-            <File>
-              <FileName>SSI0.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\Library\SSI\SSI0.c</FilePath>
             </File>
           </Files>
         </Group>

@@ -151,18 +151,34 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>83</LineNumber>
+          <LineNumber>533</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>8456</Address>
+          <Address>76</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
           <SizeOfObject>0</SizeOfObject>
           <BreakByAccess>0</BreakByAccess>
           <BreakIfRCount>1</BreakIfRCount>
-          <Filename>..\Main.c</Filename>
+          <Filename>RTE/Device/TM4C123GH6PM/system_TM4C123.c</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\Wireless\../Main.c\83</Expression>
+          <Expression>\\Wireless\RTE/Device/TM4C123GH6PM/system_TM4C123.c\533</Expression>
+        </Bp>
+        <Bp>
+          <Number>1</Number>
+          <Type>0</Type>
+          <LineNumber>0</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>68</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename></Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>0x00000044</Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>
