@@ -1,10 +1,15 @@
+// 1 (1 byte for sync) = 0xEA
+// 1 (1 byte for total length from this point) = 30
+// 1 (1 byte for command) = 0x21
+// 1 (1 byte for actual data length) = 28
+// 28 (4 bytes per float, 4 floats for quaternion, 3 floats for translation)
+// 2 (2 bytes for checksum)
+const bufferSize = 1 + 1 + 1 + 1 + 28 + 2;
+
+let buffer;
+
 let port;
 let reader;
-let inputDone;
-let outputDone;
-let inputStream;
-let outputStream;
-let showCalibration = false;
 
 let orientation = [0, 0, 0];
 let quaternion = [1, 0, 0, 0];
@@ -29,16 +34,15 @@ addEventListener("message", async (evt) => {
  */
 async function connect(baudRate) {
   [port] = await navigator.serial.getPorts();
-  await port.open({ baudRate });
+  await port.open({ baudRate, bufferSize });
+  port.addEventListener("disconnect", disconnect);
 
-  let decoder = new TextDecoderStream();
-  inputDone = port.readable.pipeTo(decoder.writable);
-  inputStream = decoder.readable.pipeThrough(
-    new TransformStream(new LineBreakTransformer())
-  );
+  buffer = new ArrayBuffer(bufferSize);
+  reader = port.readable.getReader({ mode: "byob" });
 
-  reader = inputStream.getReader();
-  readLoop().catch(disconnect);
+  readLoop().catch((e) => {
+    console.log(e);
+  });
   self.postMessage({ type: "CONNECTED" });
 }
 
@@ -46,22 +50,16 @@ async function connect(baudRate) {
  * @name disconnect
  * Closes the Web Serial connection.
  */
-async function disconnect() {
+async function disconnect(err) {
+  console.log(err);
+
   if (reader) {
     await reader.cancel();
-    await inputDone.catch(() => {});
     reader = null;
     inputDone = null;
   }
 
-  if (outputStream) {
-    await outputStream.getWriter().close();
-    await outputDone;
-    outputStream = null;
-    outputDone = null;
-  }
-
-  await port.close();
+  await port.forget();
   self.postMessage({ type: "DISCONNECTED" });
 }
 
@@ -71,44 +69,47 @@ async function disconnect() {
  */
 async function readLoop() {
   while (true) {
-    const { value, done } = await reader.read();
-
-    if (value) {
-      self.postMessage({
-        type: "DATA_READ",
-        value: value.split(" ").map(parseFloat),
-      });
-    }
+    const { value, done } = await reader.read(new Uint8Array(buffer));
 
     if (done) {
       console.log("[readLoop] DONE", done);
       reader.releaseLock();
       break;
     }
-  }
-}
 
-/**
- * @name LineBreakTransformer
- * TransformStream to parse the stream into lines.
- */
-class LineBreakTransformer {
-  constructor() {
-    // A container for holding stream data until a new line.
-    this.container = "";
-  }
+    buffer = value.buffer;
+    const [syncWord, totalLength, command, payloadLength, ...data] = value;
+    // console.log({ syncWord, totalLength, command, payloadLength, data });
 
-  transform(chunk, controller) {
-    this.container += chunk;
-    const lines = this.container.split("\n");
-    this.container = lines.pop();
-    lines.forEach((line) => {
-      controller.enqueue(line);
-      // self.postMessage({ type: "LOG_DATA", line });
+    if (syncWord !== 0xea) continue;
+    // console.log("Passed Sync");
+    if (totalLength !== payloadLength + 2) continue;
+    // console.log("Passed Total Length");
+    if (command !== 0x21) continue;
+    // console.log("Passed Command");
+
+    const positionBytes = data.slice(0, payloadLength);
+
+    const expectedChecksum = new Uint16Array(
+      new Uint8Array(data.slice(payloadLength)).buffer
+    )[0];
+    const calculatedChecksum =
+      command +
+      payloadLength +
+      positionBytes.reduce((acc, cur) => acc + cur, 0);
+
+    if (calculatedChecksum != expectedChecksum) {
+      console.groupCollapsed("Checksum Failed");
+      console.log(value);
+      console.groupEnd();
+      // console.log({ expectedChecksum, calculatedChecksum });
+      continue;
+    }
+    // console.log("Passed Checksum");
+
+    self.postMessage({
+      type: "DATA_READ",
+      value: new Float32Array(new Uint8Array(positionBytes).buffer),
     });
-  }
-
-  flush(controller) {
-    controller.enqueue(this.container);
   }
 }

@@ -851,50 +851,50 @@
       serial: (function () {
         let worker;
         let serialActive;
-        const notSupported = document.getElementById("notSupported");
-
-        if (!("serial" in navigator)) {
-          notSupported.classList.remove("hidden");
-          return;
-        } else notSupported.classList.add("hidden");
-
-        navigator.serial.requestPort().then(() => {
-          worker = new Worker("./js/worker.js");
-
-          worker.addEventListener("message", async ({ data }) => {
-            const { type, ...body } = data;
-
-            switch (type) {
-              case "DATA_READ":
-                try {
-                  this.orientation = new Quaternion(body.value.slice(0, 3));
-                  this.translation = body.value.slice(4);
-                } catch (err) {
-                  console.log(body.value);
-                }
-                break;
-              case "CONNECTED":
-                serialActive = true;
-                break;
-              case "DISCONNECT":
-                serialActive = false;
-                notSupported.classList.add("hidden");
-                worker.terminate();
-              default:
-                break;
-            }
-          });
-
-          worker.postMessage({ type: "CONNECT", baudRate: 115200 });
-        });
 
         return {
           duration: 0,
           pathVisible: false,
           next: null,
           start: function () {
-            this.orientation = Quaternion.ONE;
-            this.translation = [0, 0, 0];
+            const notSupported = document.getElementById("notSupported");
+
+            if (!("serial" in navigator)) {
+              notSupported.classList.remove("hidden");
+              return;
+            } else notSupported.classList.add("hidden");
+
+            navigator.serial.requestPort().then(() => {
+              worker = new Worker("./js/worker.js");
+
+              worker.addEventListener("message", async ({ data }) => {
+                const { type, ...body } = data;
+
+                switch (type) {
+                  case "DATA_READ":
+                    try {
+                      this.orientation = new Quaternion(body.value.slice(0, 4));
+                      this.translation = body.value.slice(4);
+                    } catch (err) {
+                      console.log(body.value);
+                    }
+                    break;
+                  case "CONNECTED":
+                    serialActive = true;
+                    this.orientation = Quaternion.ONE;
+                    this.translation = [0, 0, 0];
+                    break;
+                  case "DISCONNECTED":
+                    serialActive = false;
+                    notSupported.classList.add("hidden");
+                    worker.terminate();
+                  default:
+                    break;
+                }
+              });
+
+              worker.postMessage({ type: "CONNECT", baudRate: 115200 });
+            });
           },
           fn: function () {
             if (!serialActive) {
