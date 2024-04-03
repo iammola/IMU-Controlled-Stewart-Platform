@@ -30,7 +30,7 @@ int main(void) {
   // 0.582978 0.640293 0.336891 -0.370012 - Accel, Gyro no Z-axis
   // 0.778757 0.489159 -0.332855 0.209075 - Accel, Gyro Z-axis
   // 0.628237 0.014747 -0.585671 -0.512185 - Accel, Gyro, Mag
-  const Quaternion IMU_Quat_Offset = QuaternionInverse(0.628237f, 0.014747f, -0.585671f, -0.512185f);
+  const Quaternion IMU_Quat_Offset = QuaternionInverse(0.604001f, 0.622846f, -0.294529f, -0.400927f);
 
   PLL_Init();              // Initialize the PLL
   FPULazyStackingEnable(); // Enable Floating Point

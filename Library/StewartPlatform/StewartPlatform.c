@@ -20,8 +20,8 @@
 #define PLATFORM_OUTER_RADIUS 70.946f  // Radius (mm) of circumscribed circle of hexagonal platform plate
 #define PLATFORM_INNER_RADIUS 45.0f    // Radius (mm) of inscribed circle of hexagonal platform plate
 #define ROD_LENGTH            150.0f   // Length (mm) of the rod attached to the servo horn and the platform
-#define HORN_LENGTH           38.1f    // Length (mm) of servo horn attached to the motor shaft and the rod
-#define SHAFT_DISTANCE        19.05f   // Distance (mm) from center of side to servo motor shaft/horn center
+#define HORN_LENGTH           31.75f    // Length (mm) of servo horn attached to the motor shaft and the rod
+#define SHAFT_DISTANCE        20.0f    // Distance (mm) from center of side to servo motor shaft/horn center
 #define ANCHOR_DISTANCE       22.225f  // Distance (mm) from center of side to platform anchor point
 #define HORN_DIRECTION        0        // If horns are pointed outwards 0, otherwise 1
 #define SERVO_ANGLE_LIMIT     90.0f    // Min/Max range (°) for the servo motors to rotate allowed

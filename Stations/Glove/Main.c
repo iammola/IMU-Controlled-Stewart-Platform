@@ -13,6 +13,7 @@
 
 #include "FPU/fpu.h"
 #include "PLL/PLL.h"
+#include "SysTick/SysTick.h"
 
 #include "IMU/IMU.h"
 #include "Wireless/Wireless.h"
@@ -107,7 +108,7 @@ static void Enable_Control_Method(uint8_t dataLength, uint8_t *buffer) {
 int main(void) {
   COMMAND          cmd = 0x00;
   uint8_t          dataLength = 0x00;
-  const Quaternion positionOffset = QuaternionInverse(0.628237f, 0.014747f, -0.585671f, -0.512185f);
+  const Quaternion positionOffset = QuaternionInverse(0.604001f, 0.622846f, -0.294529f, -0.400927f);
 
   DisableInterrupts();
 
@@ -128,11 +129,18 @@ int main(void) {
     WaitForInterrupt();
 
     if (position.isNew) {
-      // Get the diff from the offset quaternion
-      positionFromOffset = QuaternionMultiply(position.quaternion, positionOffset);
+      DisableInterrupts();
 
-      memcpy(positionInBytes, &positionFromOffset, NEW_POSITION_LENGTH);
+      // Get the diff from the offset quaternion
+      position.quaternion = QuaternionMultiply(position.quaternion, positionOffset);
+
+      memcpy(positionInBytes, &position, NEW_POSITION_LENGTH);
+
       Wireless_Transmit(NEW_POSITION, positionInBytes, NEW_POSITION_LENGTH);
+      while (UART5_FR_R & UART_FR_BUSY) {
+      }
+
+      EnableInterrupts();
 
       position.isNew = false;
     }

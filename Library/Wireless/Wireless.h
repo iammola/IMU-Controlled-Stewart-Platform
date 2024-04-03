@@ -26,12 +26,12 @@ typedef enum COMMAND {
   NEW_POSITION = 0x21,
 } COMMAND;
 
-inline void Wireless_Init(uint32_t SYS_CLOCK, bool enableRX) {
+static inline void Wireless_Init(uint32_t SYS_CLOCK, bool enableRX) {
   HC12_Init();
   HC12_Config(SYS_CLOCK, BAUD_115200, TX_20dBm, enableRX); // Use 115200 bps, 20 dBm
 }
 
-inline void Wireless_Transmit(COMMAND cmd, uint8_t *data, uint8_t length) {
+static inline void Wireless_Transmit(COMMAND cmd, uint8_t *data, uint8_t length) {
   TX_Data_Buffer[0] = cmd;
   TX_Data_Buffer[1] = length;
   memcpy(TX_Data_Buffer + 2, data, length);

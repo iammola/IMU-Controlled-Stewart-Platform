@@ -16,6 +16,8 @@
 
 #include "Maestro.h"
 
+#define MAX_WAIT_TICKS 1e6
+
 /**
  * @brief
  * @param SYS_CLOCK
@@ -46,7 +48,7 @@ inline void Maestro_SetAngle(uint8_t channel, float angle) {
   target = (NEUTRAL_PULSE_POS + (angle * K)) * 4;
 
   cmd[0] = CMD__SET_TARGET;
-  cmd[1] = channel;                    // Set channel
+  cmd[1] = channel;                // Set channel
   cmd[2] = target & 0x7F;          // lower 7 bits of quarter-us
   cmd[3] = (target & 0x7F00) >> 7; // upper 7 bits of quarter-us
 
@@ -57,7 +59,7 @@ inline void Maestro_SetAngle(uint8_t channel, float angle) {
 
   cmd[0] = CMD__SET_TARGET_MINI_SSC;
   cmd[1] = channel + MINI_SSC__OFFSET; // Set channel
-  cmd[2] = (uint8_t)target;        // Set target from 0 to 254
+  cmd[2] = (uint8_t)target;            // Set target from 0 to 254
 
   UART4_Transmit(cmd, 3); // send data
 #endif
@@ -86,8 +88,8 @@ float Maestro_GetPosition(uint8_t channel) {
   uint8_t cmd[2] = {CMD__GET_POSITIONS, channel};
   uint8_t response[2] = {0.0f};
 
-  UART4_Transmit(cmd, 2);     // send data
-  UART4_Receive(response, 2); // read response
+  UART4_Transmit(cmd, 2);                     // send data
+  UART4_Receive(response, 2, MAX_WAIT_TICKS); // read response
 
   // Get pulse width in quarter-us, convert back to us
   pulseWidth = (float)((response[1] << 8) | response[0]) / 4.0f;
@@ -124,7 +126,7 @@ void Maestro_WaitForIdle(void) {
   cmd[0] = CMD__GET_SUBROUTINE_SCRIPT_STATUS; // change command
   do {
     UART4_Transmit(cmd, 1); // Get script status
-    UART4_Receive(&scriptRunningState, 1);
+    UART4_Receive(&scriptRunningState, 1, MAX_WAIT_TICKS);
   } while (!(scriptRunningState & SCRIPT_STATE__STOPPED));
 
   /*
@@ -148,8 +150,8 @@ uint16_t Maestro_GetErrors(void) {
   uint8_t cmd = CMD__GET_ERRORS;
   uint8_t response[2] = {0};
 
-  UART4_Transmit(&cmd, 1);    // Get error status
-  UART4_Receive(response, 2); // Read response
+  UART4_Transmit(&cmd, 1);                    // Get error status
+  UART4_Receive(response, 2, MAX_WAIT_TICKS); // Read response
 
   return (uint16_t)((response[1] << 8) | response[0]);
 }

@@ -19,6 +19,8 @@
 
 #include "HC-12.h"
 
+#define MAX_WAIT_TICKS 1e6
+
 #define SET_BIT    (unsigned)(1 << 1) // PE1
 #define SET_PCTL_M (unsigned)(GPIO_PCTL_PE1_M)
 #define SET_ADDR   (*((volatile uint32_t *)(PORTE_BASE | (SET_BIT << 2))))
@@ -43,7 +45,25 @@ uint8_t TX_Data_Buffer[MAX_MESSAGE_SIZE] = {0};
 
 static const uint8_t INTERRUPT_PRIORITY = 1;
 
-void UART5_Handler(void);
+void     UART5_Handler(void);
+uint16_t CalculateChecksum(uint8_t *buffer, uint8_t length);
+
+/**
+ * @brief
+ * @param buffer
+ * @param length
+ * @return
+ */
+uint16_t CalculateChecksum(uint8_t *buffer, uint8_t length) {
+  uint16_t result = 0;
+
+  while (length > 0) {
+    result += buffer[length - 1];
+    --length;
+  }
+
+  return result;
+}
 
 /**
  * @brief UART5 Interrupt Handler
@@ -52,11 +72,12 @@ void UART5_Handler(void);
 void UART5_Handler(void) {
   uint8_t SYN = 0;
   uint8_t dataLength = 0;
+  uint8_t checksum[2] = {0};
 
   UART5_ICR_R |= UART_ICR_RXIC;
 
   do {
-    UART5_Receive(&SYN, 1);
+    UART5_Receive(&SYN, 1, MAX_WAIT_TICKS);
     // Ensure sync word matches to assume valid data
     // Check full FIFO for start
   } while ((SYN != SYNC_WORD) && !(UART5_FR_R & UART_FR_RXFE));
@@ -64,12 +85,17 @@ void UART5_Handler(void) {
   if (SYN != SYNC_WORD)
     return;
 
-  UART5_Receive(&dataLength, 1); // Get amount of bytes sent
+  UART5_Receive(&dataLength, 1, MAX_WAIT_TICKS); // Get amount of bytes sent
 
   if (dataLength > MAX_MESSAGE_SIZE) // Ensure it's within expected range
     dataLength = MAX_MESSAGE_SIZE;
 
-  UART5_Receive(RX_Data_Buffer, dataLength); // Read data
+  UART5_Receive(RX_Data_Buffer, dataLength, MAX_WAIT_TICKS); // Read data
+
+  UART5_Receive(checksum, 2, MAX_WAIT_TICKS); // Read checksum bytes
+  if (CalculateChecksum(RX_Data_Buffer, dataLength) != (uint16_t)((checksum[1] << 8) | (checksum[0]))) {
+    return;
+  }
 
   HasNewData = true; // Toggle to alert for new data
 }
@@ -85,7 +111,9 @@ void UART5_Handler(void) {
 static bool HC12_SendCommand(char *FORMAT, char *RESPONSE_FORMAT, ...) {
   char cmd[25];
   char response[25];
-  char CMDResponse[25] = {0};
+
+  uint8_t charIdx = 0;
+  char    CMDResponse[25] = {0};
 
   va_list argptrCMD, argptrRES;
   va_start(argptrCMD, RESPONSE_FORMAT); // Last fixed parameter
@@ -100,11 +128,14 @@ static bool HC12_SendCommand(char *FORMAT, char *RESPONSE_FORMAT, ...) {
     HC12_SetMode(COMMAND_MODE);
 
   while (!(UART5_FR_R & UART_FR_RXFE)) { // Clear FIFO
-    UART5_Receive((uint8_t *)cmd, 1);
+    UART5_Receive((uint8_t *)cmd, 1, MAX_WAIT_TICKS);
   }
 
   UART5_Transmit((uint8_t *)cmd, strlen((const char *)cmd));
-  UART5_Receive((uint8_t *)CMDResponse, strlen((const char *)response));
+  for (charIdx = 0; charIdx < strlen((const char *)response); charIdx++) {
+    UART5_Receive((uint8_t *)(CMDResponse + charIdx), 1, MAX_WAIT_TICKS);
+	if (*(CMDResponse + charIdx) == '\n') break;
+  }
 
   return strcmp(CMDResponse, response) == 0; // Verify they are equal
 }
@@ -179,8 +210,10 @@ void HC12_Config(uint32_t SYS_CLOCK, BAUD_RATE baud, TX_POWER powerLevel, bool e
   HC12_SetMode(TRANSMISSION_MODE); // Exit Command Mode
 
   UART5_Init(SYS_CLOCK, baud, WORD_8_BIT, NO_PARITY, ONE_STOP_BIT); // Use new Baud-Rate
+
   if (enableRX) {
-    UART5_FIFOInterrupt(RX_FIFO_1_8, INTERRUPT_PRIORITY); // Use 1/8 full for 2 bytes (metadata) out of 16
+    // Sync + Length + Checksum MSB + Checksum LSB
+    UART5_FIFOInterrupt(RX_FIFO_2_8, INTERRUPT_PRIORITY); // Set Interrupt Threshold
   }
 }
 
@@ -191,7 +224,8 @@ void HC12_Config(uint32_t SYS_CLOCK, BAUD_RATE baud, TX_POWER powerLevel, bool e
  * @return
  */
 bool HC12_SendData(uint8_t *data, uint8_t length) {
-  uint8_t TX_Metadata[METADATA_SIZE] = {SYNC_WORD, length};
+  uint16_t checksum = CalculateChecksum(data, length);
+  uint8_t  TX_Metadata[METADATA_SIZE] = {SYNC_WORD, length};
 
   if (length > MAX_MESSAGE_SIZE)
     return false;
@@ -201,6 +235,10 @@ bool HC12_SendData(uint8_t *data, uint8_t length) {
 
   UART5_Transmit(TX_Metadata, METADATA_SIZE);
   UART5_Transmit(data, length);
+
+  TX_Metadata[0] = checksum & 0xFF;
+  TX_Metadata[1] = (checksum & 0xFF00) >> 8;
+  UART5_Transmit(TX_Metadata, METADATA_SIZE);
 
   return true;
 }

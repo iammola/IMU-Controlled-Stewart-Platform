@@ -207,6 +207,12 @@ void ICM20948_MagCalibration(void);
  */
 void ICM20948_AccelGyroCalibration(void);
 
+/**
+ * @brief
+ * @param
+ */
+void ICM20948_QuaternionCalibration(void);
+
 // Gyroscope Offset Bias in LSBs for +/-250 dps
 extern FusionVector gyroscopeOffset;
 // Accelerometer Offset Bias in LSBs for +/-2G

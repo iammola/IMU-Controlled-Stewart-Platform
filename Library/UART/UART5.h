@@ -28,4 +28,4 @@ void UART5_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8
 
 void UART5_Transmit(uint8_t *data, uint32_t length);
 
-void UART5_Receive(uint8_t *data, uint32_t length);
+void UART5_Receive(uint8_t *data, uint32_t length, uint32_t maxTicks);

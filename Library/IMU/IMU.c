@@ -63,6 +63,8 @@ void IMU_Enable(void) {
 
   ICM20948_MadgwickFusion_Init(); // Initialize Fusion Algorithm
   ICM20948_Interrupt_Pin_Init();  // Configure the Interrupt pin
+
+  // ICM20948_QuaternionCalibration();
 }
 
 /**
