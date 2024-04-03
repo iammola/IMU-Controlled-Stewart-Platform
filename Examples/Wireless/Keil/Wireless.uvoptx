@@ -151,34 +151,18 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>533</LineNumber>
+          <LineNumber>100</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>76</Address>
+          <Address>7202</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
           <SizeOfObject>0</SizeOfObject>
           <BreakByAccess>0</BreakByAccess>
           <BreakIfRCount>1</BreakIfRCount>
-          <Filename>RTE/Device/TM4C123GH6PM/system_TM4C123.c</Filename>
+          <Filename>..\..\..\Library\Wireless\HC-12\HC-12.c</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\Wireless\RTE/Device/TM4C123GH6PM/system_TM4C123.c\533</Expression>
-        </Bp>
-        <Bp>
-          <Number>1</Number>
-          <Type>0</Type>
-          <LineNumber>0</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>68</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename></Filename>
-          <ExecCommand></ExecCommand>
-          <Expression>0x00000044</Expression>
+          <Expression>\\Wireless\../../../Library/Wireless/HC-12/HC-12.c\100</Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>
@@ -201,6 +185,21 @@
           <count>3</count>
           <WinNumber>1</WinNumber>
           <ItemText>CURRENT_MODE</ItemText>
+        </Ww>
+        <Ww>
+          <count>4</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>dataLength</ItemText>
+        </Ww>
+        <Ww>
+          <count>5</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>checksum</ItemText>
+        </Ww>
+        <Ww>
+          <count>6</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>result</ItemText>
         </Ww>
       </WatchWindow1>
       <Tracepoint>
@@ -304,7 +303,7 @@
       <GroupNumber>1</GroupNumber>
       <FileNumber>4</FileNumber>
       <FileType>1</FileType>
-      <tvExp>0</tvExp>
+      <tvExp>1</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
       <PathWithFileName>..\..\..\Library\UART\UART5.c</PathWithFileName>
