@@ -2,14 +2,10 @@
 #include <stdint.h>
 
 // TRIGGER ON 12/16 bytes full
-#define METADATA_SIZE    2
+#define METADATA_SIZE 2
 #define MAX_MESSAGE_SIZE 32
 
 #define SYNC_WORD 0xEA
-
-extern volatile bool HasNewData;
-extern uint8_t       RX_Data_Buffer[MAX_MESSAGE_SIZE];
-extern uint8_t       TX_Data_Buffer[MAX_MESSAGE_SIZE];
 
 typedef enum {
   TX_20dBm = 8,
@@ -58,3 +54,9 @@ void HC12_Config(uint32_t SYS_CLOCK, BAUD_RATE baud, TX_POWER powerLevel, bool e
  * @return
  */
 bool HC12_SendData(uint8_t *data, uint8_t length);
+
+/**
+ * @brief Parses the received data into its appropriate RX buffers
+ * @param RX_Data_Buffer 
+ */
+extern inline void HC12_ReceiveHandler(uint8_t *RX_Data_Buffer);

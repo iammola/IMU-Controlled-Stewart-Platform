@@ -42,7 +42,7 @@ void Maze_UpdateControlMethod(MAZE_CONTROL_METHOD newControl) {
     case JOYSTICK_CTL_METHOD:
       Joystick_Enable();
       break;
-    default:
+    case IMU_CTL_METHOD:
       Joystick_Disable();
       break;
   }
@@ -148,31 +148,19 @@ int main(void) {
       Maze_MoveToPosition();
 
     // Wait for new data to be confirmed
-    if (HasNewData) {
-      dataLength = RX_Data_Buffer[1];
+    if (ReceivedCommands.ChangeControlMethod.inUse) {
+      Maze_UpdateControlMethod(ReceivedCommands.ChangeControlMethod.data[0]);
 
+      ReceivedCommands.ChangeControlMethod.inUse = false;
+    }
+
+    if (ReceivedCommands.NewPosition.inUse) {
+      memcpy(&position, ReceivedCommands.NewPosition.data, sizeof(ReceivedCommands.NewPosition.data));
+      position.isNew = true;
+      Maze_MoveToPosition();
+
+      ReceivedCommands.NewPosition.inUse = false;
       Maze_UpdateConnectedState(true);
-
-      switch (RX_Data_Buffer[0]) {
-        case CHANGE_CONTROL_METHOD:
-          if (dataLength == CHANGE_CONTROL_METHOD_LENGTH && RX_Data_Buffer[DATA_OFFSET] != CTL_METHOD) {
-            Maze_UpdateControlMethod(RX_Data_Buffer[DATA_OFFSET]);
-          }
-          break;
-        case NEW_POSITION:
-          // Verify length matches expected
-          if (dataLength == NEW_POSITION_LENGTH) {
-            memcpy(&position, RX_Data_Buffer + DATA_OFFSET, NEW_POSITION_LENGTH);
-            position.isNew = true;
-
-            Maze_MoveToPosition();
-          }
-          break;
-        default:
-          break;
-      }
-
-      HasNewData = false; // Clear data flag
     }
   }
 }

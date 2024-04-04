@@ -11,14 +11,10 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <string.h>
 
-#include "HC-12/HC-12.h"
-
-#define DATA_OFFSET 2
-
-#define CHANGE_CONTROL_METHOD_LENGTH 1
-#define NEW_POSITION_LENGTH          28 // (4 bytes per flaot * (4 quaternion floats) + (3 translation floats))
+#define CHANGE_CONTROL_METHOD_LENGTH     1  // Sent contorl method
+#define CHANGE_CONTROL_METHOD_ACK_LENGTH 1  // Returned control method
+#define NEW_POSITION_LENGTH              16 // (4 bytes per float * 4 quaternion floats)
 
 typedef enum COMMAND {
   CHANGE_CONTROL_METHOD = 0x57,
@@ -26,15 +22,23 @@ typedef enum COMMAND {
   NEW_POSITION = 0x21,
 } COMMAND;
 
-static inline void Wireless_Init(uint32_t SYS_CLOCK, bool enableRX) {
-  HC12_Init();
-  HC12_Config(SYS_CLOCK, BAUD_115200, TX_20dBm, enableRX); // Use 115200 bps, 20 dBm
-}
+typedef struct CommandData {
+  struct NewPosition {
+    bool    inUse;
+    uint8_t data[NEW_POSITION_LENGTH];
+  } NewPosition;
+  struct ChangeControlMethod {
+    bool    inUse;
+    uint8_t data[CHANGE_CONTROL_METHOD_LENGTH];
+  } ChangeControlMethod;
+  struct ChangeControlMethodAck {
+    bool    inUse;
+    uint8_t data[CHANGE_CONTROL_METHOD_ACK_LENGTH];
+  } ChangeControlMethodAck;
+} CommandData;
 
-static inline void Wireless_Transmit(COMMAND cmd, uint8_t *data, uint8_t length) {
-  TX_Data_Buffer[0] = cmd;
-  TX_Data_Buffer[1] = length;
-  memcpy(TX_Data_Buffer + 2, data, length);
+extern CommandData ReceivedCommands;
 
-  HC12_SendData(TX_Data_Buffer, length + 2);
-}
+extern inline void Wireless_Init(uint32_t SYS_CLOCK, bool enableRX);
+
+void Wireless_Transmit(COMMAND cmd, uint8_t *data, uint8_t length);

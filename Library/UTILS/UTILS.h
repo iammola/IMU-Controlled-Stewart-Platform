@@ -88,6 +88,17 @@ Quaternion QuaternionMultiply(Quaternion Q1, Quaternion Q2);
 Quaternion QuaternionInverse(float w, float x, float y, float z);
 
 /**
+ * @brief Conjugate of Quaternion. This is equals to the Quaternion's inverse
+ * when borth are normalized
+ * @param w `w` component
+ * @param x `x` component
+ * @param y `y` component
+ * @param z `z` component
+ * @return Quaternion's conjugate
+ */
+Quaternion QuaternionConjugate(float w, float x, float y, float z);
+
+/**
  * @brief Rotates a vector according to the quaternion, assumes |q|=1
  * @link https://github.com/rawify/Quaternion.js/blob/c3834673b502e64e1866dbbf13568c0be93e52cc/quaternion.js#L1004-L1025
  * @param q Quaternion

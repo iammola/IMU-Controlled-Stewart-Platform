@@ -1,10 +1,9 @@
 // 1 (1 byte for sync) = 0xEA
-// 1 (1 byte for total length from this point) = 30
+// 1 (1 byte for data length from this point) = 17 (16 + 1 command byte)
 // 1 (1 byte for command) = 0x21
-// 1 (1 byte for actual data length) = 28
-// 28 (4 bytes per float, 4 floats for quaternion, 3 floats for translation)
+// 16 (4 bytes per float, 4 floats for quaternion)
 // 2 (2 bytes for checksum)
-const bufferSize = 1 + 1 + 1 + 1 + 28 + 2;
+const bufferSize = 1 + 1 + 1 + 16 + 2;
 
 let buffer;
 
@@ -33,17 +32,21 @@ addEventListener("message", async (evt) => {
  * output stream.
  */
 async function connect(baudRate) {
-  [port] = await navigator.serial.getPorts();
-  await port.open({ baudRate, bufferSize });
-  port.addEventListener("disconnect", disconnect);
+  try {
+    [port] = await navigator.serial.getPorts();
+    await port.open({ baudRate, bufferSize });
+    port.addEventListener("disconnect", disconnect);
 
-  buffer = new ArrayBuffer(bufferSize);
-  reader = port.readable.getReader({ mode: "byob" });
+    buffer = new ArrayBuffer(bufferSize);
+    reader = port.readable.getReader({ mode: "byob" });
 
-  readLoop().catch((e) => {
-    console.log(e);
-  });
-  self.postMessage({ type: "CONNECTED" });
+    readLoop().catch((e) => {
+      console.log(e);
+    });
+    self.postMessage({ type: "CONNECTED" });
+  } catch (err) {
+    self.close();
+  }
 }
 
 /**
@@ -68,6 +71,16 @@ async function disconnect(err) {
  * Reads data from the input stream and displays it on screen.
  */
 async function readLoop() {
+  // let lastPass = 0;
+  const passRate = {
+    received: 0,
+    passed: 0,
+    get rate() {
+      if (this.received == 0) return "No packets received";
+      return (this.passed / this.received) * 100;
+    },
+  };
+
   while (true) {
     const { value, done } = await reader.read(new Uint8Array(buffer));
 
@@ -77,39 +90,50 @@ async function readLoop() {
       break;
     }
 
-    buffer = value.buffer;
-    const [syncWord, totalLength, command, payloadLength, ...data] = value;
-    // console.log({ syncWord, totalLength, command, payloadLength, data });
+    try {
+      buffer = value.buffer;
+      const [syncWord, totalLength, command, ...data] = value;
 
-    if (syncWord !== 0xea) continue;
-    // console.log("Passed Sync");
-    if (totalLength !== payloadLength + 2) continue;
-    // console.log("Passed Total Length");
-    if (command !== 0x21) continue;
-    // console.log("Passed Command");
+      ++passRate.received;
 
-    const positionBytes = data.slice(0, payloadLength);
+      if (syncWord !== 0xea) throw new Error("Sync Word Failed", syncWord);
+      if (totalLength !== 17)
+        throw new Error("Total Length Failed", totalLength);
+      if (command !== 0x21) throw new Error("Command Failed", command);
 
-    const expectedChecksum = new Uint16Array(
-      new Uint8Array(data.slice(payloadLength)).buffer
-    )[0];
-    const calculatedChecksum =
-      command +
-      payloadLength +
-      positionBytes.reduce((acc, cur) => acc + cur, 0);
+      const payloadLength = totalLength - 1;
+      const positionBytes = data.slice(0, payloadLength);
 
-    if (calculatedChecksum != expectedChecksum) {
-      console.groupCollapsed("Checksum Failed");
+      const expectedChecksum = new Uint16Array(
+        new Uint8Array(data.slice(payloadLength)).buffer
+      )[0];
+      const calculatedChecksum =
+        command + positionBytes.reduce((acc, cur) => acc + cur, 0);
+
+      if (calculatedChecksum != expectedChecksum)
+        throw new Error(
+          `Checksum Failed... C=${calculatedChecksum} E=${expectedChecksum}`
+        );
+
+      ++passRate.passed;
+
+      // console.log(passRate.received - lastPass); // Calculates no. of packets since last complete packet
+      // lastPass = passRate.received;
+
+      self.postMessage({
+        type: "DATA_READ",
+        value: [
+          ...new Float32Array(new Uint8Array(positionBytes).buffer),
+          0,
+          0,
+          0,
+        ],
+      });
+    } catch (error) {
+      console.groupCollapsed("Failed");
       console.log(value);
+      console.log(error.message);
       console.groupEnd();
-      // console.log({ expectedChecksum, calculatedChecksum });
-      continue;
     }
-    // console.log("Passed Checksum");
-
-    self.postMessage({
-      type: "DATA_READ",
-      value: new Float32Array(new Uint8Array(positionBytes).buffer),
-    });
   }
 }

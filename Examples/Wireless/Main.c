@@ -19,8 +19,8 @@
 void GPIOF_Handler(void);
 
 // Tracked LED for peer node
-static uint8_t peerLEDIdx = 0;
-static bool    SendData = false;
+static uint8_t       peerLEDIdx = 0;
+static volatile bool SendData = false;
 
 static void PortF_Init(void) {
   volatile uint32_t delay;
@@ -59,8 +59,6 @@ void GPIOF_Handler(void) {
 }
 
 int main(void) {
-  uint8_t cmd, dataLength;
-
   SysTick_Init(); // Initialize SysTick
   PLL_Init();     // Initialize PLL
   PortF_Init();   // Initialize Port F
@@ -69,19 +67,9 @@ int main(void) {
 
   while (1) {
     // Wait for new data to be confirmed
-    if (HasNewData) {
-      cmd = RX_Data_Buffer[0];
-      if (cmd != NEW_POSITION)
-        continue;
-
-      // Require the length bit to be 1. Just for which color to turn on
-      dataLength = RX_Data_Buffer[1];
-      if (dataLength != 0x01)
-        continue;
-
-      GPIO_PORTF_DATA_R = LED_BITS & (1 << RX_Data_Buffer[2]); // Turn RED on, then BLUE, then GREEN, then OFF.
-
-      HasNewData = false; // Clear data flag
+    if (ReceivedCommands.NewPosition.inUse) {
+      GPIO_PORTF_DATA_R = LED_BITS & (1 << ReceivedCommands.NewPosition.data[0]); // Turn RED on, then BLUE, then GREEN, then OFF.
+      ReceivedCommands.NewPosition.inUse = false;                                 // Clear data flag
     }
 
     if (SendData) {

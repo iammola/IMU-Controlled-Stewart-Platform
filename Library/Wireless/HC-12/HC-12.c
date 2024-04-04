@@ -37,28 +37,24 @@ typedef enum MODE {
 static void HC12_SetMode(MODE NewMode);
 static bool HC12_SendCommand(char *FORMAT, char *RESPONSE_FORMAT, ...);
 
-static MODE   CURRENT_MODE = 0xFF;
-volatile bool HasNewData = false;
+static MODE CURRENT_MODE = 0xFF;
 
-uint8_t RX_Data_Buffer[MAX_MESSAGE_SIZE] = {0};
-uint8_t TX_Data_Buffer[MAX_MESSAGE_SIZE] = {0};
-
-static const uint8_t INTERRUPT_PRIORITY = 1;
+#define INTERRUPT_PRIORITY 1
 
 void     UART5_Handler(void);
 uint16_t CalculateChecksum(uint8_t *buffer, uint8_t length);
 
 /**
- * @brief
- * @param buffer
- * @param length
- * @return
+ * @brief Calculates the sum of bytes in buffer of specified length
+ * @param buffer Bytes to be summed for total
+ * @param length Number of bytes in buffer to sum
+ * @return 16 bit total of summed bytes
  */
 uint16_t CalculateChecksum(uint8_t *buffer, uint8_t length) {
   uint16_t result = 0;
 
   while (length > 0) {
-    result += buffer[length - 1];
+    result += buffer[length - 1]; // Sum bytes to get checksum
     --length;
   }
 
@@ -70,11 +66,13 @@ uint16_t CalculateChecksum(uint8_t *buffer, uint8_t length) {
  * @param
  */
 void UART5_Handler(void) {
-  uint8_t SYN = 0;
-  uint8_t dataLength = 0;
-  uint8_t checksum[2] = {0};
+  uint8_t SYN = 0;           // Sync word
+  uint8_t dataLength = 0;    // Total length of data
+  uint8_t checksum[2] = {0}; // Checksum
 
-  UART5_ICR_R |= UART_ICR_RXIC;
+  uint8_t RX_Data_Buffer[MAX_MESSAGE_SIZE] = {0}; // Allocated buffer
+
+  UART5_ICR_R |= UART_ICR_RXIC; // Clear interrupt
 
   do {
     UART5_Receive(&SYN, 1, MAX_WAIT_TICKS);
@@ -97,7 +95,7 @@ void UART5_Handler(void) {
     return;
   }
 
-  HasNewData = true; // Toggle to alert for new data
+  HC12_ReceiveHandler(RX_Data_Buffer); // Handler function
 }
 
 /**
@@ -109,11 +107,9 @@ void UART5_Handler(void) {
  * @return `true` if the expected response was read. `false` otherwise
  */
 static bool HC12_SendCommand(char *FORMAT, char *RESPONSE_FORMAT, ...) {
-  char cmd[25];
-  char response[25];
-
-  uint8_t charIdx = 0;
-  char    CMDResponse[25] = {0};
+  char cmd[25];               // AT command to be sent with substituted placeholders
+  char response[25];          // AT response to expected with substituted placeholders
+  char CMDResponse[25] = {0}; // AT response received
 
   va_list argptrCMD, argptrRES;
   va_start(argptrCMD, RESPONSE_FORMAT); // Last fixed parameter
@@ -132,10 +128,7 @@ static bool HC12_SendCommand(char *FORMAT, char *RESPONSE_FORMAT, ...) {
   }
 
   UART5_Transmit((uint8_t *)cmd, strlen((const char *)cmd));
-  for (charIdx = 0; charIdx < strlen((const char *)response); charIdx++) {
-    UART5_Receive((uint8_t *)(CMDResponse + charIdx), 1, MAX_WAIT_TICKS);
-	if (*(CMDResponse + charIdx) == '\n') break;
-  }
+  UART5_Receive((uint8_t *)CMDResponse, strlen((const char *)response), MAX_WAIT_TICKS);
 
   return strcmp(CMDResponse, response) == 0; // Verify they are equal
 }

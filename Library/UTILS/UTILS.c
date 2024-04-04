@@ -60,6 +60,7 @@ Quaternion QuaternionFromAxisAngle(float x, float y, float z, float angle) {
 /**
  * @brief Calculates the inverse of a quat for non-normalized quats such that
  * Q^-1 * Q = 1 and Q * Q^-1 = 1
+ * This is equal to the quaternion's conjugate when both are normalized
  * @link https://github.com/rawify/Quaternion.js/blob/c3834673b502e64e1866dbbf13568c0be93e52cc/quaternion.js#L471-L502
  * @param w `w` component
  * @param x `x` component
@@ -102,6 +103,19 @@ Quaternion QuaternionMultiply(Quaternion Q1, Quaternion Q2) {
   };
 
   return result;
+}
+
+/**
+ * @brief Conjugate of Quaternion. This is equals to the Quaternion's inverse
+ * when borth are normalized
+ * @param w `w` component
+ * @param x `x` component
+ * @param y `y` component
+ * @param z `z` component
+ * @return Quaternion's conjugate
+ */
+Quaternion QuaternionConjugate(float w, float x, float y, float z) {
+  return ((Quaternion){.w = w, .x = -x, .y = -y, .z = -z});
 }
 
 /**

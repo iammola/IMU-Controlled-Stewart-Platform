@@ -35,25 +35,21 @@ void DisableInterrupts(void);
 
 static void Button_Init(void);
 
-static void Enable_Control_Method(uint8_t dataLength, uint8_t *buffer);
+static void Enable_Control_Method(MAZE_CONTROL_METHOD newControl);
 
+static Position                     position = {0};
+static volatile MAZE_CONTROL_METHOD ExpectingCTLMethod;
 static volatile MAZE_CONTROL_METHOD CTL_METHOD = DEFAULT_CTL_METHOD;
 
-static Position   position = {0};
-static Quaternion positionFromOffset = {0};
-static uint8_t    positionInBytes[NEW_POSITION_LENGTH] = {0};
-
 void GPIOD_Handler(void) {
-  uint8_t byte = CTL_METHOD == JOYSTICK_CTL_METHOD ? IMU_CTL_METHOD : JOYSTICK_CTL_METHOD;
+  MAZE_CONTROL_METHOD byte = CTL_METHOD == JOYSTICK_CTL_METHOD ? IMU_CTL_METHOD : JOYSTICK_CTL_METHOD;
 
   if (!(GPIO_PORTD_MIS_R & BTN_BIT))
     return;
 
   GPIO_PORTD_ICR_R |= BTN_BIT; // clear interrupt
-
-  DisableInterrupts();
-  Wireless_Transmit(CHANGE_CONTROL_METHOD, &byte, CHANGE_CONTROL_METHOD_LENGTH);
-  EnableInterrupts();
+  Wireless_Transmit(CHANGE_CONTROL_METHOD, (uint8_t *)&byte, CHANGE_CONTROL_METHOD_LENGTH);
+  ExpectingCTLMethod = byte;
 }
 
 /**
@@ -84,31 +80,27 @@ static void Button_Init(void) {
   GPIO_PORTD_IM_R |= BTN_BIT; // Allow the INT pin interrupt to be detected
 }
 
-/**
- * @brief
- * @param dataLength
- * @param buffer
- */
-static void Enable_Control_Method(uint8_t dataLength, uint8_t *buffer) {
-  if (dataLength != CHANGE_CONTROL_METHOD_LENGTH)
+static void Enable_Control_Method(MAZE_CONTROL_METHOD newControl) {
+  if (ExpectingCTLMethod != newControl)
     return;
 
-  CTL_METHOD = buffer[0];
+  CTL_METHOD = newControl;
 
   switch (CTL_METHOD) {
     case IMU_CTL_METHOD:
       IMU_Enable();
       break;
-    default:
+    case JOYSTICK_CTL_METHOD:
       IMU_Disable();
       break;
   }
 }
 
 int main(void) {
-  COMMAND          cmd = 0x00;
-  uint8_t          dataLength = 0x00;
-  const Quaternion positionOffset = QuaternionInverse(0.604001f, 0.622846f, -0.294529f, -0.400927f);
+  static uint32_t count = 0x00;
+  const uint32_t  ticks = (60 * 366) / 100;
+  // QuaternionConjugate(0.604001f, 0.622846f, -0.294529f, -0.400927f);
+  Quaternion quaternionOffset = QuaternionConjugate(0.541299462f, 0.69512105f, 0.122621112f, -0.457175076f);
 
   DisableInterrupts();
 
@@ -129,35 +121,20 @@ int main(void) {
     WaitForInterrupt();
 
     if (position.isNew) {
-      DisableInterrupts();
-
-      // Get the diff from the offset quaternion
-      position.quaternion = QuaternionMultiply(position.quaternion, positionOffset);
-
-      memcpy(positionInBytes, &position, NEW_POSITION_LENGTH);
-
-      Wireless_Transmit(NEW_POSITION, positionInBytes, NEW_POSITION_LENGTH);
-      while (UART5_FR_R & UART_FR_BUSY) {
+      if (count == 0) {
+        DisableInterrupts();
+        position.quaternion = QuaternionMultiply(position.quaternion, quaternionOffset); // Get the diff from the offset quaternion
+        Wireless_Transmit(NEW_POSITION, (uint8_t *)&position, NEW_POSITION_LENGTH);
+        position.isNew = false;
+        EnableInterrupts();
       }
 
-      EnableInterrupts();
-
-      position.isNew = false;
+      count = (count + 1) % ticks;
     }
 
-    if (HasNewData) {
-      cmd = RX_Data_Buffer[0];
-      dataLength = RX_Data_Buffer[1];
-
-      switch (cmd) {
-        case CHANGE_CONTROL_METHOD_ACK:
-          Enable_Control_Method(dataLength, RX_Data_Buffer + DATA_OFFSET);
-          break;
-        default:
-          break;
-      }
-
-      HasNewData = false;
+    if (ReceivedCommands.ChangeControlMethodAck.inUse) {
+      Enable_Control_Method(ReceivedCommands.ChangeControlMethodAck.data[0]);
+      ReceivedCommands.ChangeControlMethodAck.inUse = false;
     }
   }
 }

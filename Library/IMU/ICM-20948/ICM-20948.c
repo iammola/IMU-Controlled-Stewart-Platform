@@ -137,14 +137,16 @@ void GPIOB_Handler(void) {
   // FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, deltaTime); // Update gyroscope AHRS algorithm without magnetometer
   FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, deltaTime); // Update gyroscope AHRS algorithm
 
-  __position->quaternion.w = ahrs.quaternion.element.w;
-  __position->quaternion.x = ahrs.quaternion.element.x; // Hard-fault here when building with -O0
-  __position->quaternion.y = ahrs.quaternion.element.y;
-  __position->quaternion.z = ahrs.quaternion.element.z;
-  __position->translation.x = 0.0f;
-  __position->translation.y = 0.0f;
-  __position->translation.z = 0.0f;
-  __position->isNew = true;
+  if (!__position->isNew) {
+    __position->quaternion.w = ahrs.quaternion.element.w;
+    __position->quaternion.x = ahrs.quaternion.element.x; // Hard-fault here when building with -O0
+    __position->quaternion.y = ahrs.quaternion.element.y;
+    __position->quaternion.z = ahrs.quaternion.element.z;
+    // __position->translation.x = 0.0f;
+    // __position->translation.y = 0.0f;
+    // __position->translation.z = 0.0f;
+    __position->isNew = true;
+  }
 
   // Serial Plot
   // snprintf(text, CLI_TXT_BUF, "%0.4f %0.4f %0.4f ", gyroscope.axis.x, gyroscope.axis.y, gyroscope.axis.z);
