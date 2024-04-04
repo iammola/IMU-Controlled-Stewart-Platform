@@ -13,6 +13,8 @@
 
 #include "Ping.h"
 
+#define PING_INTERRUPT_PRIORITY (unsigned)0
+
 void TIMER0A_Handler(void);
 
 void TIMER0A_Handler(void) {

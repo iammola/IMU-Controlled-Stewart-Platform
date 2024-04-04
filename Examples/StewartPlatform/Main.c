@@ -19,16 +19,15 @@
 #include "Pololu Maestro/Maestro.h"
 #include "StewartPlatform/StewartPlatform.h"
 
-#define SYS_CLOCK 80e6
+#define SYS_CLOCK    80e6
+#define INT_PRIORITY 3
+
+#define DURATION 7000.0f
 
 void WaitForInterrupt(void);
-void EnableInterrupts(void);
-void DisableInterrupts(void);
 
 void TIMER0A_Handler(void);
 void Timer_Init(uint32_t FREQ);
-
-#define DURATION 7000.0f
 
 static volatile float    elapsed = 0.0f;
 static volatile Position position = {0};
@@ -72,9 +71,10 @@ void TIMER0A_Handler(void) {
 
   angle = powf(sinf((elapsedInPercent * M_PI * 2) - (M_PI * 8)), 5) / 3.0f;
 
-  position.isNew = true;
-  position.translation = ((Coords){0});
-  position.quaternion = QuaternionFromAxisAngle(x, y, z, angle);
+  // position.translation = ((Coords){0});
+  if (!position.inUse) {
+    position.quaternion = QuaternionFromAxisAngle(x, y, z, angle);
+  }
 
   TIMER0_ICR_R |= TIMER_ICR_TATOCINT; // Clear interrupt
 }
@@ -109,19 +109,14 @@ int main(void) {
   while (1) {
     WaitForInterrupt();
 
-    if (!position.isNew)
-      continue;
-
-    DisableInterrupts();
+    position.inUse = true;
 
     StewartPlatform_Update(position.translation, position.quaternion);
     for (legIdx = 0; legIdx < Maestro_Channels; legIdx++) {
       Maestro_SetAngle(legIdx, legs[legIdx].servoAngle);
     }
 
-    position.isNew = false;
+    position.inUse = false;
     Maestro_WaitForIdle();
-
-    EnableInterrupts();
   }
 }

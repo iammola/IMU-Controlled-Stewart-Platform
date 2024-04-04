@@ -16,6 +16,7 @@
 #include "SysTick/SysTick.h"
 
 #include "IMU/IMU.h"
+#include "Timer/Ping/Ping.h"
 #include "Wireless/Wireless.h"
 
 #include "Glove.h"
@@ -28,6 +29,10 @@
 
 #define SYS_CLOCK 80e6
 
+#define IMU_SAMPLE_RATE    400
+#define OUTPUT_RATE        25
+#define OUTPUT_COUNTER_MAX (SYS_CLOCK / (OUTPUT_RATE * IMU_SAMPLE_RATE))
+
 void GPIOD_Handler(void);
 void WaitForInterrupt(void);
 void EnableInterrupts(void);
@@ -37,7 +42,8 @@ static void Button_Init(void);
 
 static void Enable_Control_Method(MAZE_CONTROL_METHOD newControl);
 
-static Position                     position = {0};
+static volatile Position            position = {0};
+static volatile Quaternion          quaternionOffset;
 static volatile MAZE_CONTROL_METHOD ExpectingCTLMethod;
 static volatile MAZE_CONTROL_METHOD CTL_METHOD = DEFAULT_CTL_METHOD;
 
@@ -96,11 +102,17 @@ static void Enable_Control_Method(MAZE_CONTROL_METHOD newControl) {
   }
 }
 
+inline void Ping_Handler(void) {
+  position.inUse = true;
+
+  position.quaternion = QuaternionMultiply(position.quaternion, quaternionOffset); // Get the diff from the offset quaternion
+  Wireless_Transmit(NEW_POSITION, (uint8_t *)&position, NEW_POSITION_LENGTH);
+
+  position.inUse = false;
+}
+
 int main(void) {
-  static uint32_t count = 0x00;
-  const uint32_t  ticks = (60 * 366) / 100;
-  // QuaternionConjugate(0.604001f, 0.622846f, -0.294529f, -0.400927f);
-  Quaternion quaternionOffset = QuaternionConjugate(0.541299462f, 0.69512105f, 0.122621112f, -0.457175076f);
+  quaternionOffset = QuaternionConjugate(0.541299462f, 0.69512105f, 0.122621112f, -0.457175076f);
 
   DisableInterrupts();
 
@@ -108,7 +120,8 @@ int main(void) {
   FPULazyStackingEnable(); // Enable Floating Point
 
   Wireless_Init(SYS_CLOCK, true);
-  IMU_Init(SYS_CLOCK, &position);
+  Ping_TimerInit(OUTPUT_COUNTER_MAX);
+  IMU_Init(SYS_CLOCK, IMU_SAMPLE_RATE, &position);
 
   if (CTL_METHOD == IMU_CTL_METHOD)
     IMU_Enable();
@@ -119,18 +132,6 @@ int main(void) {
 
   while (1) {
     WaitForInterrupt();
-
-    if (position.isNew) {
-      if (count == 0) {
-        DisableInterrupts();
-        position.quaternion = QuaternionMultiply(position.quaternion, quaternionOffset); // Get the diff from the offset quaternion
-        Wireless_Transmit(NEW_POSITION, (uint8_t *)&position, NEW_POSITION_LENGTH);
-        position.isNew = false;
-        EnableInterrupts();
-      }
-
-      count = (count + 1) % ticks;
-    }
 
     if (ReceivedCommands.ChangeControlMethodAck.inUse) {
       Enable_Control_Method(ReceivedCommands.ChangeControlMethodAck.data[0]);

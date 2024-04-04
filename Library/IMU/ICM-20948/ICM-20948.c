@@ -19,8 +19,6 @@
 //              < 4=>  4: Gyroscope Test
 //              < 5=>  5: Magnetometer
 //              < 6=>  6: Magnetometer Test
-//              < 7=>  7: Quaternion
-//              < 8=>  8: Quaternion Test
 //          <i> The calibration state to put the IMU in
 //
 #define CALIBRATION_MODE 0
@@ -137,7 +135,7 @@ void GPIOB_Handler(void) {
   // FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, deltaTime); // Update gyroscope AHRS algorithm without magnetometer
   FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, deltaTime); // Update gyroscope AHRS algorithm
 
-  if (!__position->isNew) {
+  if (!__position->inUse) {
     __position->quaternion.w = ahrs.quaternion.element.w;
     __position->quaternion.x = ahrs.quaternion.element.x; // Hard-fault here when building with -O0
     __position->quaternion.y = ahrs.quaternion.element.y;
@@ -145,7 +143,6 @@ void GPIOB_Handler(void) {
     // __position->translation.x = 0.0f;
     // __position->translation.y = 0.0f;
     // __position->translation.z = 0.0f;
-    __position->isNew = true;
   }
 
   // Serial Plot
@@ -578,60 +575,6 @@ void ICM20948_AccelGyroCalibration(void) {
   totalSamples.axis.z /= (SAMPLES_COUNT * sampleSensitivity.axis.z);
 
   snprintf(text, CLI_TXT_BUF, "Measurement finished. X = %0.4f Y = %0.4f Z = %0.4f\n", totalSamples.axis.x, totalSamples.axis.y, totalSamples.axis.z);
-  CLI_Write(text);
-
-  while (1)
-    ;
-#endif
-}
-
-/**
- * @brief
- * @param
- */
-void ICM20948_QuaternionCalibration(void) {
-#if (CALIBRATION_MODE == 7) || (CALIBRATION_MODE == 8)
-  uint32_t      SAMPLES_LEFT = 0;
-  const int32_t SAMPLES_COUNT = 1e4;
-  static char   text[CLI_TXT_BUF] = "";
-
-  const Quaternion IMU_Quat_Offset = QuaternionInverse(0.0f, 0.0f, 0.0f, 0.0f);
-  FusionQuaternion total = {
-      .element = {.w = 0.0f, .x = 0.0f, .y = 0.0f, .z = 0.0f}
-  };
-
-  for (SAMPLES_LEFT = SAMPLES_COUNT; SAMPLES_LEFT > 0; SAMPLES_LEFT--)
-  // while (1)
-  {
-    while (!__position->isNew) {
-    }
-
-#if (CALIBRATION_MODE == 8)
-    __position->quaternion = QuaternionMultiply(__position->quaternion, IMU_Quat_Offset);
-#endif
-
-    total.element.w += __position->quaternion.w;
-    total.element.x += __position->quaternion.x;
-    total.element.y += __position->quaternion.y;
-    total.element.z += __position->quaternion.z;
-
-#define Q __position->quaternion
-    snprintf(text, CLI_TXT_BUF, "%0.6f %0.6f %0.6f %0.6f\n", Q.w, Q.x, Q.y, Q.z);
-#undef Q
-    CLI_Write(text);
-
-    __position->isNew = false;
-  }
-
-  // Normalize
-  total.element.w /= SAMPLES_COUNT;
-  total.element.x /= SAMPLES_COUNT;
-  total.element.y /= SAMPLES_COUNT;
-  total.element.z /= SAMPLES_COUNT;
-
-#define R total.element
-  snprintf(text, CLI_TXT_BUF, "Measurement finished. W = %0.6f X = %0.6f Y = %0.6f Z = %0.6f\n", R.w, R.x, R.y, R.z);
-#undef T
   CLI_Write(text);
 
   while (1)

@@ -2,14 +2,14 @@
 #include <stdint.h>
 
 #include "UTILS/UTILS.h"
-#include "ICM-20948/ICM-20948.h"
 
 /**
  * @brief
  * @param SYS_CLK
+ * @param SAMPLE_RATE
  * @param position
  */
-void IMU_Init(uint32_t SYS_CLK, volatile Position *position);
+void IMU_Init(uint32_t SYS_CLK, uint32_t SAMPLE_RATE, volatile Position *position);
 
 /**
  * @brief

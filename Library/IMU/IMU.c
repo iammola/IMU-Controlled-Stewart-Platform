@@ -1,17 +1,18 @@
 #include "IMU.h"
-
-#define SAMPLE_RATE 400
+#include "ICM-20948/ICM-20948.h"
 
 static uint16_t IMU_CalcSDR(uint32_t frequency, uint32_t desired);
 
 /**
  * @brief
  * @param SYS_CLK
+ * @param SAMPLE_RATE
  * @param position
  */
-void IMU_Init(uint32_t SYS_CLK, volatile Position *position) {
+void IMU_Init(uint32_t SYS_CLK, uint32_t SAMPLE_RATE, volatile Position *position) {
   uint8_t whoAmI = 0, MAG_whoAmI = 0;
-  uint8_t userCtrl = 0;
+
+  uint16_t sampleRateDiv = IMU_CalcSDR(MAX_SAMPLE_RATE, SAMPLE_RATE);
 
   ICM20948_Init(SYS_CLK, SAMPLE_RATE, position);
 
@@ -29,13 +30,12 @@ void IMU_Init(uint32_t SYS_CLK, volatile Position *position) {
   accelerometerOffset.axis.y /= 8 / 2;
   accelerometerOffset.axis.z /= 8 / 2;
 
-  ICM20948_Write(ODR_ALIGN_EN_ADDR, ODR_ALIGN_ENABLE);                                               // Align output data rate
-  ICM20948_Write(GYRO_SMPLRT_DIV_ADDR, IMU_CalcSDR(GYRO_MAX_SMPLRT, SAMPLE_RATE) & 0xFF);            // Configure sample rate
-  ICM20948_Write(ACCEL_SMPLRT_DIV_1_ADDR, (IMU_CalcSDR(ACCEL_MAX_SMPLRT, SAMPLE_RATE) >> 8) & 0xFF); // Configure (MSB) sample rate
-  ICM20948_Write(ACCEL_SMPLRT_DIV_2_ADDR, IMU_CalcSDR(ACCEL_MAX_SMPLRT, SAMPLE_RATE) & 0xFF);        // Configure (LSB) sample rate
+  ICM20948_Write(ODR_ALIGN_EN_ADDR, ODR_ALIGN_ENABLE);                  // Align output data rate
+  ICM20948_Write(GYRO_SMPLRT_DIV_ADDR, sampleRateDiv & 0xFF);           // Configure sample rate
+  ICM20948_Write(ACCEL_SMPLRT_DIV_1_ADDR, (sampleRateDiv >> 8) & 0xFF); // Configure (MSB) sample rate
+  ICM20948_Write(ACCEL_SMPLRT_DIV_2_ADDR, sampleRateDiv & 0xFF);        // Configure (LSB) sample rate
 
-  ICM20948_Read(USER_CTRL_ADDR, &userCtrl);
-  ICM20948_Write(USER_CTRL_ADDR, (userCtrl | SPI_ENABLE) & ~(DMP_ENABLE | FIFO_ENABLE)); // Enable SPI
+  ICM20948_Write(USER_CTRL_ADDR, SPI_ENABLE & ~(DMP_ENABLE | FIFO_ENABLE)); // Enable SPI
 
   ICM20948_Mag_Init(); // Enable I2C master for Magnetometer read
 
@@ -47,7 +47,7 @@ void IMU_Init(uint32_t SYS_CLK, volatile Position *position) {
     ICM20948_Mag_Read(MAG_WHO_AM_I, &MAG_whoAmI, 1); // Confirm communication success
   } while (MAG_whoAmI != 0x09);
 
-  // ICM20948_MagCalibration();       // Run Calibrations
+  ICM20948_MagCalibration();       // Run Calibrations
   ICM20948_AccelGyroCalibration(); // Will be empty functions if undesired
 }
 
@@ -63,8 +63,6 @@ void IMU_Enable(void) {
 
   ICM20948_MadgwickFusion_Init(); // Initialize Fusion Algorithm
   ICM20948_Interrupt_Pin_Init();  // Configure the Interrupt pin
-
-  // ICM20948_QuaternionCalibration();
 }
 
 /**
@@ -88,7 +86,7 @@ static uint16_t IMU_CalcSDR(uint32_t frequency, uint32_t desired) {
   if (desired > frequency)
     return 0;
 
-  SMPLRT = ((float)frequency / (float)desired) - 1.0f + 0.5f;
+  SMPLRT = ((float)frequency / (float)desired) - 1.0f;
 
   return (uint16_t)(SMPLRT);
 }

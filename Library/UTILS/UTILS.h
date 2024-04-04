@@ -38,7 +38,7 @@ typedef struct Coords {
 typedef struct Position {
   Quaternion quaternion;
   Coords     translation;
-  bool       isNew;
+  bool       inUse;
 } Position;
 
 #define sqr(num) ((num) * (num))

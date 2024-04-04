@@ -70,7 +70,7 @@ void Maze_UpdateControlMethod(MAZE_CONTROL_METHOD newControl) {
 void Maze_MoveToPosition(void) {
   uint8_t legIdx = 0;
 
-  if (!position.isNew)
+  if (!position.inUse)
     return;
 
   StewartPlatform_Update(position.translation, position.quaternion);
@@ -79,7 +79,7 @@ void Maze_MoveToPosition(void) {
     Maestro_SetAngle(legIdx, legs[legIdx].servoAngle * ((legIdx % 2 == 0) ? 1.0f : -1.0f));
   }
 
-  position.isNew = false;
+  position.inUse = false;
 
   Maestro_WaitForIdle();
 }
@@ -108,7 +108,7 @@ void Maze_UpdateConnectedState(bool connected) {
   connectionState = connected;
 }
 
-void Ping_Handler(void) {
+inline void Ping_Handler(void) {
   Maze_UpdateConnectedState(false);
 }
 
@@ -144,7 +144,7 @@ int main(void) {
     WaitForInterrupt();
 
     // Direct Joystick control
-    if (CTL_METHOD == JOYSTICK_CTL_METHOD && position.isNew)
+    if (CTL_METHOD == JOYSTICK_CTL_METHOD && position.inUse)
       Maze_MoveToPosition();
 
     // Wait for new data to be confirmed
@@ -156,7 +156,7 @@ int main(void) {
 
     if (ReceivedCommands.NewPosition.inUse) {
       memcpy(&position, ReceivedCommands.NewPosition.data, sizeof(ReceivedCommands.NewPosition.data));
-      position.isNew = true;
+      position.inUse = true;
       Maze_MoveToPosition();
 
       ReceivedCommands.NewPosition.inUse = false;

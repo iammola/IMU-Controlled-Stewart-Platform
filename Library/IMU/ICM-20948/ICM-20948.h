@@ -125,8 +125,7 @@ typedef struct REG_ADDRESS_STRUCT {
 #define GYRO_1000_SENSITIVITY SENSITIVITY(1000.0f)
 #define GYRO_2000_SENSITIVITY SENSITIVITY(2000.0f)
 
-#define ACCEL_MAX_SMPLRT 1125 // 1.125 kHz
-#define GYRO_MAX_SMPLRT  1100 // 1.100 kHz
+#define MAX_SAMPLE_RATE  1125 // 1.125 kHz
 
 /**
  * @brief Initializes the SysTick, and the SPI module for communication. It resets the device,
@@ -206,12 +205,6 @@ void ICM20948_MagCalibration(void);
  * @param
  */
 void ICM20948_AccelGyroCalibration(void);
-
-/**
- * @brief
- * @param
- */
-void ICM20948_QuaternionCalibration(void);
 
 // Gyroscope Offset Bias in LSBs for +/-250 dps
 extern FusionVector gyroscopeOffset;

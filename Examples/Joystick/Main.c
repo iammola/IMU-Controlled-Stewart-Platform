@@ -40,14 +40,11 @@ int main(void) {
   while (1) {
     WaitForInterrupt();
 
-    if (!position.isNew)
-      continue;
+    position.inUse = true;
+    snprintf(text, CLI_TXT_BUF, "%0.6f %0.6f %0.6f %0.6f\n", position.quaternion.w, position.quaternion.x, position.quaternion.y,
+             position.quaternion.z);
+    position.inUse = false;
 
-    DisableInterrupts();
-#define Q position.quaternion
-    snprintf(text, CLI_TXT_BUF, "%0.6f %0.6f %0.6f %0.6f\n", Q.w, Q.x, Q.y, Q.z);
-#undef Q
-    position.isNew = false;
-    EnableInterrupts();
+    CLI_Write(text);
   }
 }
