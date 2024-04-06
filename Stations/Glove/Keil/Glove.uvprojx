@@ -314,7 +314,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>3</Optim>
+            <Optim>2</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -453,6 +453,11 @@
               <FileName>Wireless.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\Library\Wireless\Wireless.c</FilePath>
+            </File>
+            <File>
+              <FileName>Ping.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Library\Timer\Ping\Ping.c</FilePath>
             </File>
           </Files>
         </Group>
