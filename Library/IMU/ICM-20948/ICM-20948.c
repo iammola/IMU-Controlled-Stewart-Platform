@@ -145,6 +145,8 @@ void GPIOB_Handler(void) {
     // __position->translation.z = 0.0f;
   }
 
+  ++__position->count;
+
   // Serial Plot
   // snprintf(text, CLI_TXT_BUF, "%0.4f %0.4f %0.4f ", gyroscope.axis.x, gyroscope.axis.y, gyroscope.axis.z);
   // CLI_Write(text);
@@ -426,7 +428,7 @@ void ICM20948_Mag_Write(uint8_t MAG_ADDRESS, uint8_t data) {
 void ICM20948_MadgwickFusion_Init(void) {
   const FusionAhrsSettings settings = {
       .convention = FusionConventionNwu,
-      .gain = 1.5f,
+      .gain = 10.0f,
       .gyroscopeRange = 2000.0f, // gyroscope range in dps
       .accelerationRejection = 10.0f,
       .magneticRejection = 5.0f,

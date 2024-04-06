@@ -23,15 +23,15 @@
 
 #include "tm4c123gh6pm.h"
 
-#define BTN_BIT                (unsigned)(1 << 0) // PD0
+#define BTN_BIT                (unsigned)(1 << 0) // PD6
 #define BTN_INTERRUPT_PRIORITY (unsigned)4
 #define BTN_PCTL_M             (unsigned)(GPIO_PCTL_PD0_M)
 
 #define SYS_CLOCK 80e6
 
-#define IMU_SAMPLE_RATE    400
-#define OUTPUT_RATE        25
-#define OUTPUT_COUNTER_MAX (SYS_CLOCK / (OUTPUT_RATE * IMU_SAMPLE_RATE))
+#define IMU_SAMPLE_RATE     300
+#define SAMPLES_BEFORE_PING ((60 * IMU_SAMPLE_RATE) / 100)
+#define PING_FREQUENCY      60
 
 void GPIOD_Handler(void);
 void WaitForInterrupt(void);
@@ -40,22 +40,18 @@ void DisableInterrupts(void);
 
 static void Button_Init(void);
 
-static void Enable_Control_Method(MAZE_CONTROL_METHOD newControl);
+static void Glove_UpdateControlMethod(MAZE_CONTROL_METHOD newControl);
 
 static volatile Position            position = {0};
 static volatile Quaternion          quaternionOffset;
-static volatile MAZE_CONTROL_METHOD ExpectingCTLMethod;
-static volatile MAZE_CONTROL_METHOD CTL_METHOD = DEFAULT_CTL_METHOD;
+static volatile MAZE_CONTROL_METHOD ExpectingCTLMethod = DEFAULT_CTL_METHOD;
+static volatile MAZE_CONTROL_METHOD CTL_METHOD;
 
 void GPIOD_Handler(void) {
-  MAZE_CONTROL_METHOD byte = CTL_METHOD == JOYSTICK_CTL_METHOD ? IMU_CTL_METHOD : JOYSTICK_CTL_METHOD;
-
-  if (!(GPIO_PORTD_MIS_R & BTN_BIT))
-    return;
-
   GPIO_PORTD_ICR_R |= BTN_BIT; // clear interrupt
-  Wireless_Transmit(CHANGE_CONTROL_METHOD, (uint8_t *)&byte, CHANGE_CONTROL_METHOD_LENGTH);
-  ExpectingCTLMethod = byte;
+
+  ExpectingCTLMethod = CTL_METHOD == JOYSTICK_CTL_METHOD ? IMU_CTL_METHOD : JOYSTICK_CTL_METHOD;
+  Wireless_Transmit(CHANGE_CONTROL_METHOD, (uint8_t *)&ExpectingCTLMethod, CHANGE_CONTROL_METHOD_LENGTH);
 }
 
 /**
@@ -68,7 +64,7 @@ static void Button_Init(void) {
   }
 
   GPIO_PORTD_DEN_R |= BTN_BIT;      // Enable Digital
-  GPIO_PORTD_PDR_R |= BTN_BIT;      // Configure as active low
+  GPIO_PORTD_PDR_R |= BTN_BIT;      // Pull input down
   GPIO_PORTD_DIR_R &= ~BTN_BIT;     // Configure as input
   GPIO_PORTD_AMSEL_R &= ~BTN_BIT;   // Disable Analog mode
   GPIO_PORTD_AFSEL_R &= ~BTN_BIT;   // Disable Alternate functions
@@ -86,7 +82,7 @@ static void Button_Init(void) {
   GPIO_PORTD_IM_R |= BTN_BIT; // Allow the INT pin interrupt to be detected
 }
 
-static void Enable_Control_Method(MAZE_CONTROL_METHOD newControl) {
+static void Glove_UpdateControlMethod(MAZE_CONTROL_METHOD newControl) {
   if (ExpectingCTLMethod != newControl)
     return;
 
@@ -103,39 +99,49 @@ static void Enable_Control_Method(MAZE_CONTROL_METHOD newControl) {
 }
 
 inline void Ping_Handler(void) {
+  Ping_TimerDisable();
+
   position.inUse = true;
 
-  position.quaternion = QuaternionMultiply(position.quaternion, quaternionOffset); // Get the diff from the offset quaternion
+  // Get the diff from the offset quaternion and scale it down
+  position.quaternion = QuaternionMultiply(position.quaternion, quaternionOffset, 0.5f);
+
   Wireless_Transmit(NEW_POSITION, (uint8_t *)&position, NEW_POSITION_LENGTH);
 
   position.inUse = false;
+  position.count = 0;
 }
 
 int main(void) {
-  quaternionOffset = QuaternionConjugate(0.541299462f, 0.69512105f, 0.122621112f, -0.457175076f);
-
   DisableInterrupts();
+
+  quaternionOffset = QuaternionConjugate(0.615685642f, 0.688054919f, -0.0159532707f, -0.384057611f);
 
   PLL_Init();
   FPULazyStackingEnable(); // Enable Floating Point
 
   Wireless_Init(SYS_CLOCK, true);
-  Ping_TimerInit(OUTPUT_COUNTER_MAX);
   IMU_Init(SYS_CLOCK, IMU_SAMPLE_RATE, &position);
-
-  if (CTL_METHOD == IMU_CTL_METHOD)
-    IMU_Enable();
+  Ping_TimerInit(SYS_CLOCK / PING_FREQUENCY, true);
 
   Button_Init();
 
+  Glove_UpdateControlMethod(DEFAULT_CTL_METHOD);
   EnableInterrupts();
 
   while (1) {
     WaitForInterrupt();
 
-    if (ReceivedCommands.ChangeControlMethodAck.inUse) {
-      Enable_Control_Method(ReceivedCommands.ChangeControlMethodAck.data[0]);
-      ReceivedCommands.ChangeControlMethodAck.inUse = false;
+    if (position.count == SAMPLES_BEFORE_PING) {
+      Ping_TimerEnable();
+    }
+
+    if (ReceivedCommands.ChangeControlMethodAck.isNew) {
+      ReceivedCommands.ChangeControlMethodAck.inUse = true;
+
+      Glove_UpdateControlMethod(ReceivedCommands.ChangeControlMethodAck.data[0]);
+
+      ReceivedCommands.ChangeControlMethodAck.isNew = ReceivedCommands.ChangeControlMethodAck.inUse = false;
     }
   }
 }

@@ -58,67 +58,6 @@ Quaternion QuaternionFromAxisAngle(float x, float y, float z, float angle) {
 }
 
 /**
- * @brief Calculates the inverse of a quat for non-normalized quats such that
- * Q^-1 * Q = 1 and Q * Q^-1 = 1
- * This is equal to the quaternion's conjugate when both are normalized
- * @link https://github.com/rawify/Quaternion.js/blob/c3834673b502e64e1866dbbf13568c0be93e52cc/quaternion.js#L471-L502
- * @param w `w` component
- * @param x `x` component
- * @param y `y` component
- * @param z `z` component
- * @return The inverted quaternion
- */
-Quaternion QuaternionInverse(float w, float x, float y, float z) {
-  Quaternion result = {0};
-  float      normSq = sqr(w) + sqr(x) + sqr(y) + sqr(z);
-
-  if (normSq == 0.0f) {
-    return result;
-  }
-
-  normSq = 1 / normSq;
-
-  result.w = w * normSq;
-  result.x = -x * normSq;
-  result.y = -y * normSq;
-  result.z = -z * normSq;
-
-  return result;
-}
-
-/**
- * @brief Calculates the Hamilton product of two quaternions. Leaving out the imaginary part results in just scaling the quat
- * Not commutative because cross(v1, v2) != cross(v2, v1)!
- * @link https://github.com/rawify/Quaternion.js/blob/c3834673b502e64e1866dbbf13568c0be93e52cc/quaternion.js#L406-L439
- * @param Q1 The LHS of the equation
- * @param Q2 The RHS of the equation
- * @return The result of the subtraction
- */
-Quaternion QuaternionMultiply(Quaternion Q1, Quaternion Q2) {
-  Quaternion result = {
-      .w = Q1.w * Q2.w - Q1.x * Q2.x - Q1.y * Q2.y - Q1.z * Q2.z,
-      .x = Q1.w * Q2.x + Q1.x * Q2.w + Q1.y * Q2.z - Q1.z * Q2.y,
-      .y = Q1.w * Q2.y + Q1.y * Q2.w + Q1.z * Q2.x - Q1.x * Q2.z,
-      .z = Q1.w * Q2.z + Q1.z * Q2.w + Q1.x * Q2.y - Q1.y * Q2.x,
-  };
-
-  return result;
-}
-
-/**
- * @brief Conjugate of Quaternion. This is equals to the Quaternion's inverse
- * when borth are normalized
- * @param w `w` component
- * @param x `x` component
- * @param y `y` component
- * @param z `z` component
- * @return Quaternion's conjugate
- */
-Quaternion QuaternionConjugate(float w, float x, float y, float z) {
-  return ((Quaternion){.w = w, .x = -x, .y = -y, .z = -z});
-}
-
-/**
  * @brief Rotates a vector according to the quaternion, assumes |q|=1
  * @link https://github.com/rawify/Quaternion.js/blob/c3834673b502e64e1866dbbf13568c0be93e52cc/quaternion.js#L1004-L1025
  * @param q Quaternion

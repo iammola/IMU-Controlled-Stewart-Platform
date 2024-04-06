@@ -13,6 +13,7 @@
 #include <stdint.h>
 
 #include "STATIONS.h"
+#include "UTILS/UTILS.h"
 
 #define CONNECTED_STATE_X      10
 #define CONNECTED_STATE_Y      60
@@ -23,6 +24,21 @@
 #define CONTROL_METHOD_Y      80
 #define CONTROL_METHOD_WIDTH  215
 #define CONTROL_METHOD_HEIGHT 20
+
+typedef enum CONNECTED_STATE {
+  CONNECTED = 0x81,
+  DISCONNECTED = 0x96,
+} CONNECTED_STATE;
+
+extern volatile Position            position;
+extern volatile MAZE_CONTROL_METHOD CTL_METHOD;
+extern volatile CONNECTED_STATE     connectionState;
+
+/**
+ * @brief
+ * @param SYS_CLOCK
+ */
+void Maze_Init(uint32_t SYS_CLOCK);
 
 /**
  * @brief
@@ -41,4 +57,10 @@ void Maze_MoveToPosition(void);
  * @brief
  * @param connected
  */
-void Maze_UpdateConnectedState(bool connected);
+void Maze_UpdateConnectedState(CONNECTED_STATE connected);
+
+/**
+ * @brief
+ * @param
+ */
+extern inline void Maze_ConfirmedInitialized(void);

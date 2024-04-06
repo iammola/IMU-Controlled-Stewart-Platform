@@ -25,20 +25,34 @@ typedef enum COMMAND {
 typedef struct CommandData {
   struct NewPosition {
     bool    inUse;
+    bool    isNew;
     uint8_t data[NEW_POSITION_LENGTH];
   } NewPosition;
   struct ChangeControlMethod {
     bool    inUse;
+    bool    isNew;
     uint8_t data[CHANGE_CONTROL_METHOD_LENGTH];
   } ChangeControlMethod;
   struct ChangeControlMethodAck {
     bool    inUse;
+    bool    isNew;
     uint8_t data[CHANGE_CONTROL_METHOD_ACK_LENGTH];
   } ChangeControlMethodAck;
 } CommandData;
 
 extern CommandData ReceivedCommands;
 
-extern inline void Wireless_Init(uint32_t SYS_CLOCK, bool enableRX);
+/**
+ * @brief Initializes and configures the HC-12 module with constant parameters
+ * @param SYS_CLOCK System Clock speed
+ * @param enableRX Allow incoming transmissions
+ */
+void Wireless_Init(uint32_t SYS_CLOCK, bool enableRX);
 
+/**
+ * @brief Packages the data to be transmitted into one of the available buffers.
+ * @param cmd COMMAND for data transfer
+ * @param data Data applicable to command
+ * @param length Number of bytes in data to send
+ */
 void Wireless_Transmit(COMMAND cmd, uint8_t *data, uint8_t length);

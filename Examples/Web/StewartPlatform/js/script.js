@@ -96,6 +96,7 @@ function setupPlatform() {
       platform = new Stewart();
       animation = new Animation(platform);
 
+      const range = (90 * Math.PI) / 180;
       platform.initHexagonal({
         baseRadius: 60,
         baseRadiusOuter: 83.2665,
@@ -107,13 +108,13 @@ function setupPlatform() {
         hornDirection: 0,
         shaftDistance: 20,
         anchorDistance: 22.225,
-        servoRange: [-Math.PI / 2, Math.PI / 2],
+        servoRange: [-range, range],
         servoRangeVisible: true,
       });
     };
 
     p.draw = function () {
-      p.background(255);
+      p.background("#646364");
 
       p.push();
 

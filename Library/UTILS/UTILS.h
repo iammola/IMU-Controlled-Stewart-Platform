@@ -11,6 +11,7 @@
 #include <float.h>
 #include <math.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifndef UTILS_H
 #define UTILS_H
@@ -39,6 +40,7 @@ typedef struct Position {
   Quaternion quaternion;
   Coords     translation;
   bool       inUse;
+  uint32_t   count;
 } Position;
 
 #define sqr(num) ((num) * (num))
@@ -71,9 +73,19 @@ Quaternion QuaternionFromAxisAngle(float x, float y, float z, float angle);
  * @link https://github.com/rawify/Quaternion.js/blob/c3834673b502e64e1866dbbf13568c0be93e52cc/quaternion.js#L406-L439
  * @param Q1 The LHS of the equation
  * @param Q2 The RHS of the equation
+ * @param scale Value to scale result by
  * @return The result of the subtraction
  */
-Quaternion QuaternionMultiply(Quaternion Q1, Quaternion Q2);
+inline Quaternion QuaternionMultiply(Quaternion Q1, Quaternion Q2, float scale) {
+  Quaternion result = {
+      .w = (Q1.w * Q2.w - Q1.x * Q2.x - Q1.y * Q2.y - Q1.z * Q2.z) * scale,
+      .x = (Q1.w * Q2.x + Q1.x * Q2.w + Q1.y * Q2.z - Q1.z * Q2.y) * scale,
+      .y = (Q1.w * Q2.y + Q1.y * Q2.w + Q1.z * Q2.x - Q1.x * Q2.z) * scale,
+      .z = (Q1.w * Q2.z + Q1.z * Q2.w + Q1.x * Q2.y - Q1.y * Q2.x) * scale,
+  };
+
+  return result;
+}
 
 /**
  * @brief Calculates the inverse of a quat for non-normalized quats such that
@@ -96,7 +108,9 @@ Quaternion QuaternionInverse(float w, float x, float y, float z);
  * @param z `z` component
  * @return Quaternion's conjugate
  */
-Quaternion QuaternionConjugate(float w, float x, float y, float z);
+inline Quaternion QuaternionConjugate(float w, float x, float y, float z) {
+  return ((Quaternion){.w = w, .x = -x, .y = -y, .z = -z});
+}
 
 /**
  * @brief Rotates a vector according to the quaternion, assumes |q|=1

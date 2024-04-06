@@ -34,13 +34,17 @@ CommandData ReceivedCommands = {0};
  * @param SYS_CLOCK System Clock speed
  * @param enableRX Allow incoming transmissions
  */
-inline void Wireless_Init(uint32_t SYS_CLOCK, bool enableRX) {
+void Wireless_Init(uint32_t SYS_CLOCK, bool enableRX) {
   HC12_Init();
   HC12_Config(SYS_CLOCK, BAUD_115200, TX_20dBm, enableRX); // Use 115200 bps, 20 dBm
 }
 
 inline void HC12_ReceiveHandler(uint8_t *RX_Data_Buffer) {
-  Buffer *rxBufferPtr;
+  struct {
+    bool    isNew;
+    bool    inUse;
+    uint8_t data[0];
+  }      *rxBufferPtr;
   COMMAND cmd = RX_Data_Buffer[0];
 
   switch (cmd) {
@@ -51,12 +55,14 @@ inline void HC12_ReceiveHandler(uint8_t *RX_Data_Buffer) {
       rxBufferPtr = &ReceivedCommands.ChangeControlMethodAck;
       break;
     case NEW_POSITION:
-      rxBufferPtr = &ReceivedCommands.ChangeControlMethod;
+      rxBufferPtr = &ReceivedCommands.NewPosition;
       break;
+    default:
+      return;
   }
 
   if (rxBufferPtr != NULL && !rxBufferPtr->inUse) { // Only save new data if not currently in use
-    rxBufferPtr->inUse = true;
+    rxBufferPtr->isNew = true;
     memcpy(rxBufferPtr->data, RX_Data_Buffer + 1, sizeof(rxBufferPtr->data));
   }
 }

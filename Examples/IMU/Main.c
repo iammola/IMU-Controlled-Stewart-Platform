@@ -26,7 +26,7 @@ void WaitForInterrupt(void);
 
 int main(void) {
   volatile Position position = {0};
-  const Quaternion  IMU_Quat_Offset = QuaternionInverse(0.604001f, 0.622846f, -0.294529f, -0.400927f);
+  const Quaternion  IMU_Quat_Offset = QuaternionConjugate(0.604001f, 0.622846f, -0.294529f, -0.400927f);
 
   PLL_Init();              // Initialize the PLL
   FPULazyStackingEnable(); // Enable Floating Point
@@ -40,7 +40,7 @@ int main(void) {
     WaitForInterrupt();
 
     position.inUse = true;
-    position.quaternion = QuaternionMultiply(position.quaternion, IMU_Quat_Offset);
+    position.quaternion = QuaternionMultiply(position.quaternion, IMU_Quat_Offset, 1.0f);
     snprintf(text, CLI_TXT_BUF,
              // "Quaternion: %0.6f,%0.6f,%0.6f,%0.6f\n", // AdaFruit_3D_Model_Viewer
              "%0.6f %0.6f %0.6f %0.6f\n", // Stewart Platform

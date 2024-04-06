@@ -173,8 +173,8 @@ void UART4_Transmit(uint8_t *data, uint32_t byteCount) {
   } while (byteIndex < byteCount);
 }
 
-void UART5_Receive(uint8_t *data, uint32_t length, uint32_t maxTicks) {
-  uint32_t ticks = 0x00;
+void UART4_Receive(uint8_t *data, uint32_t length, uint32_t maxTicks) {
+  volatile uint32_t ticks = 0x00;
 
   while (length > 0) {
     ticks = maxTicks;

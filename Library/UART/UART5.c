@@ -174,7 +174,7 @@ void UART5_Transmit(uint8_t *data, uint32_t byteCount) {
 }
 
 void UART5_Receive(uint8_t *data, uint32_t length, uint32_t maxTicks) {
-  uint32_t ticks = 0x00;
+  volatile uint32_t ticks = 0x00;
 
   while (length > 0) {
     ticks = maxTicks;
