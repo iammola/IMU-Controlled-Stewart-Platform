@@ -90,6 +90,7 @@ async function readLoop() {
       reader.releaseLock();
       break;
     }
+
     if (value.length < 1) continue;
 
     const totalBuffer = [...trimmedBuffer, ...value];
@@ -98,7 +99,7 @@ async function readLoop() {
     for (let start = 0; start < totalBuffer.length; ) {
       if (totalBuffer[start] != 0xea) continue;
 
-      const buffer = [];
+      const buffer = [0xea];
 
       start += 1;
       for (; start < totalBuffer.length; start++) {
@@ -112,7 +113,7 @@ async function readLoop() {
       }
 
       try {
-        const [totalLength, command, ...data] = buffer;
+        const [, totalLength, command, ...data] = buffer;
 
         ++passRate.received;
 

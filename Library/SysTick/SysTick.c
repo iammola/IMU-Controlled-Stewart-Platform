@@ -46,6 +46,10 @@
 
 // Initialize SysTick with busy wait running at bus clock.
 void SysTick_Init(void) {
+  if (ST_CTRL_R & ST_CTRL_ENABLE) { // Do not reset if already enabled
+     return;
+  }
+	
   ST_CTRL_R = 0;             // disable SysTick during setup
   ST_RELOAD_R = ST_RELOAD_M; // maximum reload value
   ST_CURRENT_R = 0;          // any write to current clears it
@@ -59,12 +63,12 @@ void SysTick_Wait(uint32_t delay) {
   uint32_t elapsedTime = 0;
 
   volatile uint32_t currentTime = 0;
-  volatile uint32_t startTime = ST_CURRENT_R;
+  uint32_t startTime = ST_CURRENT_R;
 
   do {
     currentTime = ST_CURRENT_R;
 
-    if (startTime < currentTime) {
+    if (startTime <= currentTime) {
       startTime = currentTime;
       delay -= elapsedTime;
     } else {

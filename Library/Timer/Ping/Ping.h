@@ -49,5 +49,4 @@ static inline void Ping_TimerDisable(void) {
  */
 static inline void Ping_TimerEnable(void) {
   TIMER0_CTL_R |= TIMER_CTL_TAEN; // Enable Timer A
-  Ping_TimerReset();
 }

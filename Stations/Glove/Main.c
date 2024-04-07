@@ -29,9 +29,14 @@
 
 #define SYS_CLOCK 80e6
 
-#define IMU_SAMPLE_RATE     300
-#define SAMPLES_BEFORE_PING ((60 * IMU_SAMPLE_RATE) / 100)
-#define PING_FREQUENCY      60
+#define IMU_SAMPLE_RATE 300
+/* To PC */
+// #define SAMPLES_BEFORE_PING ((15 * IMU_SAMPLE_RATE) / 100)
+// #define PING_FREQUENCY      100
+
+/* To MCU */
+#define SAMPLES_BEFORE_PING ((75 * IMU_SAMPLE_RATE) / 100)
+#define PING_FREQUENCY      10
 
 void GPIOD_Handler(void);
 void WaitForInterrupt(void);
@@ -126,7 +131,6 @@ int main(void) {
 
   Button_Init();
 
-  Glove_UpdateControlMethod(DEFAULT_CTL_METHOD);
   EnableInterrupts();
 
   while (1) {

@@ -29,17 +29,16 @@ volatile CONNECTED_STATE     connectionState;
 void Maze_Init(const uint32_t SYS_CLOCK) {
   Wireless_Init(SYS_CLOCK, true); // Initialize Wireless
 
-  Ping_TimerInit((uint32_t)(SYS_CLOCK * 3), false); // Init timer for 3 seconds
-  RA8875_begin(SYS_CLOCK, RA8875_800x480);          // Init screen
-  Joystick_Init(SYS_CLOCK, &position);              // Initialize Joystick
+  RA8875_begin(SYS_CLOCK, RA8875_800x480); // Init screen
+  Joystick_Init(SYS_CLOCK, &position);     // Initialize Joystick
 
   StewartPlatform_Init();  // Initialize stewart platform
   Maestro_Init(SYS_CLOCK); // Initialize Servo Maestro Controller
 
-  Maze_UpdateControlMethod(DEFAULT_CTL_METHOD);
-  Maze_UpdateConnectedState(DISCONNECTED);
+  Ping_TimerInit((uint32_t)(SYS_CLOCK * 3), false); // Init timer for 3 seconds
 
-  Ping_TimerEnable(); // Start timer
+  Maze_UpdateControlMethod(DEFAULT_CTL_METHOD); // Initialize and Send method
+  Maze_UpdateConnectedState(DISCONNECTED);
 }
 
 /**
@@ -58,8 +57,6 @@ void Maze_UpdateControlMethod(MAZE_CONTROL_METHOD newControl) {
       break;
   }
 
-  // DisableInterrupts();
-
   Wireless_Transmit(CHANGE_CONTROL_METHOD_ACK, (uint8_t *)&CTL_METHOD, CHANGE_CONTROL_METHOD_LENGTH); // Send ACK
 
   /* Clear section */
@@ -72,7 +69,6 @@ void Maze_UpdateControlMethod(MAZE_CONTROL_METHOD newControl) {
   RA8875_textEnlarge(0);
   RA8875_textTransparent(RA8875_WHITE);
   RA8875_textWrite(CTL_METHOD == JOYSTICK_CTL_METHOD ? "Control Method: Controller" : "Control Method: Glove", 0);
-  // EnableInterrupts();
 }
 
 /**
@@ -101,10 +97,13 @@ void Maze_MoveToPosition(void) {
  * @param connected
  */
 void Maze_UpdateConnectedState(CONNECTED_STATE connected) {
-  if (connectionState == connected)
+  if (connectionState == connected) {
+    Ping_TimerDisable(); // Disable Timer the connected state has been rendered
     return;
-
-  Ping_TimerReset();
+  } else {
+    Ping_TimerEnable(); // Enable Timer to check connection state periodically
+    Ping_TimerReset();
+  }
 
   /* Clear section */
   RA8875_graphicsMode();
@@ -114,8 +113,14 @@ void Maze_UpdateConnectedState(CONNECTED_STATE connected) {
   RA8875_textMode();
   RA8875_textSetCursor(CONNECTED_STATE_X, CONNECTED_STATE_Y);
   RA8875_textEnlarge(0);
-  RA8875_textTransparent(connected ? RA8875_GREEN : RA8875_RED);
-  RA8875_textWrite(connected ? "Connected to Glove" : "Disconnected from Glove", 0);
+
+  if (connected == CONNECTED) {
+    RA8875_textTransparent(RA8875_GREEN);
+    RA8875_textWrite("Connected to Glove", 0);
+  } else {
+    RA8875_textTransparent(RA8875_RED);
+    RA8875_textWrite("Disconnected from Glove", 0);
+  }
 
   connectionState = connected;
 }
