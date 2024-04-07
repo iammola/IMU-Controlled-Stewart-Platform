@@ -41,21 +41,26 @@ void Wireless_Init(const uint32_t SYS_CLOCK, bool enableRX) {
 
 inline void HC12_ReceiveHandler(uint8_t *RX_Data_Buffer) {
   struct {
-    bool    isNew;
     bool    inUse;
-    uint8_t data[0];
-  }      *rxBufferPtr;
+    bool    isNew;
+    uint8_t data[MAX_MESSAGE_SIZE];
+  } *rxBufferPtr; // Has to match order of each property of the CommandData struct.
+
+  uint8_t dataSize = 0x00;
   COMMAND cmd = RX_Data_Buffer[0];
 
   switch (cmd) {
     case CHANGE_CONTROL_METHOD:
       rxBufferPtr = &ReceivedCommands.ChangeControlMethod;
+      dataSize = sizeof(ReceivedCommands.ChangeControlMethod);
       break;
     case CHANGE_CONTROL_METHOD_ACK:
       rxBufferPtr = &ReceivedCommands.ChangeControlMethodAck;
+      dataSize = sizeof(ReceivedCommands.ChangeControlMethodAck);
       break;
     case NEW_POSITION:
       rxBufferPtr = &ReceivedCommands.NewPosition;
+      dataSize = sizeof(ReceivedCommands.NewPosition);
       break;
     default:
       return;
@@ -63,7 +68,7 @@ inline void HC12_ReceiveHandler(uint8_t *RX_Data_Buffer) {
 
   if (rxBufferPtr != NULL && !rxBufferPtr->inUse) { // Only save new data if not currently in use
     rxBufferPtr->isNew = true;
-    memcpy(rxBufferPtr->data, RX_Data_Buffer + 1, sizeof(rxBufferPtr->data));
+    memcpy(rxBufferPtr->data, RX_Data_Buffer + 1, dataSize);
   }
 }
 

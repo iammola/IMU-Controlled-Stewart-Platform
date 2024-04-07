@@ -115,6 +115,10 @@ static bool HC12_SendCommand(char *FORMAT, char *RESPONSE_FORMAT, ...) {
   va_start(argptrCMD, RESPONSE_FORMAT); // Last fixed parameter
   va_copy(argptrRES, argptrCMD);        // copy arguments for response format
 
+  while (!(UART5_FR_R & UART_FR_RXFE)) { // Clear FIFO
+    UART5_Receive((uint8_t *)cmd, 1, MAX_WAIT_TICKS);
+  }
+
   vsnprintf(cmd, 25, FORMAT, argptrCMD); // Format CMD string
   va_end(argptrCMD);
   vsnprintf(response, 25, RESPONSE_FORMAT, argptrRES); // Format expected response
@@ -122,10 +126,6 @@ static bool HC12_SendCommand(char *FORMAT, char *RESPONSE_FORMAT, ...) {
 
   if (CURRENT_MODE != COMMAND_MODE) // Confirm in Command Mode
     HC12_SetMode(COMMAND_MODE);
-
-  while (!(UART5_FR_R & UART_FR_RXFE)) { // Clear FIFO
-    UART5_Receive((uint8_t *)cmd, 1, MAX_WAIT_TICKS);
-  }
 
   UART5_Transmit((uint8_t *)cmd, strlen((const char *)cmd));
   UART5_Receive((uint8_t *)CMDResponse, strlen((const char *)response), MAX_WAIT_TICKS);

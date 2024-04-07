@@ -174,12 +174,13 @@ void UART4_Transmit(uint8_t *data, uint32_t byteCount) {
 }
 
 void UART4_Receive(uint8_t *data, uint32_t length, uint32_t maxTicks) {
-  volatile uint32_t ticks = 0x00;
+  uint32_t ticks = 0;
 
   while (length > 0) {
     ticks = maxTicks;
 
-    while ((UART5_FR_R & UART_FR_RXFE) && --ticks > 0) { // Wait for Receive FIFO to have data
+    while ((UART4_FR_R & UART_FR_RXFE) && ticks > 0 && ticks <= maxTicks) { // Wait for Receive FIFO to have data
+      --ticks;
     }
 
     *data = (uint8_t)UART4_DR_R; // Read data
