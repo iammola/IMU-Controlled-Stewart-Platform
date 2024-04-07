@@ -314,7 +314,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>1</Optim>
+            <Optim>4</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -382,7 +382,7 @@
       </TargetOption>
       <Groups>
         <Group>
-          <GroupName>Source Group 1</GroupName>
+          <GroupName>Project Files</GroupName>
           <Files>
             <File>
               <FileName>Main.c</FileName>
@@ -390,19 +390,9 @@
               <FilePath>..\Main.c</FilePath>
             </File>
             <File>
-              <FileName>fpu.c</FileName>
+              <FileName>Maze.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\Library\FPU\fpu.c</FilePath>
-            </File>
-            <File>
-              <FileName>PLL.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\Library\PLL\PLL.c</FilePath>
-            </File>
-            <File>
-              <FileName>Maestro.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\Library\Pololu Maestro\Maestro.c</FilePath>
+              <FilePath>..\Maze.c</FilePath>
             </File>
             <File>
               <FileName>StewartPlatform.c</FileName>
@@ -410,19 +400,9 @@
               <FilePath>..\..\..\Library\StewartPlatform\StewartPlatform.c</FilePath>
             </File>
             <File>
-              <FileName>UART5.c</FileName>
+              <FileName>Maestro.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\Library\UART\UART5.c</FilePath>
-            </File>
-            <File>
-              <FileName>SysTick.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\Library\SysTick\SysTick.c</FilePath>
-            </File>
-            <File>
-              <FileName>UART4.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\Library\UART\UART4.c</FilePath>
+              <FilePath>..\..\..\Library\Pololu Maestro\Maestro.c</FilePath>
             </File>
             <File>
               <FileName>HC-12.c</FileName>
@@ -430,19 +410,14 @@
               <FilePath>..\..\..\Library\Wireless\HC-12\HC-12.c</FilePath>
             </File>
             <File>
-              <FileName>UTILS.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\Library\UTILS\UTILS.c</FilePath>
-            </File>
-            <File>
               <FileName>Joystick.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\Library\Joystick\Joystick.c</FilePath>
             </File>
             <File>
-              <FileName>CLI.c</FileName>
+              <FileName>Wireless.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\Library\CLI\CLI.c</FilePath>
+              <FilePath>..\..\..\Library\Wireless\Wireless.c</FilePath>
             </File>
             <File>
               <FileName>RA8875.c</FileName>
@@ -455,14 +430,44 @@
               <FilePath>..\..\..\Library\Timer\Ping\Ping.c</FilePath>
             </File>
             <File>
+              <FileName>UTILS.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Library\UTILS\UTILS.c</FilePath>
+            </File>
+            <File>
+              <FileName>CLI.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Library\CLI\CLI.c</FilePath>
+            </File>
+            <File>
+              <FileName>PLL.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Library\PLL\PLL.c</FilePath>
+            </File>
+            <File>
+              <FileName>SysTick.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Library\SysTick\SysTick.c</FilePath>
+            </File>
+            <File>
+              <FileName>fpu.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Library\FPU\fpu.c</FilePath>
+            </File>
+            <File>
+              <FileName>UART4.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Library\UART\UART4.c</FilePath>
+            </File>
+            <File>
+              <FileName>UART5.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Library\UART\UART5.c</FilePath>
+            </File>
+            <File>
               <FileName>SSI0.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\Library\SSI\SSI0.c</FilePath>
-            </File>
-            <File>
-              <FileName>Wireless.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\Library\Wireless\Wireless.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -511,5 +516,14 @@
       </file>
     </files>
   </RTE>
+
+  <LayerInfo>
+    <Layers>
+      <Layer>
+        <LayName>Maze</LayName>
+        <LayPrjMark>1</LayPrjMark>
+      </Layer>
+    </Layers>
+  </LayerInfo>
 
 </Project>
