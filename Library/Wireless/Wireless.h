@@ -47,7 +47,7 @@ extern CommandData ReceivedCommands;
  * @param SYS_CLOCK System Clock speed
  * @param enableRX Allow incoming transmissions
  */
-void Wireless_Init(uint32_t SYS_CLOCK, bool enableRX);
+void Wireless_Init(const uint32_t SYS_CLOCK, bool enableRX);
 
 /**
  * @brief Packages the data to be transmitted into one of the available buffers.

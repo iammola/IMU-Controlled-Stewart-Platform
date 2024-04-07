@@ -38,7 +38,7 @@ extern volatile CONNECTED_STATE     connectionState;
  * @brief
  * @param SYS_CLOCK
  */
-void Maze_Init(uint32_t SYS_CLOCK);
+void Maze_Init(const uint32_t SYS_CLOCK);
 
 /**
  * @brief

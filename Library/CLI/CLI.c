@@ -28,7 +28,7 @@
 #define FRACTIONAL_BRD_MASK       (1 << FRACTIONAL_BRD_MULTIPLIER) - 1
 
 /* Calculates and sets the Integer and Fractional of the BRD and HSE */
-static void UART_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate);
+static void UART_BRDConfigure(const uint32_t SYS_CLOCK, uint32_t baudRate);
 /* Sets the LCRH configuration */
 static void UART_LCRHConfigure(uint8_t wordLength, uint8_t parity, bool useTwoStopBits);
 /* Enables the Receive Timeout and FIFO interrupts */
@@ -43,7 +43,7 @@ static void UART_InterruptInit(uint8_t RXFIFOLevel);
 // Input: SYS_CLOCK - The clock frequency of the system
 //        baudRate - The desired baud rate for UART transmission
 // Output: None
-static void UART_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate) {
+static void UART_BRDConfigure(const uint32_t SYS_CLOCK, uint32_t baudRate) {
   // High speed mode must be used if the BAUD rate would run faster than the system clock
   bool needsHighSpeed = (baudRate * 16) > SYS_CLOCK;
 
@@ -193,7 +193,7 @@ static void UART_InterruptEnable(uint8_t RXFIFOLevel) {
 //                 the 2nd bit being a 1 denotes Even Parity
 //        useTwoStopBits - For two stop bits to be used at the end of transmission
 // Output: None
-void CLI_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t RXFIFOLevel, uint8_t parity, bool useTwoStopBits) {
+void CLI_Init(const uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t RXFIFOLevel, uint8_t parity, bool useTwoStopBits) {
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R0; // Enable Port A's clock
   SYSCTL_RCGCUART_R |= SYSCTL_RCGCUART_R0; // Enable UART module 0's clock
 

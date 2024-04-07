@@ -26,7 +26,7 @@ volatile CONNECTED_STATE     connectionState;
  * @brief
  * @param SYS_CLOCK
  */
-void Maze_Init(uint32_t SYS_CLOCK) {
+void Maze_Init(const uint32_t SYS_CLOCK) {
   Wireless_Init(SYS_CLOCK, true); // Initialize Wireless
 
   Ping_TimerInit((uint32_t)(SYS_CLOCK * 3), false); // Init timer for 3 seconds

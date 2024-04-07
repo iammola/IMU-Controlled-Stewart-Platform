@@ -86,7 +86,7 @@ static void swap(int16_t *x, int16_t *y);
       @return True if we reached the end
 */
 /**************************************************************************/
-bool RA8875_begin(uint32_t SYS_CLOCK, enum RA8875sizes s) {
+bool RA8875_begin(const uint32_t SYS_CLOCK, enum RA8875sizes s) {
   _size = s;
 
   if (_size == RA8875_480x80) {

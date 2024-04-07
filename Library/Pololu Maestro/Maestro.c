@@ -22,7 +22,7 @@
  * @brief
  * @param SYS_CLOCK
  */
-void Maestro_Init(uint32_t SYS_CLOCK) {
+void Maestro_Init(const uint32_t SYS_CLOCK) {
   UART4_Init(SYS_CLOCK, Maestro_BAUD, WORD_8_BIT, NO_PARITY, ONE_STOP_BIT);
 
   GPIO_PORTC_ODR_R |= UART4_TX_BIT;  // Enable Open-Drain for Pull-Up to 5V

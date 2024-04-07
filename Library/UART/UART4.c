@@ -20,10 +20,10 @@
 #define UART4_PCTL      (unsigned)(GPIO_PCTL_PC4_U4RX | GPIO_PCTL_PC5_U4TX)
 
 static void UART4_NVIC_Enable(uint8_t interruptPriority);
-static void UART4_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate);
+static void UART4_BRDConfigure(const uint32_t SYS_CLOCK, uint32_t baudRate);
 static void UART4_LCRHConfigure(uint8_t wordLength, uint8_t parity, bool useTwoStopBits);
 
-static void UART4_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate) {
+static void UART4_BRDConfigure(const uint32_t SYS_CLOCK, uint32_t baudRate) {
   // High speed mode must be used if the BAUD rate would run faster than the system clock
   bool needsHighSpeed = (baudRate * 16) > SYS_CLOCK;
 
@@ -138,7 +138,7 @@ void UART4_FIFOInterrupt(uint8_t RXFIFOLevel, uint8_t interruptPriority) {
   UART4_NVIC_Enable(interruptPriority);
 }
 
-void UART4_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t parity, bool useTwoStopBits) {
+void UART4_Init(const uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t parity, bool useTwoStopBits) {
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R2; // Enable Port C's clock
   SYSCTL_RCGCUART_R |= SYSCTL_RCGCUART_R4; // Enable UART module 4's clock
 

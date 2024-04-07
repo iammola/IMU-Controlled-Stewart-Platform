@@ -24,7 +24,7 @@ void UART4_TimeoutInterrupt(uint8_t interruptPriority);
 
 void UART4_FIFOInterrupt(uint8_t RXFIFOLevel, uint8_t interruptPriority);
 
-void UART4_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t parity, bool useTwoStopBits);
+void UART4_Init(const uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t parity, bool useTwoStopBits);
 
 void UART4_Transmit(uint8_t *data, uint32_t length);
 

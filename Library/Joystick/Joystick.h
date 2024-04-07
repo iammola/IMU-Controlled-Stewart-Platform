@@ -21,7 +21,7 @@
  * @param SYS_CLOCK
  * @param position
  */
-void Joystick_Init(uint32_t SYS_CLOCK, volatile Position *position);
+void Joystick_Init(const uint32_t SYS_CLOCK, volatile Position *position);
 
 /**
  * @brief

@@ -38,7 +38,7 @@ typedef enum PACKET_TYPE {
 static bool Pixy2_1_Transaction(PACKET_TYPE reqType, PACKET_TYPE resType, uint16_t *txBuff, uint16_t *rxBuff, uint32_t rxLength, uint32_t txLength);
 static void Pixy2_1_GetVersion(void);
 
-void Pixy2_1_Init(uint32_t SYS_CLOCK) {
+void Pixy2_1_Init(const uint32_t SYS_CLOCK) {
   // Arduino SPI Mode 1
   SSI3_Init(SYS_CLOCK, SSI_SPEED, SSI_MODE1, SSI_DATA_16);
 

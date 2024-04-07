@@ -38,7 +38,7 @@
 #define FULL_PULSE_POS    2400.0f
 #define K                 (float)((FULL_PULSE_POS - NEUTRAL_PULSE_POS) / FULL_ANGLE)
 
-void Maestro_Init(uint32_t SYS_CLOCK);
+void Maestro_Init(const uint32_t SYS_CLOCK);
 
 void Maestro_SetAngles(float angles[Maestro_Channels]);
 

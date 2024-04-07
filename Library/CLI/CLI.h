@@ -35,7 +35,7 @@
 //                 the 2nd bit being a 1 denotes Even Parity
 //        useTwoStopBits - For two stop bits to be used at the end of transmission
 // Output: None
-void CLI_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t RXFIFOLevel, uint8_t parity, bool useTwoStopBits);
+void CLI_Init(const uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t RXFIFOLevel, uint8_t parity, bool useTwoStopBits);
 
 // ----------- UART_Transmit -------------
 // Transmits data through the UART line. If the transmit FIFO is full, it blocks further

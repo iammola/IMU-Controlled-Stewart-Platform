@@ -34,7 +34,7 @@ CommandData ReceivedCommands = {0};
  * @param SYS_CLOCK System Clock speed
  * @param enableRX Allow incoming transmissions
  */
-void Wireless_Init(uint32_t SYS_CLOCK, bool enableRX) {
+void Wireless_Init(const uint32_t SYS_CLOCK, bool enableRX) {
   HC12_Init();
   HC12_Config(SYS_CLOCK, BAUD_115200, TX_20dBm, enableRX); // Use 115200 bps, 20 dBm
 }

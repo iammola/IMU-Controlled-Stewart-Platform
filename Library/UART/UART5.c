@@ -20,10 +20,10 @@
 #define UART5_PCTL      (unsigned)(GPIO_PCTL_PE4_U5RX | GPIO_PCTL_PE5_U5TX)
 
 static void UART5_NVIC_Enable(uint8_t interruptPriority);
-static void UART5_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate);
+static void UART5_BRDConfigure(const uint32_t SYS_CLOCK, uint32_t baudRate);
 static void UART5_LCRHConfigure(uint8_t wordLength, uint8_t parity, bool useTwoStopBits);
 
-static void UART5_BRDConfigure(uint32_t SYS_CLOCK, uint32_t baudRate) {
+static void UART5_BRDConfigure(const uint32_t SYS_CLOCK, uint32_t baudRate) {
   // High speed mode must be used if the BAUD rate would run faster than the system clock
   bool needsHighSpeed = (baudRate * 16) > SYS_CLOCK;
 
@@ -138,7 +138,7 @@ void UART5_FIFOInterrupt(uint8_t RXFIFOLevel, uint8_t interruptPriority) {
   UART5_NVIC_Enable(interruptPriority);
 }
 
-void UART5_Init(uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t parity, bool useTwoStopBits) {
+void UART5_Init(const uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, uint8_t parity, bool useTwoStopBits) {
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R4; // Enable Port E's clock
   SYSCTL_RCGCUART_R |= SYSCTL_RCGCUART_R5; // Enable UART module 5's clock
 

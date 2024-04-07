@@ -58,7 +58,7 @@ void UART0_Handler(void) {
  * @param SYS_CLOCK
  * @param position
  */
-void Joystick_Init(uint32_t SYS_CLOCK, volatile Position *position) {
+void Joystick_Init(const uint32_t SYS_CLOCK, volatile Position *position) {
   __position = position;
 
   CLI_Init(SYS_CLOCK, 115200, WORD_8_BIT, RX_FIFO_OFF, NO_PARITY, ONE_STOP_BIT);

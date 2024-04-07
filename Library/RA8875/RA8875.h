@@ -91,7 +91,7 @@ typedef struct // Matrix
   int32_t An, Bn, Cn, Dn, En, Fn, Divider;
 } tsMatrix_t;
 
-bool RA8875_begin(uint32_t SYS_CLOCK, enum RA8875sizes s);
+bool RA8875_begin(const uint32_t SYS_CLOCK, enum RA8875sizes s);
 void RA8875_softReset(void);
 void RA8875_displayOn(bool on);
 void RA8875_sleep(bool sleep);
