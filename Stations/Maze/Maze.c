@@ -97,12 +97,18 @@ void Maze_MoveToPosition(void) {
  * @param connected
  */
 void Maze_UpdateConnectedState(CONNECTED_STATE connected) {
-  if (connectionState == connected) {
-    Ping_TimerDisable(); // Disable Timer the connected state has been rendered
-    return;
+  if (connected == DISCONNECTED) {
+    // Only disable timer if disconnected so a CONNECTED event
+    // would re-enable
+    Ping_TimerDisable();
   } else {
     Ping_TimerEnable(); // Enable Timer to check connection state periodically
     Ping_TimerReset();
+  }
+
+  if (connectionState == connected) {
+    // Return early to avoid re-printing state to screen
+    return;
   }
 
   /* Clear section */

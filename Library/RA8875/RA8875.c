@@ -127,13 +127,13 @@ bool RA8875_begin(const uint32_t SYS_CLOCK, enum RA8875sizes s) {
   SysTick_Wait10ms(10);
   /** Reset Device - End */
 
-  uint8_t x = RA8875_readReg(0);
+uint8_t x;
 
-  if (x != 0x75) {
-    // Invalid ID
-    while (1)
-      ;
-  }
+do {
+  // Invalid ID
+  x = RA8875_readReg(0);
+  break;
+} while (x != 0x75); 
 
   RA8875_initialize();
 

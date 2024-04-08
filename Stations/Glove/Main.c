@@ -35,8 +35,8 @@
 // #define PING_FREQUENCY      100
 
 /* To MCU */
-#define SAMPLES_BEFORE_PING ((75 * IMU_SAMPLE_RATE) / 100)
-#define PING_FREQUENCY      10
+#define SAMPLES_BEFORE_PING ((50 * IMU_SAMPLE_RATE) / 100)
+#define PING_FREQUENCY      30
 
 void GPIOD_Handler(void);
 void WaitForInterrupt(void);

@@ -67,9 +67,10 @@ int main(void) {
 
   while (1) {
     // Wait for new data to be confirmed
-    if (ReceivedCommands.NewPosition.inUse) {
-      GPIO_PORTF_DATA_R = LED_BITS & (1 << ReceivedCommands.NewPosition.data[0]); // Turn RED on, then BLUE, then GREEN, then OFF.
-      ReceivedCommands.NewPosition.inUse = false;                                 // Clear data flag
+    if (ReceivedCommands.NewPosition.isNew) {
+      ReceivedCommands.NewPosition.inUse = true;
+      GPIO_PORTF_DATA_R = LED_BITS & (1 << ReceivedCommands.NewPosition.data[0]);      // Turn RED on, then BLUE, then GREEN, then OFF.
+      ReceivedCommands.NewPosition.isNew = ReceivedCommands.NewPosition.inUse = false; // Clear data flag
     }
 
     if (SendData) {
