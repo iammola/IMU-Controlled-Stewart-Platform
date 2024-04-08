@@ -151,9 +151,9 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>143</LineNumber>
+          <LineNumber>118</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>17308</Address>
+          <Address>13688</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -162,7 +162,7 @@
           <BreakIfRCount>1</BreakIfRCount>
           <Filename>..\Main.c</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\Glove\../Main.c\143</Expression>
+          <Expression>\\Glove\../Main.c\118</Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>
