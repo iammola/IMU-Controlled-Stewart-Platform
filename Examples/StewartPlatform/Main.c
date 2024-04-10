@@ -36,6 +36,9 @@ int main(void) {
 
   float angle = 0.0f;
   float elapsedRatio = 0.0f;
+#if ANIMATION == 0 // Tilt
+      float a = 0.0f, x = 0.0f, y = 0.0f, z = 0.0f;
+  #endif
 
   PLL_Init();              // Initialize the PLL
   FPULazyStackingEnable(); // Enable Floating Point
@@ -53,8 +56,6 @@ int main(void) {
 
 // https://github.com/rawify/Stewart.js/blob/961177ccb21a9dbb22b54393f991f315925f5a52/stewart.js#L574-L774
 #if ANIMATION == 0 // Tilt
-      float a = 0.0f, x = 0.0f, y = 0.0f, z = 0.0f;
-
       if (elapsedRatio < (1.0f / 4.0f)) {
         a = 0.0f;
       } else if (elapsedRatio < (1.0f / 2.0f)) {
