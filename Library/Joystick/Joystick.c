@@ -23,6 +23,7 @@
 
 static volatile Position *__position;
 
+void UART0_Handler(void);
 void UART0_Handler(void) {
   float   angle = 0.0f;
   float   axes[4] = {0};

@@ -613,6 +613,7 @@
         pathVisible: false,
         next: "rotate",
         fn: function (pct) {
+          // let pct = +document.getElementById("range").value;
           var b = Math.pow(Math.sin(pct * Math.PI * 2 - Math.PI * 8), 5) / 2;
 
           this.translation[0] = 0;
@@ -625,9 +626,9 @@
         duration: 7000,
         pathVisible: false,
         next: "tilt",
-        fn: function (/* pct */) {
-          let pct = +document.getElementById("range").value;
-          const g = pct;
+        fn: function (pct) {
+          // let pct = +document.getElementById("range").value;
+          // const g = pct;
           var a = 0;
           var z = 0;
 
@@ -660,16 +661,6 @@
           this.translation[2] = 0;
 
           this.orientation = Quaternion.fromAxisAngle([x, y, z], b);
-
-          window.state = {
-            g,
-            pct,
-            x,
-            y,
-            z,
-            b,
-            orientation: Quaternion.fromAxisAngle([x, y, z], b),
-          };
         },
       },
       square: (function () {
@@ -1403,8 +1394,10 @@
 
     getServoAngles: function (inDegrees = true) {
       var ret = [];
+
       for (var i = 0; i < this.B.length; i++) {
         ret[i] = Math.asin((this.H[i][2] - this.B[i][2]) / this.hornLength);
+
         if (isNaN(ret[i])) {
           // Rod too short
           ret[i] = null;
@@ -1414,9 +1407,11 @@
           // Out of range
           ret[i] = null;
         }
+
+        if (inDegrees) ret[i] *= 180 / Math.PI;
       }
 
-      return ret * (inDegrees ? 180 / Math.PI : 1);
+      return ret;
     },
   };
 

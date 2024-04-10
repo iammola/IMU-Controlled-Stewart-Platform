@@ -20,7 +20,7 @@
 #define PLATFORM_OUTER_RADIUS 70.946f  // Radius (mm) of circumscribed circle of hexagonal platform plate
 #define PLATFORM_INNER_RADIUS 45.0f    // Radius (mm) of inscribed circle of hexagonal platform plate
 #define ROD_LENGTH            150.0f   // Length (mm) of the rod attached to the servo horn and the platform
-#define HORN_LENGTH           31.75f    // Length (mm) of servo horn attached to the motor shaft and the rod
+#define HORN_LENGTH           31.75f   // Length (mm) of servo horn attached to the motor shaft and the rod
 #define SHAFT_DISTANCE        20.0f    // Distance (mm) from center of side to servo motor shaft/horn center
 #define ANCHOR_DISTANCE       22.225f  // Distance (mm) from center of side to platform anchor point
 #define HORN_DIRECTION        0        // If horns are pointed outwards 0, otherwise 1
@@ -46,6 +46,9 @@ void StewartPlatform_Init(void) {
       powf(legs[0].platformJoint.x - legs[0].baseJoint.x, 2) - // sqr(pk(x) - bk(x))
       powf(legs[0].platformJoint.y - legs[0].baseJoint.y, 2)   // sqr(pk(y) - bk(y))
   );
+
+  // Initialize leg servo angles with no translation and rotation
+  StewartPlatform_Update((Coords){.x = 0.0f, .y = 0.0f, .z = 0.0f}, (Quaternion){.w = 1.0f, .x = 0.0f, .y = 0.0f, .z = 0.0f});
 }
 
 /**
