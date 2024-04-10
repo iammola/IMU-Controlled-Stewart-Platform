@@ -410,9 +410,9 @@
               <FilePath>..\..\..\Library\Joystick\Joystick.c</FilePath>
             </File>
             <File>
-              <FileName>Quaternion.c</FileName>
+              <FileName>UTILS.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\Library\Quaternion\Quaternion.c</FilePath>
+              <FilePath>..\..\..\Library\UTILS\UTILS.c</FilePath>
             </File>
           </Files>
         </Group>

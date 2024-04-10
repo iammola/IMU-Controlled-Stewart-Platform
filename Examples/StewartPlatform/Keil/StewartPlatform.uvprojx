@@ -314,7 +314,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>4</Optim>
+            <Optim>1</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -408,16 +408,6 @@
               <FileName>StewartPlatform.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\Library\StewartPlatform\StewartPlatform.c</FilePath>
-            </File>
-            <File>
-              <FileName>SSI2.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\Library\SSI\SSI2.c</FilePath>
-            </File>
-            <File>
-              <FileName>SysTick.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\Library\SysTick\SysTick.c</FilePath>
             </File>
             <File>
               <FileName>UART4.c</FileName>
