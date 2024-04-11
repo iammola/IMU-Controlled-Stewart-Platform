@@ -24,11 +24,15 @@ volatile CONNECTED_STATE     connectionState;
 
 /**
  * @brief
+ * @param
+ */
+static void Maze_DrawObstacles(void);
+
+/**
+ * @brief
  * @param SYS_CLOCK
  */
 void Maze_Init(const uint32_t SYS_CLOCK) {
-  Wireless_Init(SYS_CLOCK, true); // Initialize Wireless
-
   RA8875_begin(SYS_CLOCK, RA8875_800x480); // Init screen
   Joystick_Init(SYS_CLOCK, &position);     // Initialize Joystick
 
@@ -37,8 +41,11 @@ void Maze_Init(const uint32_t SYS_CLOCK) {
 
   Ping_TimerInit((uint32_t)(SYS_CLOCK * 3), false); // Init timer for 3 seconds
 
+  Wireless_Init(SYS_CLOCK, true); // Initialize Wireless
+
   Maze_UpdateControlMethod(DEFAULT_CTL_METHOD); // Initialize and Send method
   Maze_UpdateConnectedState(DISCONNECTED);
+  Maze_DrawObstacles();
 }
 
 /**
@@ -129,6 +136,123 @@ void Maze_UpdateConnectedState(CONNECTED_STATE connected) {
   }
 
   connectionState = connected;
+}
+
+/**
+ * @brief
+ * @param
+ */
+static void Maze_DrawObstacles(void) {
+  uint8_t  lineIdx;
+  uint16_t color;
+  int16_t  startX, startY;
+
+  static const struct {
+    uint32_t col;
+    uint32_t row;
+    bool     isHorizontal;
+    bool     isGate;
+  } lines[] = {
+  // Start Gate
+      {.col = 5, .row = 1,  .isHorizontal = true,  .isGate = true },
+ // 1st row
+      {.col = 2, .row = 1,  .isHorizontal = false, .isGate = false},
+      {.col = 5, .row = 1,  .isHorizontal = false, .isGate = false},
+      {.col = 8, .row = 1,  .isHorizontal = false, .isGate = false},
+ // 2nd row
+      {.col = 3, .row = 2,  .isHorizontal = true,  .isGate = false},
+      {.col = 5, .row = 2,  .isHorizontal = true,  .isGate = false},
+      {.col = 6, .row = 2,  .isHorizontal = true,  .isGate = false},
+      {.col = 8, .row = 2,  .isHorizontal = true,  .isGate = false},
+      {.col = 3, .row = 2,  .isHorizontal = false, .isGate = false},
+      {.col = 4, .row = 2,  .isHorizontal = false, .isGate = false},
+      {.col = 7, .row = 2,  .isHorizontal = false, .isGate = false},
+ // 3rd row
+      {.col = 1, .row = 3,  .isHorizontal = true,  .isGate = false},
+      {.col = 4, .row = 3,  .isHorizontal = false, .isGate = false},
+      {.col = 5, .row = 3,  .isHorizontal = true,  .isGate = false},
+      {.col = 6, .row = 3,  .isHorizontal = true,  .isGate = false},
+      {.col = 7, .row = 3,  .isHorizontal = true,  .isGate = false},
+      {.col = 8, .row = 3,  .isHorizontal = true,  .isGate = false},
+ // 4th row
+      {.col = 2, .row = 4,  .isHorizontal = true,  .isGate = false},
+      {.col = 3, .row = 4,  .isHorizontal = true,  .isGate = false},
+      {.col = 4, .row = 4,  .isHorizontal = true,  .isGate = false},
+      {.col = 5, .row = 4,  .isHorizontal = true,  .isGate = false},
+      {.col = 6, .row = 4,  .isHorizontal = true,  .isGate = false},
+      {.col = 7, .row = 4,  .isHorizontal = true,  .isGate = false},
+      {.col = 8, .row = 4,  .isHorizontal = true,  .isGate = false},
+      {.col = 9, .row = 4,  .isHorizontal = true,  .isGate = false},
+      {.col = 4, .row = 4,  .isHorizontal = false, .isGate = false},
+ // 5th row
+      {.col = 1, .row = 5,  .isHorizontal = true,  .isGate = false},
+      {.col = 2, .row = 5,  .isHorizontal = true,  .isGate = false},
+      {.col = 4, .row = 5,  .isHorizontal = true,  .isGate = false},
+      {.col = 5, .row = 5,  .isHorizontal = true,  .isGate = false},
+      {.col = 4, .row = 5,  .isHorizontal = false, .isGate = false},
+      {.col = 7, .row = 5,  .isHorizontal = false, .isGate = false},
+      {.col = 8, .row = 5,  .isHorizontal = false, .isGate = false},
+      {.col = 9, .row = 5,  .isHorizontal = false, .isGate = false},
+ // 6th row
+      {.col = 2, .row = 6,  .isHorizontal = true,  .isGate = false},
+      {.col = 3, .row = 6,  .isHorizontal = true,  .isGate = false},
+      {.col = 5, .row = 6,  .isHorizontal = true,  .isGate = false},
+      {.col = 6, .row = 6,  .isHorizontal = true,  .isGate = false},
+      {.col = 8, .row = 6,  .isHorizontal = true,  .isGate = false},
+      {.col = 3, .row = 6,  .isHorizontal = false, .isGate = false},
+      {.col = 5, .row = 6,  .isHorizontal = false, .isGate = false},
+      {.col = 9, .row = 6,  .isHorizontal = false, .isGate = false},
+ // 7th row
+      {.col = 1, .row = 7,  .isHorizontal = true,  .isGate = false},
+      {.col = 4, .row = 7,  .isHorizontal = true,  .isGate = false},
+      {.col = 6, .row = 7,  .isHorizontal = true,  .isGate = false},
+      {.col = 7, .row = 7,  .isHorizontal = true,  .isGate = false},
+      {.col = 2, .row = 7,  .isHorizontal = false, .isGate = false},
+      {.col = 4, .row = 7,  .isHorizontal = false, .isGate = false},
+      {.col = 6, .row = 7,  .isHorizontal = false, .isGate = false},
+      {.col = 8, .row = 7,  .isHorizontal = false, .isGate = false},
+      {.col = 9, .row = 7,  .isHorizontal = false, .isGate = false},
+ // 8th row
+      {.col = 3, .row = 8,  .isHorizontal = true,  .isGate = false},
+      {.col = 4, .row = 8,  .isHorizontal = true,  .isGate = false},
+      {.col = 3, .row = 8,  .isHorizontal = false, .isGate = false},
+      {.col = 6, .row = 8,  .isHorizontal = false, .isGate = false},
+      {.col = 7, .row = 8,  .isHorizontal = false, .isGate = false},
+      {.col = 9, .row = 8,  .isHorizontal = false, .isGate = false},
+ // 9th row
+      {.col = 1, .row = 9,  .isHorizontal = true,  .isGate = false},
+      {.col = 2, .row = 9,  .isHorizontal = true,  .isGate = false},
+      {.col = 3, .row = 9,  .isHorizontal = true,  .isGate = false},
+      {.col = 4, .row = 9,  .isHorizontal = true,  .isGate = false},
+      {.col = 7, .row = 9,  .isHorizontal = true,  .isGate = false},
+      {.col = 8, .row = 9,  .isHorizontal = true,  .isGate = false},
+ //  End Gate
+      {.col = 5, .row = 10, .isHorizontal = true,  .isGate = true },
+  };
+  const uint8_t linesCount = sizeof(lines) / sizeof(lines[0]);
+
+  /* Clear section */
+  RA8875_graphicsMode();
+
+  RA8875_fillRect(MAZE_X, MAZE_Y, MAZE_WIDTH, MAZE_HEIGHT, RA8875_BLACK); // Clear Screen
+
+  RA8875_drawRect(MAZE_X, MAZE_Y, MAZE_WIDTH, MAZE_HEIGHT, RA8875_WHITE); // Maze Box
+  for (lineIdx = 0; lineIdx < linesCount; lineIdx++) {                    // Draw lines
+    if (lines[lineIdx].row > MAZE_ROWS_COUNT) {
+      startY = MAZE_HEIGHT - 1 + MAZE_Y; // Draw on box outer line
+    } else {
+      startY = (int16_t)(((lines[lineIdx].row - 1) * MAZE_CELL_SIZE) + MAZE_Y);
+    }
+
+    startX = (int16_t)(((lines[lineIdx].col - 1) * MAZE_CELL_SIZE) + MAZE_X);
+    color = lines[lineIdx].isGate ? RA8875_BLACK : RA8875_WHITE; // Draw walls in white, gates in black for "transparent"
+
+    if (lines[lineIdx].isHorizontal) {
+      RA8875_drawFastHLine(startX, startY, MAZE_CELL_SIZE, color);
+    } else {
+      RA8875_drawFastVLine(startX, startY, MAZE_CELL_SIZE, color);
+    }
+  }
 }
 
 /**

@@ -25,6 +25,14 @@
 #define CONTROL_METHOD_WIDTH  215
 #define CONTROL_METHOD_HEIGHT 20
 
+#define MAZE_X             400
+#define MAZE_Y             50
+#define MAZE_CELL_SIZE     40
+#define MAZE_COLUMNS_COUNT 9
+#define MAZE_ROWS_COUNT    9
+#define MAZE_WIDTH         (MAZE_COLUMNS_COUNT * MAZE_CELL_SIZE)
+#define MAZE_HEIGHT        (MAZE_ROWS_COUNT * MAZE_CELL_SIZE)
+
 typedef enum CONNECTED_STATE {
   CONNECTED = 0x81,
   DISCONNECTED = 0x96,
