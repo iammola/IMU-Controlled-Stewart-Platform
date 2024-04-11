@@ -32,8 +32,10 @@ void Ping_TimerInit(uint32_t LOAD, bool oneShot) {
 
   TIMER0_CFG_R = TIMER_CFG_32_BIT_TIMER;
   TIMER0_TAMR_R = oneShot ? TIMER_TAMR_TAMR_1_SHOT : TIMER_TAMR_TAMR_PERIOD; // Periodic timer and counting up
-  TIMER0_IMR_R |= TIMER_IMR_TATOIM;                                          // Trigger interrupt when reaches limit
   TIMER0_TAILR_R = LOAD;                                                     // Set LOAD
+
+  TIMER0_ICR_R |= TIMER_ICR_TATOCINT; // Clear interrupt
+  TIMER0_IMR_R |= TIMER_IMR_TATOIM;   // Trigger interrupt when reaches limit
 
   NVIC_EN0_R |= NVIC_EN0_INT19;                                                                      // Enable Timer 0 SubTimer A Interrupt Handler
   NVIC_PRI4_R = (NVIC_PRI4_R & ~NVIC_PRI4_INT19_M) | (PING_INTERRUPT_PRIORITY << NVIC_PRI4_INT19_S); // Set Priority

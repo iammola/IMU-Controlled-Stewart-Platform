@@ -13,6 +13,7 @@
 
 #include "FPU/fpu.h"
 #include "PLL/PLL.h"
+#include "SysTick/SysTick.h"
 #include "tm4c123gh6pm.h"
 
 #include "Pololu Maestro/Maestro.h"
@@ -20,12 +21,9 @@
 
 #define SYS_CLOCK 80e6
 
-#define ANIMATION 1 // 0 = Tilt, 1 = Wobble
-#if ANIMATION == 0
-#define DURATION 7000
-#elif ANIMATION == 1
-#define DURATION 3000
-#endif
+#define ANIMATION 0 // 0 = Tilt, 1 = Wobble
+
+static const uint32_t DURATION = (uint32_t)(SYS_CLOCK * (ANIMATION == 1 ? 3 : 10));
 
 int main(void) {
   Quaternion orientation = {0};
@@ -37,9 +35,10 @@ int main(void) {
   float angle = 0.0f;
   float elapsedRatio = 0.0f;
 #if ANIMATION == 0 // Tilt
-      float a = 0.0f, x = 0.0f, y = 0.0f, z = 0.0f;
-  #endif
+  float a = 0.0f, x = 0.0f, y = 0.0f, z = 0.0f;
+#endif
 
+  SysTick_Init();          // Initialize SysTick
   PLL_Init();              // Initialize the PLL
   FPULazyStackingEnable(); // Enable Floating Point
 
@@ -51,11 +50,17 @@ int main(void) {
   }
 
   while (1) {
-    for (elapsed = 0; elapsed <= DURATION; elapsed++) {
+    for (elapsed = 0; elapsed <= DURATION; elapsed += (ST_RELOAD_R - ST_CURRENT_R)) {
+      ST_CURRENT_R = 0; // reset tick counter
+
       elapsedRatio = (float)elapsed / (float)DURATION;
 
 // https://github.com/rawify/Stewart.js/blob/961177ccb21a9dbb22b54393f991f315925f5a52/stewart.js#L574-L774
 #if ANIMATION == 0 // Tilt
+      x = 0.0f;
+      y = 0.0f;
+      z = 0.0f;
+
       if (elapsedRatio < (1.0f / 4.0f)) {
         a = 0.0f;
       } else if (elapsedRatio < (1.0f / 2.0f)) {
@@ -65,6 +70,8 @@ int main(void) {
         elapsedRatio -= 1.0f / 2.0f;
         a = (2 * M_PI) / 3.0f;
       } else {
+        elapsed = 0;
+        continue; // Z-rotation doesn't work great
         elapsedRatio -= 3.0f / 4.0f;
         z = 1.0f;
       }
