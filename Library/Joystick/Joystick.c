@@ -52,6 +52,8 @@ void UART0_Handler(void) {
     __position->quaternion = normalizeQuaternion(-13.0f, -cosf(angle), sinf(angle), 0);                            // Use 2nd Joystick for tilt
     __position->translation = (Coords){.x = axes[1] * PAN_RANGE, .y = axes[0] * PAN_RANGE, .z = 0.0f * PAN_RANGE}; // Use 1st joystick for pan
   }
+  
+  ++__position->count;
 }
 
 /**

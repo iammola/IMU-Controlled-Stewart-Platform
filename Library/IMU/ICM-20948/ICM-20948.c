@@ -140,21 +140,9 @@ void GPIOB_Handler(void) {
     __position->quaternion.x = ahrs.quaternion.element.x; // Hard-fault here when building with -O0
     __position->quaternion.y = ahrs.quaternion.element.y;
     __position->quaternion.z = ahrs.quaternion.element.z;
-    // __position->translation.x = 0.0f;
-    // __position->translation.y = 0.0f;
-    // __position->translation.z = 0.0f;
   }
 
   ++__position->count;
-
-  // Serial Plot
-  // snprintf(text, CLI_TXT_BUF, "%0.4f %0.4f %0.4f ", gyroscope.axis.x, gyroscope.axis.y, gyroscope.axis.z);
-  // CLI_Write(text);
-  // snprintf(text, CLI_TXT_BUF, "%0.4f %0.4f %0.4f ", accelerometer.axis.x, accelerometer.axis.y, accelerometer.axis.z);
-  // CLI_Write(text);
-  // snprintf(text, CLI_TXT_BUF, "%0.4f %0.4f %0.4f ", magnetometer.axis.x, magnetometer.axis.y, magnetometer.axis.z);
-  // CLI_Write(text);
-  // CLI_Write("\n");
 }
 
 /**
@@ -430,8 +418,8 @@ void ICM20948_MadgwickFusion_Init(void) {
       .convention = FusionConventionNwu,
       .gain = 10.0f,
       .gyroscopeRange = 2000.0f, // gyroscope range in dps
-      .accelerationRejection = 10.0f,
-      .magneticRejection = 5.0f,
+      .accelerationRejection = 30.0f,
+      .magneticRejection = 30.0f,
       .recoveryTriggerPeriod = 5 * __sampleRate, /* 5 seconds */
   };
 

@@ -39,8 +39,11 @@ int main(void) {
     WaitForInterrupt();
 
     // Direct Joystick control
-    if (CTL_METHOD == JOYSTICK_CTL_METHOD && position.inUse)
+    if (CTL_METHOD == JOYSTICK_CTL_METHOD && position.count > 0) {
+      position.inUse = true;
       Maze_MoveToPosition();
+      position.count = 0;
+    }
 
     if (ReceivedCommands.ChangeControlMethod.isNew) {
       ReceivedCommands.ChangeControlMethod.inUse = false;

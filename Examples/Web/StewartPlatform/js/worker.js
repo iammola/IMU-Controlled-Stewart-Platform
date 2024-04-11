@@ -6,6 +6,7 @@
 const payloadLength = 16;
 const bufferSize = 1 + 1 + 1 + payloadLength + 2;
 let passRate;
+let scaleFactor = 1;
 
 let buffer;
 
@@ -141,13 +142,12 @@ async function readLoop() {
 
         ++passRate.passed;
 
-        // console.log(passRate.received - lastPass); // Calculates no. of packets since last complete packet
-        // lastPass = passRate.received;
-
         self.postMessage({
           type: "DATA_READ",
           value: [
-            ...new Float32Array(new Uint8Array(positionBytes).buffer),
+            ...new Float32Array(new Uint8Array(positionBytes).buffer).map(
+              (f) => f * scaleFactor
+            ),
             0,
             0,
             0,
