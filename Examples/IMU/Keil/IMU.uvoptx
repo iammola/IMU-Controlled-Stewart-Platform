@@ -147,40 +147,7 @@
           <Name>UL2CM3(-S0 -C0 -P0 -FD20000000 -FC1000 -FN1 -FF0TM4C123_256 -FS00 -FL040000 -FP0($$Device:TM4C123GH6PM$Flash\TM4C123_256.FLM))</Name>
         </SetRegEntry>
       </TargetDriverDllRegistry>
-      <Breakpoint>
-        <Bp>
-          <Number>0</Number>
-          <Type>0</Type>
-          <LineNumber>528</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>24</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename>RTE/Device/TM4C123GH6PM/system_TM4C123.c</Filename>
-          <ExecCommand></ExecCommand>
-          <Expression>\\IMU\RTE/Device/TM4C123GH6PM/system_TM4C123.c\528</Expression>
-        </Bp>
-        <Bp>
-          <Number>1</Number>
-          <Type>0</Type>
-          <LineNumber>0</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>300</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename></Filename>
-          <ExecCommand></ExecCommand>
-          <Expression>0x0000012C</Expression>
-        </Bp>
-      </Breakpoint>
+      <Breakpoint/>
       <WatchWindow1>
         <Ww>
           <count>0</count>
@@ -401,8 +368,8 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\..\..\Library\CLI\CLI.c</PathWithFileName>
-      <FilenameWithoutPath>CLI.c</FilenameWithoutPath>
+      <PathWithFileName>..\..\..\Library\FPU\fpu.c</PathWithFileName>
+      <FilenameWithoutPath>fpu.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>
@@ -413,8 +380,8 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\..\..\Library\FPU\fpu.c</PathWithFileName>
-      <FilenameWithoutPath>fpu.c</FilenameWithoutPath>
+      <PathWithFileName>..\..\..\Library\UTILS\UTILS.c</PathWithFileName>
+      <FilenameWithoutPath>UTILS.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>
@@ -425,8 +392,32 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\..\..\Library\UTILS\UTILS.c</PathWithFileName>
-      <FilenameWithoutPath>UTILS.c</FilenameWithoutPath>
+      <PathWithFileName>..\..\..\Library\Wireless\Wireless.c</PathWithFileName>
+      <FilenameWithoutPath>Wireless.c</FilenameWithoutPath>
+      <RteFlg>0</RteFlg>
+      <bShared>0</bShared>
+    </File>
+    <File>
+      <GroupNumber>1</GroupNumber>
+      <FileNumber>13</FileNumber>
+      <FileType>1</FileType>
+      <tvExp>0</tvExp>
+      <tvExpOptDlg>0</tvExpOptDlg>
+      <bDave2>0</bDave2>
+      <PathWithFileName>..\..\..\Library\Wireless\HC-12\HC-12.c</PathWithFileName>
+      <FilenameWithoutPath>HC-12.c</FilenameWithoutPath>
+      <RteFlg>0</RteFlg>
+      <bShared>0</bShared>
+    </File>
+    <File>
+      <GroupNumber>1</GroupNumber>
+      <FileNumber>14</FileNumber>
+      <FileType>1</FileType>
+      <tvExp>0</tvExp>
+      <tvExpOptDlg>0</tvExpOptDlg>
+      <bDave2>0</bDave2>
+      <PathWithFileName>..\..\..\Library\UART\UART5.c</PathWithFileName>
+      <FilenameWithoutPath>UART5.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>

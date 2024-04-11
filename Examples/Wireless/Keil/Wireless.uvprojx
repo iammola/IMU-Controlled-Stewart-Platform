@@ -409,6 +409,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\..\Library\Wireless\HC-12\HC-12.c</FilePath>
             </File>
+            <File>
+              <FileName>Wireless.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Library\Wireless\Wireless.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

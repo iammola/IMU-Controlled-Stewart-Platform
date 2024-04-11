@@ -147,24 +147,7 @@
           <Name>UL2CM3(-S0 -C0 -P0 -FD20000000 -FC1000 -FN1 -FF0TM4C123_256 -FS00 -FL040000 -FP0($$Device:TM4C123GH6PM$Flash\TM4C123_256.FLM))</Name>
         </SetRegEntry>
       </TargetDriverDllRegistry>
-      <Breakpoint>
-        <Bp>
-          <Number>0</Number>
-          <Type>0</Type>
-          <LineNumber>100</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>7202</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>1</BreakIfRCount>
-          <Filename>..\..\..\Library\Wireless\HC-12\HC-12.c</Filename>
-          <ExecCommand></ExecCommand>
-          <Expression>\\Wireless\../../../Library/Wireless/HC-12/HC-12.c\100</Expression>
-        </Bp>
-      </Breakpoint>
+      <Breakpoint/>
       <WatchWindow1>
         <Ww>
           <count>0</count>
@@ -303,7 +286,7 @@
       <GroupNumber>1</GroupNumber>
       <FileNumber>4</FileNumber>
       <FileType>1</FileType>
-      <tvExp>1</tvExp>
+      <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
       <PathWithFileName>..\..\..\Library\UART\UART5.c</PathWithFileName>
@@ -320,6 +303,18 @@
       <bDave2>0</bDave2>
       <PathWithFileName>..\..\..\Library\Wireless\HC-12\HC-12.c</PathWithFileName>
       <FilenameWithoutPath>HC-12.c</FilenameWithoutPath>
+      <RteFlg>0</RteFlg>
+      <bShared>0</bShared>
+    </File>
+    <File>
+      <GroupNumber>1</GroupNumber>
+      <FileNumber>6</FileNumber>
+      <FileType>1</FileType>
+      <tvExp>0</tvExp>
+      <tvExpOptDlg>0</tvExpOptDlg>
+      <bDave2>0</bDave2>
+      <PathWithFileName>..\..\..\Library\Wireless\Wireless.c</PathWithFileName>
+      <FilenameWithoutPath>Wireless.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>
