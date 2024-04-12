@@ -39,13 +39,15 @@ void Maze_Init(const uint32_t SYS_CLOCK) {
   StewartPlatform_Init();  // Initialize stewart platform
   Maestro_Init(SYS_CLOCK); // Initialize Servo Maestro Controller
 
-  Ping_TimerInit((uint32_t)(SYS_CLOCK * 3), false); // Init timer for 3 seconds
+  Ping_TimerInit(SYS_CLOCK, false); // Init timer for 1 second
 
   Wireless_Init(SYS_CLOCK, true); // Initialize Wireless
 
   Maze_UpdateControlMethod(DEFAULT_CTL_METHOD); // Initialize and Send method
   Maze_UpdateConnectedState(DISCONNECTED);
   Maze_DrawObstacles();
+
+  Maze_MoveToNeutralPosition();
 }
 
 /**
@@ -64,7 +66,7 @@ void Maze_UpdateControlMethod(MAZE_CONTROL_METHOD newControl) {
       break;
   }
 
-  Wireless_Transmit(CHANGE_CONTROL_METHOD_ACK, (uint8_t *)&CTL_METHOD, CHANGE_CONTROL_METHOD_LENGTH); // Send ACK
+  Wireless_Transmit(CHANGE_CONTROL_METHOD_ACK, (uint8_t *)&CTL_METHOD, CHANGE_CONTROL_METHOD_ACK_LENGTH); // Send ACK
 
   /* Clear section */
   RA8875_graphicsMode();
@@ -76,6 +78,20 @@ void Maze_UpdateControlMethod(MAZE_CONTROL_METHOD newControl) {
   RA8875_textEnlarge(0);
   RA8875_textTransparent(RA8875_WHITE);
   RA8875_textWrite(CTL_METHOD == JOYSTICK_CTL_METHOD ? "Control Method: Controller" : "Control Method: Glove", 0);
+
+  Maze_MoveToNeutralPosition();
+}
+
+/**
+ * @brief
+ * @param
+ */
+void Maze_MoveToNeutralPosition(void) {
+  position.inUse = true;
+  position.translation = (Coords){.x = 0.0f, .y = 0.0f, .z = 0.0f};
+  position.quaternion = (Quaternion){.w = 1.0f, .x = 0.0f, .y = 0.0f, .z = 0.0f};
+
+  Maze_MoveToPosition();
 }
 
 /**

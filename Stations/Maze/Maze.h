@@ -59,6 +59,12 @@ void Maze_UpdateControlMethod(MAZE_CONTROL_METHOD newControl);
  * @brief
  * @param
  */
+void Maze_MoveToNeutralPosition(void);
+
+/**
+ * @brief
+ * @param
+ */
 void Maze_MoveToPosition(void);
 
 /**

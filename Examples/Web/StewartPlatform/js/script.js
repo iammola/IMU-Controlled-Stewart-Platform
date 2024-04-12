@@ -103,7 +103,7 @@ function setupPlatform() {
         platformRadius: 45,
         platformRadiusOuter: 70.946,
         platformTurn: false,
-        rodLength: 150,
+        rodLength: 247.65,
         hornLength: 31.75,
         hornDirection: 0,
         shaftDistance: 20,

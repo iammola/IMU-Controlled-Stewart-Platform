@@ -38,13 +38,6 @@ int main(void) {
   while (1) {
     WaitForInterrupt();
 
-    // Direct Joystick control
-    if (CTL_METHOD == JOYSTICK_CTL_METHOD && position.count > 0) {
-      position.inUse = true;
-      Maze_MoveToPosition();
-      position.count = 0;
-    }
-
     if (ReceivedCommands.ChangeControlMethod.isNew) {
       ReceivedCommands.ChangeControlMethod.inUse = false;
 
@@ -53,7 +46,14 @@ int main(void) {
       ReceivedCommands.ChangeControlMethod.isNew = ReceivedCommands.ChangeControlMethod.inUse = false;
     }
 
-    if (ReceivedCommands.NewPosition.isNew) {
+    if (CTL_METHOD == JOYSTICK_CTL_METHOD) {
+      // Direct Joystick control
+      if (position.count > 0) {
+        position.inUse = true;
+        Maze_MoveToPosition();
+        position.count = 0;
+      }
+    } else if (ReceivedCommands.NewPosition.isNew) {
       ReceivedCommands.NewPosition.inUse = position.inUse = true;
       memcpy(&position, ReceivedCommands.NewPosition.data, sizeof(ReceivedCommands.NewPosition.data));
 

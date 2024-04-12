@@ -75,6 +75,7 @@ static void Button_Init(void) {
   GPIO_PORTD_AFSEL_R &= ~BTN_BIT;   // Disable Alternate functions
   GPIO_PORTD_PCTL_R &= ~BTN_PCTL_M; // Clear peripheral function
 
+  GPIO_PORTD_ICR_R |= BTN_BIT;  // Clear the INT pin's interrupt
   GPIO_PORTD_IM_R &= ~BTN_BIT;  // Disable the INT pin interrupt
   GPIO_PORTD_IS_R &= ~BTN_BIT;  // Configure for Edge-Detect interrupts
   GPIO_PORTD_IBE_R &= ~BTN_BIT; // Only listen on one edge event
@@ -82,7 +83,6 @@ static void Button_Init(void) {
 
   NVIC_EN0_R |= NVIC_EN0_INT3;                                                                              // Enable Port D's Interrupt Handler
   NVIC_PRI0_R = (NVIC_PRI0_R & (unsigned)~NVIC_PRI0_INT3_M) | (BTN_INTERRUPT_PRIORITY << NVIC_PRI0_INT3_S); // Configure Port D's priority
-  GPIO_PORTD_ICR_R |= BTN_BIT;                                                                              // Clear the INT pin's interrupt
 
   GPIO_PORTD_IM_R |= BTN_BIT; // Allow the INT pin interrupt to be detected
 }

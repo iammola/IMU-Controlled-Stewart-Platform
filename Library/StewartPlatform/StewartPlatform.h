@@ -34,3 +34,9 @@ void StewartPlatform_Init(void);
  * @param orientation
  */
 void StewartPlatform_Update(Coords translation, Quaternion orientation);
+
+/**
+ * @brief
+ * @param
+ */
+void StewartPlatform_Reset(void);

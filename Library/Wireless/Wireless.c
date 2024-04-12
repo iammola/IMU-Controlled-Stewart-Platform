@@ -62,8 +62,6 @@ inline void HC12_ReceiveHandler(uint8_t *RX_Data_Buffer) {
       rxBufferPtr = &ReceivedCommands.NewPosition;
       dataSize = sizeof(ReceivedCommands.NewPosition);
       break;
-    default:
-      return;
   }
 
   if (rxBufferPtr != NULL && !rxBufferPtr->inUse) { // Only save new data if not currently in use
