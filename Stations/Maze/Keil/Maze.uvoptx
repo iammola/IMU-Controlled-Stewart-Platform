@@ -152,17 +152,7 @@
         <Ww>
           <count>0</count>
           <WinNumber>1</WinNumber>
-          <ItemText>legs</ItemText>
-        </Ww>
-        <Ww>
-          <count>1</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>position</ItemText>
-        </Ww>
-        <Ww>
-          <count>2</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>ReceivedCommands</ItemText>
+          <ItemText>txBufferPtr</ItemText>
         </Ww>
       </WatchWindow1>
       <Tracepoint>
