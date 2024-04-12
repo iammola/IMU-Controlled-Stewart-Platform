@@ -53,16 +53,19 @@ void IMU_Init(uint32_t SYS_CLK, uint32_t SAMPLE_RATE, volatile Position *positio
 
 /**
  * @brief
- * @param
+ * @param initializeFusion
  */
-void IMU_Enable(void) {
+void IMU_Enable(bool initializeFusion) {
   // Specify the Interrupt pin is push-pull and is an active high pin (falling edge interrupt)
   // also forces the Interrupt to be cleared for the level to be reset and any Read operation to clear the INT_STATUS
   ICM20948_Write(INT_PIN_CFG_ADDR, INT_READ_CLEAR & ~(INT_ACTIVE_LOW | INT_OPEN_DRAIN | INT_LATCH_MANUAL_CLEAR));
   ICM20948_Write(INT_ENABLE_1_ADDR, RAW_DATA_INT_ENABLE); // Enable Raw Data interrupt
 
-  ICM20948_MadgwickFusion_Init(); // Initialize Fusion Algorithm
-  ICM20948_Interrupt_Pin_Init();  // Configure the Interrupt pin
+  if (initializeFusion) {
+    ICM20948_MadgwickFusion_Init(); // Initialize Fusion Algorithm
+  }
+
+  ICM20948_Interrupt_Pin_Init(); // Configure the Interrupt pin
 }
 
 /**

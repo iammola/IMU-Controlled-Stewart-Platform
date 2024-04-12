@@ -17,6 +17,7 @@
 
 #include "IMU/IMU.h"
 #include "Timer/Ping/Ping.h"
+#include "Timer/WaitFor/WaitFor.h"
 #include "Wireless/Wireless.h"
 
 #include "Glove.h"
@@ -55,8 +56,26 @@ static volatile MAZE_CONTROL_METHOD CTL_METHOD;
 void GPIOD_Handler(void) {
   GPIO_PORTD_ICR_R |= BTN_BIT; // clear interrupt
 
+  if ((GPIO_PORTD_DATA_R & BTN_BIT) == 0x00)
+    // Try throttle interrupts by checking data register
+    return;
+
+  Ping_TimerDisable(); // Disable Ping if enabled
+  IMU_Disable();       // Disable IMU
+
   ExpectingCTLMethod = CTL_METHOD == JOYSTICK_CTL_METHOD ? IMU_CTL_METHOD : JOYSTICK_CTL_METHOD;
   Wireless_Transmit(CHANGE_CONTROL_METHOD, (uint8_t *)&ExpectingCTLMethod, CHANGE_CONTROL_METHOD_LENGTH);
+
+  WaitFor(SYS_CLOCK / 25e-3); // Start Timer to wait for a max of 25ms
+
+  while (!WaitFor_IsDone()) {
+    if (ReceivedCommands.ChangeControlMethodAck.isNew) {
+      WaitFor_Stop();
+      return;
+    }
+  }
+
+  IMU_Enable(false); // Reaching this point means the ACK was not received
 }
 
 /**
@@ -95,7 +114,7 @@ static void Glove_UpdateControlMethod(MAZE_CONTROL_METHOD newControl) {
 
   switch (CTL_METHOD) {
     case IMU_CTL_METHOD:
-      IMU_Enable();
+      IMU_Enable(true);
       break;
     case JOYSTICK_CTL_METHOD:
       IMU_Disable();
@@ -136,7 +155,7 @@ int main(void) {
   while (1) {
     WaitForInterrupt();
 
-    if (position.count == SAMPLES_BEFORE_PING) {
+    if (CTL_METHOD == IMU_CTL_METHOD && position.count == SAMPLES_BEFORE_PING) {
       Ping_TimerEnable();
     }
 

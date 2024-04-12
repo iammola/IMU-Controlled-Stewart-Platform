@@ -13,9 +13,9 @@ void IMU_Init(uint32_t SYS_CLK, uint32_t SAMPLE_RATE, volatile Position *positio
 
 /**
  * @brief
- * @param
+ * @param initializeFusion
  */
-void IMU_Enable(void);
+void IMU_Enable(bool initializeFusion);
 
 /**
  * @brief

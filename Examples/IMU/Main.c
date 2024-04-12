@@ -35,7 +35,7 @@ int main(void) {
   Wireless_Init(SYS_CLOCK, false);
 
   IMU_Init(SYS_CLOCK, IMU_SAMPLE_RATE, &position); // Initialize the IMU
-  IMU_Enable();
+  IMU_Enable(true);
 
   while (1) {
     WaitForInterrupt();
