@@ -32,20 +32,20 @@ extern inline void Ping_Handler(void);
  * @param
  */
 static inline void Ping_TimerReset(void) {
-  TIMER0_TAV_R = 0; // Reset value
+  TIMER0_TAV_R = TIMER0_TAILR_R; // Reset value to LOAD when counting DOWN
 }
 
 /**
- * @brief 
- * @param  
+ * @brief
+ * @param
  */
 static inline void Ping_TimerDisable(void) {
   TIMER0_CTL_R &= (unsigned)~TIMER_CTL_TAEN; // Disable Timer A
 }
 
 /**
- * @brief 
- * @param  
+ * @brief
+ * @param
  */
 static inline void Ping_TimerEnable(void) {
   TIMER0_CTL_R |= TIMER_CTL_TAEN; // Enable Timer A

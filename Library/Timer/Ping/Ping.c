@@ -31,7 +31,7 @@ void Ping_TimerInit(uint32_t LOAD, bool oneShot) {
   Ping_TimerDisable();
 
   TIMER0_CFG_R = TIMER_CFG_32_BIT_TIMER;
-  TIMER0_TAMR_R = oneShot ? TIMER_TAMR_TAMR_1_SHOT : TIMER_TAMR_TAMR_PERIOD; // Periodic timer and counting up
+  TIMER0_TAMR_R = oneShot ? TIMER_TAMR_TAMR_1_SHOT : TIMER_TAMR_TAMR_PERIOD; // Periodic timer
   TIMER0_TAILR_R = LOAD;                                                     // Set LOAD
 
   TIMER0_ICR_R |= TIMER_ICR_TATOCINT; // Clear interrupt
