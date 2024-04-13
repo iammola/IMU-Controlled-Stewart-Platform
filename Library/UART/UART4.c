@@ -142,6 +142,9 @@ void UART4_Init(const uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength,
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R2; // Enable Port C's clock
   SYSCTL_RCGCUART_R |= SYSCTL_RCGCUART_R4; // Enable UART module 4's clock
 
+  while ((SYSCTL_PRGPIO_R & SYSCTL_RCGCGPIO_R2) == 0x00 || (SYSCTL_RCGCUART_R & SYSCTL_RCGCUART_R4) == 0x00) { // Wait for Module ready
+  }
+
   GPIO_PORTC_AFSEL_R |= UART4_PINS; // Enable Alternate functions in PINS.
   GPIO_PORTC_PCTL_R = (GPIO_PORTC_PCTL_R & ~UART4_PCTL_MASK) |
                       UART4_PCTL; // Enable UART Tx and Rx functions by masking the pin peripherals byte and setting the UART value

@@ -19,6 +19,9 @@
 bool WaitFor(uint32_t LOAD) {
   SYSCTL_RCGCTIMER_R |= SYSCTL_RCGCTIMER_R1; // Enable Timer Module 1
 
+  while ((SYSCTL_PRTIMER_R & SYSCTL_RCGCTIMER_R1) == 0x00) { // Wait for Module ready
+  }
+
   if (TIMER1_CTL_R & TIMER_CTL_TAEN) // Wait For Timer already in use
     return false;
 

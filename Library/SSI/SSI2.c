@@ -31,6 +31,9 @@ void SSI2_Init(uint32_t SYS_CLK, uint32_t SSI_CLK, SSI_MODE frameConfig, DATA_SI
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R1; // Enable GPIO Port clock
   SYSCTL_RCGCSSI_R |= SYSCTL_RCGCSSI_R2;   // Enable SSI module clock
 
+  while ((SYSCTL_PRGPIO_R & SYSCTL_RCGCGPIO_R1) == 0x00 || (SYSCTL_RCGCSSI_R & SYSCTL_RCGCSSI_R2) == 0x00) { // Wait for Module ready
+  }
+
   GPIO_PORTB_AFSEL_R |= SSI2_PINS;                                                                // Enable Alternate Functions on all pins
   GPIO_PORTB_PCTL_R = (GPIO_PORTB_PCTL_R & ~SSI2_PCTL_MASK) | SSI2_PCTL;                          // Enable SSI module peripheral functions
   GPIO_PORTB_DIR_R = (GPIO_PORTB_DIR_R & ~SSI2_PINS) | SSI2_CLK_BIT | SSI2_TX_BIT | SSI2_FSS_BIT; // Configure CLK, TX, and FSS as outputs

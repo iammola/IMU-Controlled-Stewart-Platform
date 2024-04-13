@@ -142,6 +142,9 @@ void UART5_Init(const uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength,
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R4; // Enable Port E's clock
   SYSCTL_RCGCUART_R |= SYSCTL_RCGCUART_R5; // Enable UART module 5's clock
 
+  while ((SYSCTL_PRGPIO_R & SYSCTL_RCGCGPIO_R4) == 0x00 || (SYSCTL_RCGCUART_R & SYSCTL_RCGCUART_R5) == 0x00) { // Wait for Module ready
+  }
+
   GPIO_PORTE_AFSEL_R |= UART5_PINS; // Enable Alternate functions in PINS.
   GPIO_PORTE_PCTL_R = (GPIO_PORTE_PCTL_R & ~UART5_PCTL_MASK) |
                       UART5_PCTL; // Enable UART Tx and Rx functions by masking the pin peripherals byte and setting the UART value

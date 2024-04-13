@@ -279,6 +279,9 @@ void ICM20948_Init(uint32_t SYS_CLK, uint32_t SAMPLE_RATE, volatile Position *po
 void ICM20948_Interrupt_Pin_Init(void) {
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R3; // Enable Port D clock
 
+  while ((SYSCTL_PRGPIO_R & SYSCTL_RCGCGPIO_R3) == 0x00) { // Wait for Module ready
+  }
+
   GPIO_PORTB_AFSEL_R &= ~INT_BIT;   // Disable Alternate Functions on CS pin
   GPIO_PORTB_PCTL_R &= ~INT_PCTL_M; // Disable Peripheral functions on PD6
   GPIO_PORTB_DIR_R &= ~INT_BIT;     // Configure INT bit as input

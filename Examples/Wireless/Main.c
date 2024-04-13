@@ -23,9 +23,10 @@ static uint8_t       peerLEDIdx = 0;
 static volatile bool SendData = false;
 
 static void PortF_Init(void) {
-  volatile uint32_t delay;
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R5; // activate clock for Port F
-  delay = SYSCTL_RCGCGPIO_R;               // allow time for clock to start
+
+  while ((SYSCTL_PRGPIO_R & SYSCTL_RCGCGPIO_R5) == 0x00) { // Wait for Module ready
+  }
 
   GPIO_PORTF_LOCK_R = GPIO_LOCK_KEY; // unlock GPIO Port F
   GPIO_PORTF_CR_R = 0x0F;            // allow changes to PF0-3

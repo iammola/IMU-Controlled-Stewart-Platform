@@ -197,6 +197,9 @@ void CLI_Init(const uint32_t SYS_CLOCK, uint32_t baudRate, uint8_t wordLength, u
   SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R0; // Enable Port A's clock
   SYSCTL_RCGCUART_R |= SYSCTL_RCGCUART_R0; // Enable UART module 0's clock
 
+  while ((SYSCTL_PRGPIO_R & SYSCTL_RCGCGPIO_R0) == 0x00 || (SYSCTL_RCGCUART_R & SYSCTL_RCGCUART_R0) == 0x00) { // Wait for Module ready
+  }
+
   GPIO_PORTA_AFSEL_R |= PINS;                                  // Enable Alternate functions in PINS.
   GPIO_PORTA_PCTL_R = (GPIO_PORTA_PCTL_R & ~PCTL_MASK) | PCTL; // Configure Peripherals
   GPIO_PORTA_DIR_R = (GPIO_PORTA_DIR_R & ~PINS) | TX_BIT;      // Configure I/O pins
