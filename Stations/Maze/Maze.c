@@ -11,6 +11,8 @@
 
 #include "Maze.h"
 
+#include "SysTick/SysTick.h"
+
 #include "Joystick/Joystick.h"
 #include "Pololu Maestro/Maestro.h"
 #include "RA8875/RA8875.h"
@@ -66,8 +68,6 @@ void Maze_UpdateControlMethod(MAZE_CONTROL_METHOD newControl) {
       break;
   }
 
-  Wireless_Transmit(CHANGE_CONTROL_METHOD_ACK, (uint8_t *)&CTL_METHOD, CHANGE_CONTROL_METHOD_ACK_LENGTH); // Send ACK
-
   /* Clear section */
   RA8875_graphicsMode();
   RA8875_fillRect(CONTROL_METHOD_X, CONTROL_METHOD_Y, CONTROL_METHOD_WIDTH, CONTROL_METHOD_HEIGHT, RA8875_BLACK);
@@ -80,6 +80,9 @@ void Maze_UpdateControlMethod(MAZE_CONTROL_METHOD newControl) {
   RA8875_textWrite(CTL_METHOD == JOYSTICK_CTL_METHOD ? "Control Method: Controller" : "Control Method: Glove", 0);
 
   Maze_MoveToNeutralPosition();
+
+  SysTick_WaitCustom(10, -3);
+  Wireless_Transmit(CHANGE_CONTROL_METHOD_ACK, (uint8_t *)&CTL_METHOD, CHANGE_CONTROL_METHOD_ACK_LENGTH); // Send ACK
 }
 
 /**

@@ -56,26 +56,28 @@ static volatile MAZE_CONTROL_METHOD CTL_METHOD;
 void GPIOD_Handler(void) {
   GPIO_PORTD_ICR_R |= BTN_BIT; // clear interrupt
 
-  if ((GPIO_PORTD_DATA_R & BTN_BIT) == 0x00)
-    // Try throttle interrupts by checking data register
+  // Try throttle interrupts
+  if (ExpectingCTLMethod != 0x00)
     return;
-
-  Ping_TimerDisable(); // Disable Ping if enabled
-  IMU_Disable();       // Disable IMU
 
   ExpectingCTLMethod = CTL_METHOD == JOYSTICK_CTL_METHOD ? IMU_CTL_METHOD : JOYSTICK_CTL_METHOD;
   Wireless_Transmit(CHANGE_CONTROL_METHOD, (uint8_t *)&ExpectingCTLMethod, CHANGE_CONTROL_METHOD_LENGTH);
 
-  WaitFor(SYS_CLOCK / 25e-3); // Start Timer to wait for a max of 25ms
+  if (CTL_METHOD == IMU_CTL_METHOD) {
+    Ping_TimerDisable(); // Disable Ping if enabled
+    IMU_Disable();       // Disable IMU
 
-  while (!WaitFor_IsDone()) {
-    if (ReceivedCommands.ChangeControlMethodAck.isNew) {
-      WaitFor_Stop();
-      return;
+    WaitFor((uint32_t)((float)SYS_CLOCK * (float)25e-3)); // Start Timer to wait for a max of 25ms
+
+    while (!WaitFor_IsDone()) {
+      if (ReceivedCommands.ChangeControlMethodAck.isNew) {
+        WaitFor_Stop();
+        return;
+      }
     }
-  }
 
-  IMU_Enable(false); // Reaching this point means the ACK was not received
+    IMU_Enable(false); // Reaching this point means the ACK was not received
+  }
 }
 
 /**
@@ -120,6 +122,8 @@ static void Glove_UpdateControlMethod(MAZE_CONTROL_METHOD newControl) {
       IMU_Disable();
       break;
   }
+
+  ExpectingCTLMethod = 0x00;
 }
 
 inline void Ping_Handler(void) {
