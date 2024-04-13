@@ -21,7 +21,7 @@
 
 #define SYS_CLOCK 80e6
 
-#define ANIMATION 0 // 0 = Tilt, 1 = Wobble
+#define ANIMATION 1 // 0 = Tilt, 1 = Wobble
 
 static const uint32_t DURATION = (uint32_t)(SYS_CLOCK * (ANIMATION == 1 ? 3 : 10));
 
@@ -83,18 +83,20 @@ int main(void) {
         y = -cosf(a);
       }
 
-      angle = powf(sinf((elapsedRatio * M_PI * 2) - (M_PI * 8)), 5) / 3.0f;
+#define KX 1.75f // smaller this number, the deeper the tilt
+      angle = powf(sinf((elapsedRatio * M_PI * 2) - (M_PI * 8)), 5) / KX;
 
       translation = (Coords){0};
       orientation = QuaternionFromAxisAngle(x, y, z, angle);
 #elif ANIMATION == 1 // Wobble
       angle = elapsedRatio * M_PI * 2.0f;
+#define KX 7.5f      // smaller this number, the bigger the rotation
 
-      translation.x = cosf(-angle) * 13.0f;
-      translation.y = sinf(-angle) * 13.0f;
+      translation.x = cosf(-angle) * KX;
+      translation.y = sinf(-angle) * KX;
       translation.z = 0.0f;
 
-      orientation = normalizeQuaternion(-13.0f, -cosf(angle), sinf(angle), 0);
+      orientation = normalizeQuaternion(-KX, -cosf(angle), sinf(angle), 0);
 #endif
 
       StewartPlatform_Update(translation, orientation);
