@@ -54,6 +54,7 @@ static volatile MAZE_CONTROL_METHOD ExpectingCTLMethod = DEFAULT_CTL_METHOD;
 static volatile MAZE_CONTROL_METHOD CTL_METHOD;
 
 void GPIOD_Handler(void) {
+  bool waitingForResponse = true;
   GPIO_PORTD_ICR_R |= BTN_BIT; // clear interrupt
 
   // Try throttle interrupts
@@ -67,16 +68,23 @@ void GPIOD_Handler(void) {
     Ping_TimerDisable(); // Disable Ping if enabled
     IMU_Disable();       // Disable IMU
 
-    WaitFor((uint32_t)((float)SYS_CLOCK * (float)25e-3)); // Start Timer to wait for a max of 25ms
+    WaitFor(SYS_CLOCK); // Start Timer to wait for a max of 1s
 
     while (!WaitFor_IsDone()) {
       if (ReceivedCommands.ChangeControlMethodAck.isNew) {
-        WaitFor_Stop();
-        return;
+        waitingForResponse = false;
+        break;
       }
     }
 
-    IMU_Enable(false); // Reaching this point means the ACK was not received
+    if (waitingForResponse) // ACK was not received
+      IMU_Enable(false);
+  }
+
+  if (waitingForResponse) {
+    ExpectingCTLMethod = 0x00; // Reset tracker
+  } else {
+    WaitFor_Stop(); // Stop Timer
   }
 }
 
