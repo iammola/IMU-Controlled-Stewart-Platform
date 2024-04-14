@@ -33,11 +33,24 @@
 #define MAZE_WIDTH         (MAZE_COLUMNS_COUNT * MAZE_CELL_SIZE)
 #define MAZE_HEIGHT        (MAZE_ROWS_COUNT * MAZE_CELL_SIZE)
 
+#define SCREEN_TIME_X      10
+#define SCREEN_TIME_Y      100
+#define SCREEN_TIME_WIDTH  215
+#define SCREEN_TIME_HEIGHT 20
+
 typedef enum CONNECTED_STATE {
   CONNECTED = 0x81,
   DISCONNECTED = 0x96,
 } CONNECTED_STATE;
 
+typedef struct TIME {
+  uint8_t  minutes;      // 0 to 60
+  uint8_t  seconds;      // 0 to 60
+  uint16_t milliseconds; // 0 to 999
+  bool updated;
+} TIME;
+
+extern volatile TIME                time;
 extern volatile Position            position;
 extern volatile MAZE_CONTROL_METHOD CTL_METHOD;
 extern volatile CONNECTED_STATE     connectionState;
@@ -72,6 +85,12 @@ void Maze_MoveToPosition(void);
  * @param connected
  */
 void Maze_UpdateConnectedState(CONNECTED_STATE connected);
+
+/**
+ * @brief 
+ * @param  
+ */
+void Maze_UpdateGameTime(void);
 
 /**
  * @brief

@@ -8,6 +8,7 @@
  * @copyright Copyright (c) 2024
  *
  */
+#include <stdio.h>
 
 #include "Maze.h"
 
@@ -18,17 +19,23 @@
 #include "RA8875/RA8875.h"
 #include "StewartPlatform/StewartPlatform.h"
 #include "Timer/Ping/Ping.h"
+#include "Timer/RTC/RTC.h"
 #include "Wireless/Wireless.h"
 
+#define RTC_START_BTN              (1 << 0) // PF0
+#define RTC_STOP_BTN               (1 << 4) // PF4
+#define RTC_BTN_PCTL_M             (unsigned)(GPIO_PCTL_PF0_M | GPIO_PCTL_PF4_M)
+#define RTC_BTN_INTERRUPT_PRIORITY 6
+
+volatile TIME                time = {0};
 volatile MAZE_CONTROL_METHOD CTL_METHOD;
 volatile Position            position = {0};
 volatile CONNECTED_STATE     connectionState;
 
-/**
- * @brief
- * @param
- */
 static void Maze_DrawObstacles(void);
+static void Maze_RTCButtonInit(void);
+
+void GPIOF_Handler(void);
 
 /**
  * @brief
@@ -43,11 +50,17 @@ void Maze_Init(const uint32_t SYS_CLOCK) {
 
   Ping_TimerInit(SYS_CLOCK, false); // Init timer for 1 second
 
+  RTC_TimerInit(SYS_CLOCK); // Initialize RTC Timer
+  Maze_RTCButtonInit();     // Initialize RTC Trigger Buttons
+
   Wireless_Init(SYS_CLOCK, true); // Initialize Wireless
 
-  Maze_UpdateControlMethod(DEFAULT_CTL_METHOD); // Initialize and Send method
-  Maze_UpdateConnectedState(DISCONNECTED);
-  Maze_DrawObstacles();
+  time = (TIME){.milliseconds = 0, .seconds = 0, .minutes = 0, .updated = true}; // Init RTC timer
+
+  Maze_UpdateControlMethod(DEFAULT_CTL_METHOD); // Initialize with default control method (will send to glove if to enable IMU)
+  Maze_UpdateConnectedState(DISCONNECTED);      // Print Disconnected Glove state
+  Maze_DrawObstacles();                         // Draw Maze board and Obstacles
+  Maze_UpdateGameTime();                        // Print Game Time
 
   Maze_MoveToNeutralPosition();
 }
@@ -81,7 +94,7 @@ void Maze_UpdateControlMethod(MAZE_CONTROL_METHOD newControl) {
 
   Maze_MoveToNeutralPosition();
 
-  SysTick_WaitCustom(100, -3); // 100ms delay
+  SysTick_WaitCustom(100, -3);                                                                            // 100ms delay
   Wireless_Transmit(CHANGE_CONTROL_METHOD_ACK, (uint8_t *)&CTL_METHOD, CHANGE_CONTROL_METHOD_ACK_LENGTH); // Send ACK
 }
 
@@ -155,6 +168,59 @@ void Maze_UpdateConnectedState(CONNECTED_STATE connected) {
   }
 
   connectionState = connected;
+}
+
+/**
+ * @brief
+ * @param
+ */
+void Maze_UpdateGameTime(void) {
+  static char timeText[50] = "";
+
+  /* Clear section */
+  RA8875_graphicsMode();
+  RA8875_fillRect(SCREEN_TIME_X, SCREEN_TIME_Y, SCREEN_TIME_WIDTH, SCREEN_TIME_HEIGHT, RA8875_BLACK);
+
+  /* Print text */
+  RA8875_textMode();
+  RA8875_textSetCursor(SCREEN_TIME_X, SCREEN_TIME_Y);
+  RA8875_textTransparent(RA8875_WHITE);
+
+  snprintf(timeText, 50, "Time Since Start: %02d:%02d", time.minutes, time.seconds);
+  RA8875_textEnlarge(1); // Print seconds, hours in larger size
+  RA8875_textWrite(timeText, 0);
+
+  snprintf(timeText, 50, " . %04d ms", time.milliseconds);
+  RA8875_textEnlarge(0); // Print milliseconds in smaller size
+  RA8875_textWrite(timeText, 0);
+}
+
+/**
+ * @brief
+ * @param
+ */
+static void Maze_RTCButtonInit(void) {
+  SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R5; // Enable Port F
+
+  while ((SYSCTL_PRGPIO_R & SYSCTL_RCGCGPIO_R5) == 0x00) { // Wait for Module ready
+  }
+
+  // enable PF0 (SW2) as inputs and PF1-3 (RBG) as outputs
+  GPIO_PORTF_DIR_R &= (unsigned)~(RTC_START_BTN | RTC_STOP_BTN);
+
+  GPIO_PORTF_PUR_R |= RTC_START_BTN | RTC_STOP_BTN;                // enable pull-up on PF0
+  GPIO_PORTF_DEN_R |= RTC_START_BTN | RTC_STOP_BTN;                // enable digital I/O on PF0-3
+  GPIO_PORTF_AMSEL_R &= (unsigned)~(RTC_START_BTN | RTC_STOP_BTN); // disable analog on PF0-3
+  GPIO_PORTF_AFSEL_R &= (unsigned)~(RTC_START_BTN | RTC_STOP_BTN); // disable alternate functions on PF0-3
+  GPIO_PORTF_PCTL_R &= ~RTC_BTN_PCTL_M;                            // no peripheral functions with disabled alt. functions
+
+  GPIO_PORTF_IS_R &= ~RTC_START_BTN | RTC_STOP_BTN;              // Configure for Edge-Detect on PF0
+  GPIO_PORTF_IBE_R &= (unsigned)~(RTC_START_BTN | RTC_STOP_BTN); // Allow GPIOIEV register to control interrupt
+  GPIO_PORTF_IEV_R &= (unsigned)~(RTC_START_BTN | RTC_STOP_BTN); // Trigger falling edge on PF0
+  GPIO_PORTF_IM_R = RTC_START_BTN;                               // Allow interrupts to be sent on START btn (no need for STOP now)
+
+  NVIC_EN0_R |= NVIC_EN0_INT30; // Enable Interrupt 30 for GPIO Port F
+  NVIC_PRI7_R = (NVIC_PRI7_R & (unsigned)~NVIC_PRI7_INT30_M) | (RTC_BTN_INTERRUPT_PRIORITY << NVIC_PRI7_INT30_S); // Set Priority
 }
 
 /**
@@ -278,19 +344,49 @@ static void Maze_DrawObstacles(void) {
  * @brief
  * @param
  */
-inline void Maze_ConfirmedInitialized(void) {
-  RA8875_textMode();
-  RA8875_textSetCursor(230, 10);
-  RA8875_textEnlarge(1);
-  RA8875_textTransparent(RA8875_WHITE);
-  RA8875_textWrite("Initialized", 0);
-  RA8875_textEnlarge(0);
+inline void Ping_Handler(void) {
+  Maze_UpdateConnectedState(DISCONNECTED);
 }
 
 /**
  * @brief
  * @param
  */
-inline void Ping_Handler(void) {
-  Maze_UpdateConnectedState(DISCONNECTED);
+inline void RTC_Handler(void) {
+  if (time.milliseconds == 999) { // Milliseconds max without the increment. 1000 ms = 1 s
+    ++time.seconds;
+    time.milliseconds = 0;
+  }
+
+  if (time.seconds == 60) { // Seconds max with the increment 60s = 1 min
+    ++time.minutes;
+    time.minutes = 0;
+  }
+
+  if (time.minutes == 60) { // Minutes max with the increment 60m.
+    time.minutes = 0;
+  }
+
+  time.updated = true;
+}
+
+void GPIOF_Handler(void) {
+  switch (GPIO_PORTF_MIS_R & (RTC_START_BTN | RTC_STOP_BTN)) {
+    case RTC_START_BTN:
+      time = (TIME){.milliseconds = 0, .seconds = 0, .minutes = 0, .updated = true}; // Reset counter
+
+      GPIO_PORTF_ICR_R |= RTC_START_BTN; // Clear START interrupt
+      GPIO_PORTF_IM_R = RTC_STOP_BTN;    // Disable START interrupt, enable STOP
+
+      RTC_TimerStart();
+      break;
+    case RTC_STOP_BTN:
+      GPIO_PORTF_ICR_R |= RTC_STOP_BTN; // Clear STOP interrupt
+      GPIO_PORTF_IM_R = RTC_START_BTN;  // Disable STOP interrupt, enable START
+
+      RTC_TimerStop();
+      break;
+    default:
+      return;
+  }
 }

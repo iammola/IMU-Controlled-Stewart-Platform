@@ -38,6 +38,11 @@ int main(void) {
   while (1) {
     WaitForInterrupt();
 
+    if (time.updated) {
+      Maze_UpdateGameTime();
+      time.updated = false;
+    }
+
     if (ReceivedCommands.ChangeControlMethod.isNew) {
       ReceivedCommands.ChangeControlMethod.inUse = false;
 

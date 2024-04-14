@@ -116,6 +116,10 @@ static void Button_Init(void) {
   GPIO_PORTD_IM_R |= BTN_BIT; // Allow the INT pin interrupt to be detected
 }
 
+/**
+ * @brief 
+ * @param newControl 
+ */
 static void Glove_UpdateControlMethod(MAZE_CONTROL_METHOD newControl) {
   if (ExpectingCTLMethod != newControl)
     return;
