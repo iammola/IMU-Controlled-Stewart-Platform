@@ -129,7 +129,7 @@
         <SetRegEntry>
           <Number>0</Number>
           <Key>DLGTARM</Key>
-          <Name>(1010=316,188,766,745,0)(1007=-1,-1,-1,-1,0)(1008=616,150,992,386,0)(1009=0,312,258,900,0)(1012=-1,-1,-1,-1,0)</Name>
+          <Name>(1010=592,62,1042,619,0)(1007=-1,-1,-1,-1,0)(1008=616,150,992,386,0)(1009=0,312,258,900,0)(1012=-1,-1,-1,-1,0)</Name>
         </SetRegEntry>
         <SetRegEntry>
           <Number>0</Number>
@@ -152,12 +152,17 @@
         <Ww>
           <count>0</count>
           <WinNumber>1</WinNumber>
-          <ItemText>txBufferPtr</ItemText>
+          <ItemText>CTL_METHOD</ItemText>
         </Ww>
         <Ww>
           <count>1</count>
           <WinNumber>1</WinNumber>
-          <ItemText>CTL_METHOD</ItemText>
+          <ItemText>time</ItemText>
+        </Ww>
+        <Ww>
+          <count>2</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>ReceivedCommands</ItemText>
         </Ww>
       </WatchWindow1>
       <Tracepoint>
@@ -202,12 +207,6 @@
       <pszMrulep></pszMrulep>
       <pSingCmdsp></pSingCmdsp>
       <pMultCmdsp></pMultCmdsp>
-      <SystemViewers>
-        <Entry>
-          <Name>System Viewer\UART5</Name>
-          <WinId>35905</WinId>
-        </Entry>
-      </SystemViewers>
     </TargetOption>
   </Target>
 
@@ -317,7 +316,7 @@
       <GroupNumber>1</GroupNumber>
       <FileNumber>9</FileNumber>
       <FileType>1</FileType>
-      <tvExp>0</tvExp>
+      <tvExp>1</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
       <PathWithFileName>..\..\..\Library\Timer\Ping\Ping.c</PathWithFileName>
@@ -418,6 +417,18 @@
       <bDave2>0</bDave2>
       <PathWithFileName>..\..\..\Library\SSI\SSI0.c</PathWithFileName>
       <FilenameWithoutPath>SSI0.c</FilenameWithoutPath>
+      <RteFlg>0</RteFlg>
+      <bShared>0</bShared>
+    </File>
+    <File>
+      <GroupNumber>1</GroupNumber>
+      <FileNumber>18</FileNumber>
+      <FileType>1</FileType>
+      <tvExp>0</tvExp>
+      <tvExpOptDlg>0</tvExpOptDlg>
+      <bDave2>0</bDave2>
+      <PathWithFileName>..\..\..\Library\Timer\RTC\RTC.c</PathWithFileName>
+      <FilenameWithoutPath>RTC.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>

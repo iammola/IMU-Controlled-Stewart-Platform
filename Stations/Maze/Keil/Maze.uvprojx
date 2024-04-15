@@ -469,6 +469,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\..\Library\SSI\SSI0.c</FilePath>
             </File>
+            <File>
+              <FileName>RTC.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\Library\Timer\RTC\RTC.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
