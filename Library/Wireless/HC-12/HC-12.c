@@ -146,7 +146,7 @@ static void HC12_SetMode(MODE NewMode) {
   VCC_ADDR = VCC_BIT;                                         // Drive VCC pin HIGH to turn off device
   SET_ADDR = (NewMode == TRANSMISSION_MODE) ? SET_BIT : 0x00; // Drive SET pin HIGH for mode
 
-  SysTick_Wait10ms(35); // Wait for 200ms to enter Transmission Mode or 40ms to enter AT command mode
+  SysTick_Wait10ms(40); // Wait for 200ms to enter Transmission Mode or 400ms to enter AT command mode
 
   VCC_ADDR = 0x00;      // Drive VCC pin LOW to turn device on with mode
   SysTick_Wait10ms(10); // Wait at least 80ms to enter Transmission Mode or 40ms to enter AT command mode
