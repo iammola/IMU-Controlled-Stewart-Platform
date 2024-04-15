@@ -13,25 +13,33 @@
 
 /**
  * @brief
- * @param LOAD
- * @return
+ * @param
  */
-bool WaitFor(uint32_t LOAD) {
+void WaitFor_TimerInit(void) {
   SYSCTL_RCGCTIMER_R |= SYSCTL_RCGCTIMER_R1; // Enable Timer Module 1
 
   while ((SYSCTL_PRTIMER_R & SYSCTL_RCGCTIMER_R1) == 0x00) { // Wait for Module ready
   }
 
-  if (TIMER1_CTL_R & TIMER_CTL_TAEN) // Wait For Timer already in use
-    return false;
-
   TIMER1_CTL_R &= (unsigned)~TIMER_CTL_TAEN; // Disable Timer A
 
   TIMER1_CFG_R = TIMER_CFG_32_BIT_TIMER;
-  TIMER1_TAMR_R = TIMER_TAMR_TAMR_1_SHOT; // Periodic timer
-  TIMER1_TAILR_R = LOAD;                  // Set LOAD
+  TIMER1_TAMR_R = TIMER_TAMR_TAMR_1_SHOT; // 1 shot timer
 
-  TIMER1_CTL_R |= TIMER_CTL_TAEN;
+  /* Enable and Disable Timer to get Timeout interrupt flag set */
+  TIMER1_TAILR_R = 10;
+  TIMER1_CTL_R |= TIMER_CTL_TAEN | TIMER_CTL_TASTALL; // enable Timer 2A
+  while (!WaitFor_TimerIsDone())                      // Wait for finish
+    ;
+  TIMER1_CTL_R &= (unsigned)~TIMER_CTL_TAEN; // Disable Timer 2A
+}
 
-  return true;
+/**
+ * @brief
+ * @param LOAD
+ */
+void WaitFor_TimerStart(uint32_t LOAD) {
+  TIMER1_TAILR_R = LOAD;                              // Set LOAD
+  TIMER1_ICR_R |= TIMER_ICR_TATOCINT;                 // clear interrupt
+  TIMER1_CTL_R |= TIMER_CTL_TAEN | TIMER_CTL_TASTALL; // enable timer
 }

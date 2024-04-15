@@ -13,7 +13,6 @@
 
 #include "FPU/fpu.h"
 #include "PLL/PLL.h"
-#include "SysTick/SysTick.h"
 
 #include "IMU/IMU.h"
 #include "Timer/Ping/Ping.h"
@@ -54,38 +53,15 @@ static volatile MAZE_CONTROL_METHOD ExpectingCTLMethod = DEFAULT_CTL_METHOD;
 static volatile MAZE_CONTROL_METHOD CTL_METHOD;
 
 void GPIOD_Handler(void) {
-  bool waitingForResponse = true;
   GPIO_PORTD_ICR_R |= BTN_BIT; // clear interrupt
 
-  // Try throttle interrupts
-  if (ExpectingCTLMethod != 0x00)
+  if (!WaitFor_TimerIsDone()) // Throttle interrupt
     return;
+
+  WaitFor_TimerStart(SYS_CLOCK); // Start Timer to wait for a max of 1s before next control change request
 
   ExpectingCTLMethod = CTL_METHOD == JOYSTICK_CTL_METHOD ? IMU_CTL_METHOD : JOYSTICK_CTL_METHOD;
   Wireless_Transmit(CHANGE_CONTROL_METHOD, (uint8_t *)&ExpectingCTLMethod, CHANGE_CONTROL_METHOD_LENGTH);
-
-  if (CTL_METHOD == IMU_CTL_METHOD) {
-    Ping_TimerDisable(); // Disable Ping if enabled
-    IMU_Disable();       // Disable IMU
-
-    WaitFor(SYS_CLOCK); // Start Timer to wait for a max of 1s
-
-    while (!WaitFor_IsDone()) {
-      if (ReceivedCommands.ChangeControlMethodAck.isNew) {
-        waitingForResponse = false;
-        break;
-      }
-    }
-
-    if (waitingForResponse) // ACK was not received
-      IMU_Enable(false);
-  }
-
-  if (waitingForResponse) {
-    ExpectingCTLMethod = 0x00; // Reset tracker
-  } else {
-    WaitFor_Stop(); // Stop Timer
-  }
 }
 
 /**
@@ -117,8 +93,8 @@ static void Button_Init(void) {
 }
 
 /**
- * @brief 
- * @param newControl 
+ * @brief
+ * @param newControl
  */
 static void Glove_UpdateControlMethod(MAZE_CONTROL_METHOD newControl) {
   if (ExpectingCTLMethod != newControl)
@@ -162,7 +138,9 @@ int main(void) {
 
   Wireless_Init(SYS_CLOCK, true);
   IMU_Init(SYS_CLOCK, IMU_SAMPLE_RATE, &position);
-  Ping_TimerInit(SYS_CLOCK / PING_FREQUENCY, true);
+
+  Ping_TimerInit(SYS_CLOCK / PING_FREQUENCY, true); // Timer to send Position Data
+  WaitFor_TimerInit();                              // Timer to throttle Control Change Interrupts
 
   Button_Init();
 

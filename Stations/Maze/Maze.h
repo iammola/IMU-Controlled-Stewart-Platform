@@ -26,7 +26,7 @@
 #define CONTROL_METHOD_HEIGHT 20
 
 #define MAZE_X             400
-#define MAZE_Y             50
+#define MAZE_Y             60
 #define MAZE_CELL_SIZE     40
 #define MAZE_COLUMNS_COUNT 9
 #define MAZE_ROWS_COUNT    9
@@ -34,9 +34,9 @@
 #define MAZE_HEIGHT        (MAZE_ROWS_COUNT * MAZE_CELL_SIZE)
 
 #define SCREEN_TIME_X      10
-#define SCREEN_TIME_Y      100
-#define SCREEN_TIME_WIDTH  215
-#define SCREEN_TIME_HEIGHT 20
+#define SCREEN_TIME_Y      250
+#define SCREEN_TIME_WIDTH  115
+#define SCREEN_TIME_HEIGHT 30
 
 typedef enum CONNECTED_STATE {
   CONNECTED = 0x81,
@@ -48,6 +48,7 @@ typedef struct TIME {
   uint8_t  seconds;      // 0 to 60
   uint16_t milliseconds; // 0 to 999
   bool updated;
+  bool running;
 } TIME;
 
 extern volatile TIME                time;

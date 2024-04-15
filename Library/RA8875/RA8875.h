@@ -99,6 +99,7 @@ void RA8875_sleep(bool sleep);
 /* Text functions */
 void RA8875_textMode(void);
 void RA8875_textSetCursor(uint16_t x, uint16_t y);
+void RA8875_textSetYCursor(uint16_t y);
 void RA8875_textColor(uint16_t foreColor, uint16_t bgColor);
 void RA8875_textTransparent(uint16_t foreColor);
 void RA8875_textEnlarge(uint8_t scale);

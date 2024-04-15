@@ -374,6 +374,23 @@ void RA8875_textSetCursor(uint16_t x, uint16_t y) {
 
 /**************************************************************************/
 /*!
+      Sets the display in text mode (as opposed to graphics mode)
+
+      @param y The y position of the cursor (in pixels, 0..511)
+*/
+/**************************************************************************/
+void RA8875_textSetYCursor(uint16_t y) {
+  y = RA8875_applyRotationY(y);
+
+  /* Set cursor location */
+  RA8875_writeCommand(0x2C);
+  RA8875_writeData(y & 0xFF);
+  RA8875_writeCommand(0x2D);
+  RA8875_writeData(y >> 8);
+}
+
+/**************************************************************************/
+/*!
       Sets the fore and background color when rendering text
 
       @param foreColor The RGB565 color to use when rendering the text

@@ -13,14 +13,19 @@
 #include "tm4c123gh6pm.h"
 
 /**
- * @brief 
- * @param LOAD 
- * @return 
+ * @brief
+ * @param
  */
-bool WaitFor(uint32_t LOAD);
+void WaitFor_TimerInit(void);
 
-static inline bool WaitFor_IsDone(void) {
-  return TIMER1_RIS_R & TIMER_RIS_TATORIS;
+/**
+ * @brief 
+ * @param LOAD
+ */
+void WaitFor_TimerStart(uint32_t LOAD);
+
+static inline bool WaitFor_TimerIsDone(void) {
+	return TIMER1_RIS_R & TIMER_RIS_TATORIS;
 }
 
 static inline void WaitFor_Stop(void) {
