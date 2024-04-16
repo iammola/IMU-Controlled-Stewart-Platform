@@ -15,9 +15,9 @@
 #include "FPU/fpu.h"
 #include "PLL/PLL.h"
 
+#include "CLI/CLI.h"
 #include "IMU/IMU.h"
 #include "UTILS/UTILS.h"
-#include "Wireless/Wireless.h"
 
 #define SYS_CLOCK           80e6
 #define IMU_SAMPLE_RATE     400
@@ -25,14 +25,16 @@
 
 void WaitForInterrupt(void);
 
+static char text[CLI_TXT_BUF] = "";
+
 int main(void) {
   volatile Position position = {0};
-  const Quaternion  IMU_Quat_Offset = QuaternionConjugate(0.575982034f, 0.709781229f, -0.0408605039f, -0.403768331f);
+  const Quaternion  IMU_Quat_Offset = QuaternionConjugate(0.609836638f, 0.529993773f, 0.468245029f, 0.358044267f);
 
   PLL_Init();              // Initialize the PLL
   FPULazyStackingEnable(); // Enable Floating Point
 
-  Wireless_Init(SYS_CLOCK, false);
+  CLI_Init(SYS_CLOCK, 921600, WORD_8_BIT, RX_FIFO_OFF, NO_PARITY, ONE_STOP_BIT);
 
   IMU_Init(SYS_CLOCK, IMU_SAMPLE_RATE, &position); // Initialize the IMU
   IMU_Enable(true);
@@ -46,7 +48,10 @@ int main(void) {
     position.inUse = true;
     position.quaternion = QuaternionMultiply(position.quaternion, IMU_Quat_Offset, 1.0f);
 
-    Wireless_Transmit(NEW_POSITION, (uint8_t *)&position, NEW_POSITION_LENGTH);
+#define Q position.quaternion
+    snprintf(text, CLI_TXT_BUF, "Q: %0.6f %0.6f %0.6f %0.6f\n", Q.w, Q.x, Q.y, Q.z);
+    CLI_Write(text);
+#undef Q
 
     position.inUse = false;
     position.count = 0;
