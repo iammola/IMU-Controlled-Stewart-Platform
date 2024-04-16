@@ -440,19 +440,9 @@
               <FilePath>..\..\..\Library\UTILS\UTILS.c</FilePath>
             </File>
             <File>
-              <FileName>Wireless.c</FileName>
+              <FileName>CLI.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\Library\Wireless\Wireless.c</FilePath>
-            </File>
-            <File>
-              <FileName>HC-12.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\Library\Wireless\HC-12\HC-12.c</FilePath>
-            </File>
-            <File>
-              <FileName>UART5.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\..\Library\UART\UART5.c</FilePath>
+              <FilePath>..\..\..\Library\CLI\CLI.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -501,5 +491,14 @@
       </file>
     </files>
   </RTE>
+
+  <LayerInfo>
+    <Layers>
+      <Layer>
+        <LayName>IMU</LayName>
+        <LayPrjMark>1</LayPrjMark>
+      </Layer>
+    </Layers>
+  </LayerInfo>
 
 </Project>
